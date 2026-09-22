@@ -1,0 +1,14 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+# Written by `convex dev` codegen, or by scripts/ensure-convex-server-stub.mjs
+# before typechecks and unit tests when codegen is unavailable.
+convex/_generated/
