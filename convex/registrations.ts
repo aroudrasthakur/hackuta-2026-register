@@ -12,6 +12,7 @@ import {
   findProfileByResume,
   getProfileByUserAndHackathon,
   requireAuthUser,
+  syncAuthUserNameFromProfile,
 } from "./lib/profiles";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import { RESUME_UPLOAD_BUCKET } from "./lib/rateLimitBuckets";
@@ -187,10 +188,13 @@ async function upsertRegistration(
     emailVerificationTime: authUser.emailVerificationTime,
     hackathonId,
     status: "submitted",
+    confirmationStatus: "unconfirmed",
     submittedAt,
     updatedAt: submittedAt,
     resumeStorageId: resumeStorageId ?? undefined,
   });
+
+  await syncAuthUserNameFromProfile(ctx, authUser._id, data);
 
   if (previousResume && previousResume !== resumeStorageId) {
     await ctx.storage.delete(previousResume);

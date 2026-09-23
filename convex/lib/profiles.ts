@@ -86,6 +86,7 @@ export async function ensureDraftProfile(
     hackathonId,
     status: "draft",
     eligibilityStatus: "unreviewed",
+    confirmationStatus: "unconfirmed",
     createdAt: now,
     updatedAt: now,
   });
@@ -104,6 +105,39 @@ export async function findProfileByResume(
     .query("profiles")
     .withIndex("by_resume", (q) => q.eq("resumeStorageId", storageId))
     .first();
+}
+
+export function formatProfileFullName(fields: {
+  firstName?: string | null;
+  lastName?: string | null;
+}) {
+  const first = fields.firstName?.trim();
+  const last = fields.lastName?.trim();
+  if (first && last) return `${first} ${last}`;
+  return first || last || null;
+}
+
+/** Keep auth `users.name` in sync with the application form display name. */
+export async function syncAuthUserNameFromProfile(
+  ctx: MutationCtx,
+  authUserId: GenericId<"users">,
+  fields: { firstName?: string | null; lastName?: string | null },
+) {
+  const name = formatProfileFullName(fields);
+  const user = await ctx.db.get(authUserId);
+  if (!user) return;
+
+  if (!name) {
+    if (user.name !== undefined) {
+      const { name: _removed, ...rest } = user;
+      await ctx.db.replace(authUserId, rest);
+    }
+    return;
+  }
+
+  if (user.name !== name) {
+    await ctx.db.patch(authUserId, { name });
+  }
 }
 
 export function projectApplicantAnswers(profile: ProfileDoc) {

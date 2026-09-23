@@ -9,12 +9,19 @@ import { buildHackathonTimeline } from "../shared/hackathon/timeline";
 import { profileDraftPatch } from "./profileFields";
 import {
   ensureDraftProfile,
+  formatProfileFullName,
   getAuthUser,
   getProfileByUserAndHackathon,
   profileToDraftForm,
   projectApplicantAnswers,
+  syncAuthUserNameFromProfile,
 } from "./lib/profiles";
+import { replaceProfileWithDraftPatch } from "./lib/draftPatch";
 import { normalizeEmail } from "./lib/normalizeEmail";
+import {
+  isClearedDraftValue,
+  type DraftPatchPayload,
+} from "../shared/registration/draftPatch";
 
 export const getMyProfileDraft = query({
   args: {
@@ -57,16 +64,28 @@ export const saveProfileDraft = mutation({
 
     const authUser = await getAuthUser(ctx);
     const email = normalizeEmail(authUser?.email) ?? profile.email;
+    const updatedAt = Date.now();
 
-    await ctx.db.patch(profile._id, {
-      ...patch,
-      email,
-      emailVerificationTime:
-        authUser?.emailVerificationTime ?? profile.emailVerificationTime,
-      updatedAt: Date.now(),
-    });
+    await replaceProfileWithDraftPatch(
+      ctx,
+      profile,
+      patch as DraftPatchPayload,
+      {
+        email,
+        emailVerificationTime:
+          authUser?.emailVerificationTime ?? profile.emailVerificationTime,
+        updatedAt,
+      },
+    );
 
-    return { ok: true as const, updatedAt: Date.now() };
+    if (authUser) {
+      await syncAuthUserNameFromProfile(ctx, authUser._id, {
+        firstName: isClearedDraftValue(patch.firstName) ? null : patch.firstName,
+        lastName: isClearedDraftValue(patch.lastName) ? null : patch.lastName,
+      });
+    }
+
+    return { ok: true as const, updatedAt };
   },
 });
 
@@ -96,9 +115,10 @@ export const getMyApplicantDashboard = query({
     const timeline = buildHackathonTimeline(timelineSource);
 
     const displayName =
-      profile?.firstName && profile?.lastName
-        ? `${profile.firstName} ${profile.lastName}`
-        : authUser?.name ?? identity.name ?? null;
+      (profile ? formatProfileFullName(profile) : null) ??
+      authUser?.name ??
+      identity.name ??
+      null;
 
     return {
       profile: {
