@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_FORM } from "../../shared/registration/types";
+import { isClearedDraftValue } from "../../shared/registration/applicantFields";
 import {
   formToDraftPatch,
-  isClearedDraftValue,
-} from "../../shared/registration/draftPatch";
-import { mergeDraftPatchIntoProfile } from "../../shared/registration/draftPatch";
+  mergeDraftPatchIntoProfile,
+} from "../../shared/registration/draftMapping";
 
 describe("formToDraftPatch", () => {
   it("sends empty strings and nulls so the server can clear stored values", () => {

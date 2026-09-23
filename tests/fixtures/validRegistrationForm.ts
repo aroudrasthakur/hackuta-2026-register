@@ -1,7 +1,8 @@
 import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
 import { COUNTRIES_OF_RESIDENCE } from "../../shared/registration/countries";
 import { MLH_SCHOOLS } from "../../shared/registration/mlhSchools";
-import { INITIAL_FORM, type ApplicationFormData } from "../../shared/registration/types";
+import { validateApplicationForm } from "../../shared/registration/validation";
+import { INITIAL_FORM, type ApplicationFormData, type RegistrationPayload } from "../../shared/registration/types";
 
 export const VALID_SCHOOL = MLH_SCHOOLS[0];
 export const VALID_COUNTRY = COUNTRIES_OF_RESIDENCE[0];
@@ -31,4 +32,13 @@ export function validRegistrationForm(): ApplicationFormData {
     codeOfConductAgreed: true,
     mlhDataSharingConsent: true,
   };
+}
+
+/** Valid server submission payload derived from the shared form fixture. */
+export function validRegistrationPayload(): RegistrationPayload {
+  const result = validateApplicationForm(validRegistrationForm());
+  if (!result.success) {
+    throw new Error(`Invalid registration fixture: ${JSON.stringify(result.errors)}`);
+  }
+  return result.payload;
 }

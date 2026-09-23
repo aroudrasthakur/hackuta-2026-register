@@ -1,4 +1,13 @@
-import { v } from "convex/values";
+import { v, type GenericValidator } from "convex/values";
+import {
+  CONDITIONAL_STRING_FIELDS,
+  NULLABLE_BOOLEAN_FIELDS,
+  OPTIONAL_INT_FIELDS,
+  PLAIN_STRING_FIELDS,
+  REQUIRED_BOOLEAN_FIELDS,
+  STRING_ARRAY_FIELDS,
+  TRIMMED_STRING_FIELDS,
+} from "../shared/registration/applicantFields";
 
 /** Application lifecycle status for a hackathon profile row. */
 export const profileStatus = v.union(
@@ -24,6 +33,43 @@ export const confirmationStatus = v.union(
   v.literal("declined"),
 );
 
+const draftNullableString = v.union(v.string(), v.null());
+const draftNullableNumber = v.union(v.number(), v.null());
+const draftNullableBoolean = v.union(v.boolean(), v.null());
+
+const applicantStringFieldKeys = [
+  ...TRIMMED_STRING_FIELDS,
+  ...PLAIN_STRING_FIELDS,
+  ...CONDITIONAL_STRING_FIELDS,
+] as const;
+
+function fieldsFromKeys<const K extends readonly string[]>(
+  keys: K,
+  builder: (key: K[number]) => GenericValidator,
+) {
+  return Object.fromEntries(keys.map((key) => [key, builder(key)])) as {
+    [P in K[number]]: GenericValidator;
+  };
+}
+
+/** Optional applicant answer columns persisted on profiles. */
+const applicantAnswerFields = {
+  ...fieldsFromKeys(applicantStringFieldKeys, () => v.optional(v.string())),
+  ...fieldsFromKeys(OPTIONAL_INT_FIELDS, () => v.optional(v.number())),
+  ...fieldsFromKeys(STRING_ARRAY_FIELDS, () => v.optional(v.array(v.string()))),
+  ...fieldsFromKeys(NULLABLE_BOOLEAN_FIELDS, () => v.optional(v.boolean())),
+  ...fieldsFromKeys(REQUIRED_BOOLEAN_FIELDS, () => v.optional(v.boolean())),
+};
+
+/** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */
+const applicantDraftPatchFields = {
+  ...fieldsFromKeys(applicantStringFieldKeys, () => draftNullableString),
+  ...fieldsFromKeys(OPTIONAL_INT_FIELDS, () => draftNullableNumber),
+  ...fieldsFromKeys(STRING_ARRAY_FIELDS, () => v.array(v.string())),
+  ...fieldsFromKeys(NULLABLE_BOOLEAN_FIELDS, () => draftNullableBoolean),
+  ...fieldsFromKeys(REQUIRED_BOOLEAN_FIELDS, () => v.boolean()),
+};
+
 /**
  * Applicant profile — one row per auth user per hackathon.
  * Passwords and auth secrets live in Convex Auth tables only.
@@ -47,73 +93,11 @@ export const profileRecord = {
   confirmationStatus: v.optional(confirmationStatus),
   internalNotes: v.optional(v.string()),
   resumeStorageId: v.optional(v.id("_storage")),
-  firstName: v.optional(v.string()),
-  lastName: v.optional(v.string()),
-  phone: v.optional(v.string()),
-  age: v.optional(v.number()),
-  school: v.optional(v.string()),
-  otherSchool: v.optional(v.string()),
-  countryOfResidence: v.optional(v.string()),
-  levelOfStudy: v.optional(v.string()),
-  major: v.optional(v.string()),
-  otherMajor: v.optional(v.string()),
-  graduationYear: v.optional(v.number()),
-  gender: v.optional(v.string()),
-  raceEthnicity: v.optional(v.array(v.string())),
-  otherRaceEthnicity: v.optional(v.string()),
-  dietaryRestrictions: v.optional(v.array(v.string())),
-  otherDietary: v.optional(v.string()),
-  tshirtSize: v.optional(v.string()),
-  firstHackathon: v.optional(v.boolean()),
-  hearAbout: v.optional(v.string()),
-  otherHearAbout: v.optional(v.string()),
-  linkedin: v.optional(v.string()),
-  github: v.optional(v.string()),
-  portfolio: v.optional(v.string()),
-  devpost: v.optional(v.string()),
-  accessibilityNeeds: v.optional(v.string()),
-  emergencyContactName: v.optional(v.string()),
-  emergencyContactPhone: v.optional(v.string()),
-  codeOfConductAgreed: v.optional(v.boolean()),
-  mlhDataSharingConsent: v.optional(v.boolean()),
-  mlhCommunicationsConsent: v.optional(v.boolean()),
+  ...applicantAnswerFields,
 };
-
-const draftNullableString = v.union(v.string(), v.null());
-const draftNullableNumber = v.union(v.number(), v.null());
-const draftNullableBoolean = v.union(v.boolean(), v.null());
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */
 export const profileDraftPatch = v.object({
-  firstName: draftNullableString,
-  lastName: draftNullableString,
-  phone: draftNullableString,
-  age: draftNullableNumber,
-  school: draftNullableString,
-  otherSchool: draftNullableString,
-  countryOfResidence: draftNullableString,
-  levelOfStudy: draftNullableString,
-  major: draftNullableString,
-  otherMajor: draftNullableString,
-  graduationYear: draftNullableNumber,
-  gender: draftNullableString,
-  raceEthnicity: v.array(v.string()),
-  otherRaceEthnicity: draftNullableString,
-  dietaryRestrictions: v.array(v.string()),
-  otherDietary: draftNullableString,
-  tshirtSize: draftNullableString,
-  firstHackathon: draftNullableBoolean,
-  hearAbout: draftNullableString,
-  otherHearAbout: draftNullableString,
-  linkedin: draftNullableString,
-  github: draftNullableString,
-  portfolio: draftNullableString,
-  devpost: draftNullableString,
-  accessibilityNeeds: draftNullableString,
-  emergencyContactName: draftNullableString,
-  emergencyContactPhone: draftNullableString,
-  codeOfConductAgreed: v.boolean(),
-  mlhDataSharingConsent: v.boolean(),
-  mlhCommunicationsConsent: v.boolean(),
+  ...applicantDraftPatchFields,
   resumeStorageId: v.optional(v.id("_storage")),
 });

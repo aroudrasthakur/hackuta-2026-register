@@ -178,39 +178,3 @@ export function projectApplicantAnswers(profile: ProfileDoc) {
   };
 }
 
-export function profileToDraftForm(profile: ProfileDoc) {
-  return {
-    firstName: profile.firstName ?? "",
-    lastName: profile.lastName ?? "",
-    phone: profile.phone ?? "",
-    age: profile.age !== undefined ? String(profile.age) : "",
-    school: profile.school ?? "",
-    otherSchool: profile.otherSchool ?? "",
-    countryOfResidence: profile.countryOfResidence ?? "",
-    levelOfStudy: profile.levelOfStudy ?? "",
-    major: profile.major ?? "",
-    otherMajor: profile.otherMajor ?? "",
-    graduationYear:
-      profile.graduationYear !== undefined ? String(profile.graduationYear) : "",
-    gender: profile.gender ?? "",
-    raceEthnicity: profile.raceEthnicity ?? [],
-    otherRaceEthnicity: profile.otherRaceEthnicity ?? "",
-    dietaryRestrictions: profile.dietaryRestrictions ?? [],
-    otherDietary: profile.otherDietary ?? "",
-    tshirtSize: profile.tshirtSize ?? "",
-    firstHackathon: profile.firstHackathon ?? null,
-    hearAbout: profile.hearAbout ?? "",
-    otherHearAbout: profile.otherHearAbout ?? "",
-    resume: null,
-    linkedin: profile.linkedin ?? "",
-    github: profile.github ?? "",
-    portfolio: profile.portfolio ?? "",
-    devpost: profile.devpost ?? "",
-    accessibilityNeeds: profile.accessibilityNeeds ?? "",
-    emergencyContactName: profile.emergencyContactName ?? "",
-    emergencyContactPhone: profile.emergencyContactPhone ?? "",
-    codeOfConductAgreed: profile.codeOfConductAgreed ?? false,
-    mlhDataSharingConsent: profile.mlhDataSharingConsent ?? false,
-    mlhCommunicationsConsent: profile.mlhCommunicationsConsent ?? false,
-  };
-}

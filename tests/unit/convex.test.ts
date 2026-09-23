@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
 import { RESUME_UPLOAD_BUCKET } from "../../convex/lib/rateLimitBuckets";
 import { formToDraftPatch } from "../../shared/registration/draftPatch";
-import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
+import { validRegistrationPayload } from "../fixtures/validRegistrationForm";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import {
   RESUME_FILENAME_HEADER,
@@ -28,37 +28,6 @@ type ConvexTestClient = {
   withIdentity: (identity: { tokenIdentifier: string; subject?: string; email?: string; name?: string }) => ConvexTestClient;
   run: ReturnType<typeof convexTest>["run"];
   fetch: ReturnType<typeof convexTest>["fetch"];
-};
-
-const validRegistrationData = {
-  firstName: "Sam",
-  lastName: "Test",
-  phone: "5551234567",
-  age: 20,
-  school: "The University of Texas at Arlington",
-  countryOfResidence: "United States of America",
-  levelOfStudy: "Undergraduate University (3+ year)",
-  major: "Computer science, computer engineering, or software engineering",
-  graduationYear: MIN_GRADUATION_YEAR,
-  gender: "Man",
-  raceEthnicity: [] as string[],
-  dietaryRestrictions: [] as string[],
-  otherDietary: "",
-  tshirtSize: "M",
-  firstHackathon: true,
-  hearAbout: "Discord",
-  resumeStorageId: undefined,
-  linkedin: undefined,
-  github: undefined,
-  portfolio: undefined,
-  devpost: undefined,
-  accessibilityNeeds: "",
-  emergencyContactName: "Jane Test",
-  emergencyContactPhone: "5559876543",
-  codeOfConductAgreed: true,
-  mlhDataSharingConsent: true,
-  mlhCommunicationsConsent: false,
-  hackathonId: "hackuta-2026",
 };
 
 const TEST_ORIGIN = "https://hackuta.test";
@@ -166,7 +135,7 @@ describe("convex registrations", () => {
     const t = await authTest();
 
     const first = await t.mutation("registrations:register", {
-      data: validRegistrationData,
+      data: validRegistrationPayload(),
     });
     expect(first.ok).toBe(true);
     expect(first.isNew).toBe(true);
@@ -174,7 +143,7 @@ describe("convex registrations", () => {
     await drainScheduledFunctions(t);
 
     await expect(t.mutation("registrations:register", {
-      data: validRegistrationData,
+      data: validRegistrationPayload(),
     })).rejects.toThrow("already submitted");
   }, 15_000);
 
@@ -182,7 +151,7 @@ describe("convex registrations", () => {
     const t = await authTest();
     const upload = await verifiedUpload(t);
     await t.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: upload.storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.token,
     });
     const profile = await t.run((ctx) => ctx.db.query("profiles").first());
@@ -195,7 +164,7 @@ describe("convex registrations", () => {
     const t = await authTest();
     const upload = await verifiedUpload(t);
     await expect(t.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: upload.storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: "wrong-token",
     })).rejects.toThrow("valid PDF resume");
   });
@@ -208,7 +177,7 @@ describe("convex registrations", () => {
     const t = await authTest();
     const storageId = await storeFile(t, contents, type);
     await expect(t.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: storageId },
     })).rejects.toThrow("valid PDF resume");
   });
 
@@ -234,14 +203,14 @@ describe("convex registrations", () => {
 
   it("accepts the submitRegistration alias", async () => {
     const t = await authTest();
-    await expect(t.mutation("registrations:submitRegistration", { data: validRegistrationData }))
+    await expect(t.mutation("registrations:submitRegistration", { data: validRegistrationPayload() }))
       .resolves.toMatchObject({ ok: true, isNew: true });
   });
 
   it("rejects invalid registration payloads", async () => {
     const t = await authTest();
     await expect(t.mutation("registrations:register", {
-      data: { ...validRegistrationData, age: -1 },
+      data: { ...validRegistrationPayload(), age: -1 },
     })).rejects.toThrow("Invalid registration data.");
   });
 
@@ -254,7 +223,7 @@ describe("convex registrations", () => {
     await expect(
       t.query("queries:getHackathonBySlug", { slug: "hackuta-2026" }),
     ).resolves.toBeNull();
-    await t.mutation("registrations:register", { data: validRegistrationData });
+    await t.mutation("registrations:register", { data: validRegistrationPayload() });
     await expect(
       t.query("queries:getHackathonBySlug", { slug: "hackuta-2026" }),
     ).resolves.toMatchObject({ slug: "hackuta-2026", name: "HackUTA 2026" });
@@ -264,7 +233,7 @@ describe("convex registrations", () => {
     const t = createTest() as unknown as ConvexTestClient;
 
     await expect(
-      t.mutation("registrations:register", { data: validRegistrationData }),
+      t.mutation("registrations:register", { data: validRegistrationPayload() }),
     ).rejects.toThrow("Authentication required.");
   });
 
@@ -277,7 +246,7 @@ describe("convex registrations", () => {
 
     expect(await t.run((ctx) => ctx.db.query("profiles").collect())).toHaveLength(0);
 
-    await t.mutation("registrations:register", { data: validRegistrationData });
+    await t.mutation("registrations:register", { data: validRegistrationPayload() });
 
     await expect(t.query("queries:getCurrentUser", {})).resolves.toMatchObject({
       email: "sam@example.com",
@@ -297,7 +266,7 @@ describe("convex registrations", () => {
     });
 
     await expect(
-      t.mutation("registrations:register", { data: validRegistrationData }),
+      t.mutation("registrations:register", { data: validRegistrationPayload() }),
     ).rejects.toThrow("Verify your email");
   });
 });
@@ -352,7 +321,7 @@ describe("resume HTTP validation and lifecycle", () => {
       value: { contentType: string },
     ) => Promise<void>)(upload.storageId, { contentType: "application/pdf" }));
     await expect(t.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: upload.storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.uploadToken,
     })).resolves.toMatchObject({ ok: true, isNew: true });
   });
@@ -482,7 +451,7 @@ describe("resume HTTP validation and lifecycle", () => {
   it("keeps an attached resume and permits idempotent resubmission", async () => {
     const t = await authTest();
     const upload = await verifiedUpload(t);
-    const data = { ...validRegistrationData, resumeStorageId: upload.storageId };
+    const data = { ...validRegistrationPayload(), resumeStorageId: upload.storageId };
     await t.mutation("registrations:register", { data, resumeUploadToken: upload.token });
     await t.mutation("registrations:deleteResumeUpload", { uploadToken: upload.token });
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).not.toBeNull();
@@ -501,7 +470,7 @@ describe("resume HTTP validation and lifecycle", () => {
     await seedAuthUser(owner, { email: "owner@example.com" });
     const upload = await verifiedUpload(owner);
     await owner.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: upload.storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.token,
     });
 
@@ -511,7 +480,7 @@ describe("resume HTTP validation and lifecycle", () => {
     }) as unknown as ConvexTestClient;
     await seedAuthUser(otherApplicant, { email: "other@example.com" });
     await expect(otherApplicant.mutation("registrations:register", {
-      data: { ...validRegistrationData, firstName: "Other", resumeStorageId: upload.storageId },
+      data: { ...validRegistrationPayload(), firstName: "Other", resumeStorageId: upload.storageId },
     })).rejects.toThrow("already attached");
   });
 
@@ -519,7 +488,7 @@ describe("resume HTTP validation and lifecycle", () => {
     const t = await authTest();
     const upload = await verifiedUpload(t);
     await t.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: upload.storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.token,
     });
     await expect(t.mutation("registrations:deleteResumeUpload", { uploadToken: upload.token })).resolves.toEqual({ ok: true });
@@ -539,7 +508,7 @@ describe("resume HTTP validation and lifecycle", () => {
     const t = await authTest();
     const upload = await verifiedUpload(t);
     await t.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: upload.storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.token,
     });
     const profile = await t.run((ctx) => ctx.db.query("profiles").first());
@@ -566,7 +535,7 @@ describe("resume HTTP validation and lifecycle", () => {
     const orphan = await verifiedUpload(t, "orphan-token");
     const attached = await verifiedUpload(t, "attached-token");
     await t.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: attached.storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: attached.storageId },
       resumeUploadToken: attached.token,
     });
     const now = Date.now();
@@ -646,7 +615,7 @@ describe("convex queries", () => {
     await seedHackathon(t);
     await seedAuthUser(t, { email: "sam@example.com", name: "Sam Test" });
 
-    await t.mutation("registrations:register", { data: validRegistrationData });
+    await t.mutation("registrations:register", { data: validRegistrationPayload() });
 
     await expect(t.query("queries:getCurrentUser", {})).resolves.toMatchObject({
       email: "sam@example.com",
@@ -675,7 +644,7 @@ describe("convex queries", () => {
     await seedHackathon(t);
     await seedAuthUser(t, { email: "sam@example.com" });
     await t.mutation("registrations:register", {
-      data: validRegistrationData,
+      data: validRegistrationPayload(),
     });
 
     await expect(
@@ -720,7 +689,7 @@ describe("convex applicant auth flows", () => {
 
   it("stores the verified email on submitted profiles", async () => {
     const t = await authTest();
-    await t.mutation("registrations:register", { data: validRegistrationData });
+    await t.mutation("registrations:register", { data: validRegistrationPayload() });
     await drainScheduledFunctions(t);
     const profile = await t.run((ctx) => ctx.db.query("profiles").first());
     expect(profile?.email).toBe("applicant@example.com");
@@ -728,7 +697,7 @@ describe("convex applicant auth flows", () => {
 
   it("returns dashboard data with registration and timeline", async () => {
     const t = await authTest();
-    await t.mutation("registrations:register", { data: validRegistrationData });
+    await t.mutation("registrations:register", { data: validRegistrationPayload() });
     await drainScheduledFunctions(t);
 
     await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
@@ -781,7 +750,7 @@ describe("convex applicant auth flows", () => {
     const t = await authTest();
     const upload = await verifiedUpload(t);
     await t.mutation("registrations:register", {
-      data: { ...validRegistrationData, resumeStorageId: upload.storageId },
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.token,
     });
     await drainScheduledFunctions(t);

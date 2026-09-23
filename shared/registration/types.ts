@@ -11,6 +11,7 @@ import type {
   TSHIRT_SIZES,
 } from "./constants";
 import type { MlhSchool } from "./mlhSchools";
+import { createEmptyApplicantFormValues } from "./applicantFields";
 import { registrationPayloadSchema } from "./schema";
 
 export type LevelOfStudy = (typeof LEVELS_OF_STUDY)[number];
@@ -21,6 +22,7 @@ export type Major = (typeof MAJORS)[number];
 export type TshirtSize = (typeof TSHIRT_SIZES)[number];
 export type HearAboutOption = (typeof HEAR_ABOUT_OPTIONS)[number];
 
+/** UI form state — union refinements for selects; `resume` is client-only. */
 export type ApplicationFormData = {
   firstName: string;
   lastName: string;
@@ -90,37 +92,8 @@ export const FIELD_ORDER: FieldName[] = [
 ];
 
 export const INITIAL_FORM: ApplicationFormData = {
-  firstName: "",
-  lastName: "",
-  phone: "",
-  age: "",
-  school: "",
-  otherSchool: "",
-  countryOfResidence: "",
-  levelOfStudy: "",
-  major: "",
-  otherMajor: "",
-  graduationYear: "",
-  gender: "",
-  raceEthnicity: [],
-  otherRaceEthnicity: "",
-  dietaryRestrictions: [],
-  otherDietary: "",
-  tshirtSize: "",
-  firstHackathon: null,
-  hearAbout: "",
-  otherHearAbout: "",
+  ...(createEmptyApplicantFormValues() as Omit<ApplicationFormData, "resume">),
   resume: null,
-  linkedin: "",
-  github: "",
-  portfolio: "",
-  devpost: "",
-  accessibilityNeeds: "",
-  emergencyContactName: "",
-  emergencyContactPhone: "",
-  codeOfConductAgreed: false,
-  mlhDataSharingConsent: false,
-  mlhCommunicationsConsent: false,
 };
 
 /** Maps validation keys to DOM ids used for focus management. */

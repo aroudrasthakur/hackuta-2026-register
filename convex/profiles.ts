@@ -12,7 +12,6 @@ import {
   formatProfileFullName,
   getAuthUser,
   getProfileByUserAndHackathon,
-  profileToDraftForm,
   projectApplicantAnswers,
   syncAuthUserNameFromProfile,
 } from "./lib/profiles";
@@ -22,6 +21,7 @@ import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
+import { profileToDraftForm } from "../shared/registration/draftMapping";
 
 export const getMyProfileDraft = query({
   args: {
