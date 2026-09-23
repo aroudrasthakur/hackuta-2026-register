@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  getRegistrationAllowedOrigins,
+  getResumeUploadAllowedOrigins,
   isOriginAllowed,
-} from "../../convex/registrationSecurity";
+} from "../../convex/resumeUploadSecurity";
 
-describe("registrationSecurity", () => {
+describe("resumeUploadSecurity", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -13,7 +13,7 @@ describe("registrationSecurity", () => {
     vi.stubEnv("REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS", "true");
     vi.stubEnv("REGISTRATION_ALLOWED_ORIGINS", "");
     vi.stubEnv("SITE_URL", "");
-    const allowed = getRegistrationAllowedOrigins();
+    const allowed = getResumeUploadAllowedOrigins();
     expect(allowed).toEqual([
       "http://127.0.0.1:5273",
       "http://localhost:5273",
@@ -27,7 +27,7 @@ describe("registrationSecurity", () => {
     vi.stubEnv("REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS", "");
     vi.stubEnv("REGISTRATION_ALLOWED_ORIGINS", "https://register.hackuta.com");
     vi.stubEnv("SITE_URL", "https://register.hackuta.com");
-    const allowed = getRegistrationAllowedOrigins();
+    const allowed = getResumeUploadAllowedOrigins();
     expect(allowed).toEqual(["https://register.hackuta.com"]);
     expect(isOriginAllowed("http://localhost:5273", allowed)).toBe(false);
     expect(isOriginAllowed("https://register.hackuta.com", allowed)).toBe(true);
@@ -40,7 +40,7 @@ describe("registrationSecurity", () => {
       "https://register.hackuta.com,http://localhost:5273",
     );
     vi.stubEnv("SITE_URL", "http://127.0.0.1:5273");
-    const allowed = getRegistrationAllowedOrigins();
+    const allowed = getResumeUploadAllowedOrigins();
     expect(allowed).toEqual(["https://register.hackuta.com"]);
     expect(isOriginAllowed("http://localhost:5273", allowed)).toBe(false);
   });
@@ -49,7 +49,7 @@ describe("registrationSecurity", () => {
     vi.stubEnv("REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS", "true");
     vi.stubEnv("REGISTRATION_ALLOWED_ORIGINS", "");
     vi.stubEnv("SITE_URL", "http://127.0.0.1:5273");
-    const allowed = getRegistrationAllowedOrigins();
+    const allowed = getResumeUploadAllowedOrigins();
     expect(allowed).toEqual([
       "http://127.0.0.1:5273",
       "http://localhost:5273",
@@ -61,7 +61,7 @@ describe("registrationSecurity", () => {
     vi.stubEnv("REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS", "true");
     vi.stubEnv("REGISTRATION_ALLOWED_ORIGINS", "https://hackuta.org, https://www.hackuta.org");
     vi.stubEnv("SITE_URL", "");
-    const allowed = getRegistrationAllowedOrigins();
+    const allowed = getResumeUploadAllowedOrigins();
     expect(allowed).toEqual([
       "http://127.0.0.1:5273",
       "http://localhost:5273",

@@ -34,8 +34,6 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     })();
   }, [isAuthenticated, isLoading, sessionReady, signOut]);
 
-  // Only block the initial auth read. Do not unmount the tree when isLoading
-  // flips during sign-in actions — that would reset SignInPage step state.
   if (!sessionReady) {
     return <AuthLoadingScreen />;
   }

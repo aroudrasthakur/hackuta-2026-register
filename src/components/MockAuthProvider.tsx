@@ -15,7 +15,7 @@ function scenarioState(
   email: string | null,
 ): Omit<
   MockAuthContextValue,
-  "enabled" | "scenario" | "setScenario" | "requestOtp" | "verifyOtp" | "signOut"
+  "enabled" | "setScenario" | "requestOtp" | "verifyOtp" | "signOut"
 > {
   switch (scenario) {
     case "signedOut":
@@ -23,36 +23,28 @@ function scenarioState(
         isLoading: false,
         isAuthenticated: false,
         verifiedEmail: null,
-        hasRegistration: false,
         hasSubmittedRegistration: false,
-        registrationStatus: null,
       };
     case "otpPending":
       return {
         isLoading: false,
         isAuthenticated: false,
         verifiedEmail: email,
-        hasRegistration: false,
         hasSubmittedRegistration: false,
-        registrationStatus: null,
       };
     case "signedInNew":
       return {
         isLoading: false,
         isAuthenticated: true,
         verifiedEmail: email ?? "applicant@example.com",
-        hasRegistration: false,
         hasSubmittedRegistration: false,
-        registrationStatus: null,
       };
     case "signedInReturning":
       return {
         isLoading: false,
         isAuthenticated: true,
         verifiedEmail: email ?? "applicant@example.com",
-        hasRegistration: true,
         hasSubmittedRegistration: true,
-        registrationStatus: "submitted",
       };
   }
 }
@@ -101,7 +93,6 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
 
     return {
       enabled: true,
-      scenario,
       setScenario,
       requestOtp,
       verifyOtp,

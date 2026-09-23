@@ -13,7 +13,6 @@ vi.mock("@convex-dev/auth/react", () => ({
     isAuthenticated: false,
   }),
   useAuthActions: () => ({
-    signIn: vi.fn(async () => ({ signingIn: true })),
     signOut: vi.fn(async () => {}),
   }),
 }));
@@ -61,35 +60,12 @@ describe("useSessionAuth", () => {
     expect(result.current.isAuthenticated).toBe(false);
   });
 
-  it("provides signIn function", () => {
-    const { result } = renderHook(() => useSessionAuth(), {
-      wrapper: createWrapper(true),
-    });
-
-    expect(result.current.signIn).toBeInstanceOf(Function);
-  });
-
   it("provides signOut function", () => {
     const { result } = renderHook(() => useSessionAuth(), {
       wrapper: createWrapper(true),
     });
 
     expect(result.current.signOut).toBeInstanceOf(Function);
-  });
-
-  it("signIn returns signingIn state", async () => {
-    const { result } = renderHook(() => useSessionAuth(), {
-      wrapper: createWrapper(true),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    const signInResult = await result.current.signIn("email", {
-      email: "test@example.com",
-    });
-    expect(signInResult).toHaveProperty("signingIn");
   });
 
   it("uses ConvexSessionBridge when mock is disabled", () => {

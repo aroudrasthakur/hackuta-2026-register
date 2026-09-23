@@ -6,7 +6,7 @@ const crons = cronJobs();
 crons.interval(
   "delete expired unassociated resume uploads",
   { minutes: 15 },
-  makeFunctionReference<"mutation">("registrations:cleanupExpiredResumeUploads"),
+  makeFunctionReference<"mutation">("resumeUploads:cleanupExpiredUploadSessions"),
   {},
 );
 

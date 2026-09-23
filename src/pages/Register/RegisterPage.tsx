@@ -6,7 +6,7 @@ import { StormPageFrame } from "../../components/StormPageFrame";
 import { ApplicationForm } from "./ApplicationForm";
 import { SuccessStep } from "./SuccessStep";
 
-export type RegisterStep = "application" | "success";
+type RegisterStep = "application" | "success";
 
 export default function RegisterPage() {
   const navigate = useNavigate();

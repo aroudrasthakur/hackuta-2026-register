@@ -13,39 +13,37 @@ hackuta.com (marketing) ──link──► register.hackuta.com (this app)
 hackuta-2026-registration (legacy repo) ──contact form only (separate deployment)
 ```
 
-Related repos: marketing site (`hackuta-2026-repository`), applicant profile split (`hackuta-2026-profile`).
+Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroudrasthakur/hackuta-2026-repository)).
 
 ## Repository layout
 
-```
-convex/                     Backend — queries, mutations, actions, HTTP, cron
-  auth.ts                   @convex-dev/auth Password + email OTP verification
-  http.ts                   Resume upload + Auth OIDC routes
-  profiles.ts               Draft save/load, applicant dashboard
-  registrations.ts          Submit application, resume sessions
-  applicant.ts              Routing, ensureApplicantProfile
-  rateLimits.ts             OTP and upload throttling
-  pdfValidation.ts          Server-side PDF parse
-  registrationSecurity.ts   Origin allowlist
-  profileFields.ts          Profile schema validators
-  email/                    SMTP actions + HTML templates
-  lib/                      Shared Convex helpers
+| Path | README | Role |
+| --- | --- | --- |
+| convex/ | [convex/README.md](../convex/README.md) | Backend — mutations, actions, HTTP, cron |
+| src/ | [src/README.md](../src/README.md) | React SPA |
+| shared/ | [shared/README.md](../shared/README.md) | Isomorphic validation and constants |
+| public/ | [public/README.md](../public/README.md) | Static fonts, images, trusted-types |
+| security/ | [security/README.md](../security/README.md) | CSP + response headers (sync with vercel.json) |
+| scripts/ | [scripts/README.md](../scripts/README.md) | Codegen stub, deploy verify, data generators |
+| tests/ | [tests/README.md](../tests/README.md) | Vitest unit + Playwright e2e |
+| docs/ | [docs/README.md](README.md) | This documentation set |
 
-shared/                     Isomorphic code (client + Convex)
-  registration/             Zod schema, types, validation, resume policy, draftPatch
-  auth/                     Password rules, OTP rate-limit helpers
-  lib/                      sanitizeInput, normalizeEmail
-  hackathon/                Schedule/timeline constants
+### Convex (summary)
 
-src/                        React SPA
-  pages/SignIn|Register|Profile
-  convex/client.ts          ConvexReactClient wiring
-  hooks/                    Auth, routing, applicant state
-
-security/                   CSP + response headers (sync with vercel.json)
-tests/                      Vitest unit + Playwright e2e
-docs/                       This documentation set
-```
+| Module | Role |
+| --- | --- |
+| auth.ts | @convex-dev/auth Password + email OTP verification |
+| applicant.ts | Profile bootstrap and routing state |
+| profiles.ts | Draft save/load and applicant dashboard |
+| registrations.ts | Application submission |
+| resumeUploads.ts | Upload sessions, rate limits, cleanup |
+| hackathons.ts | Seed/sync helpers and public hackathon query |
+| http.ts | Resume upload + Auth OIDC routes |
+| rateLimits.ts | OTP throttling |
+| resumeUploadSecurity.ts | Upload origin allowlist |
+| pdfValidation.ts | Server-side PDF parse |
+| email/ | SMTP actions + HTML templates |
+| lib/ | Auth, profiles, draft patch helpers |
 
 ## Request flows
 
@@ -82,29 +80,36 @@ Draft rows use `status: "draft"`. Users can leave and resume until submit.
 
 Email in `data` is ignored; server uses verified auth email.
 
+### Resume discard
+
+```
+/register widget → resumeUploads:discardUploadSession { uploadToken }
+                 → removes unconsumed session + orphaned storage
+```
+
 ## Data model
 
-Auth lives on `users` (Convex Auth). Application data lives in **`profiles`** — one row per auth user per hackathon.
+Auth lives on `users` (Convex Auth). Application data lives in **profiles** — one row per auth user per hackathon.
 
 | Table | Purpose |
 | --- | --- |
-| `users` | Convex Auth identity (email, verification time; no passwords in schema) |
-| `profiles` | All form fields as columns + status, draft/submitted timestamps |
-| `hackathons` | Event metadata and registration window |
-| `rateLimits` | Sliding-window counters (OTP, upload) |
-| `resumeUploadSessions` | Capability tokens linking upload → registration |
-| `_storage` | Resume PDF blobs |
-| Auth tables | Sessions, verification codes (managed by `@convex-dev/auth`) |
+| users | Convex Auth identity (email, verification time) |
+| profiles | Form fields as columns + status, draft/submitted timestamps |
+| hackathons | Event metadata and registration window |
+| rateLimits | Sliding-window counters (OTP, upload) |
+| resumeUploadSessions | Capability tokens linking upload → registration |
+| _storage | Resume PDF blobs |
+| Auth tables | Sessions, verification codes (@convex-dev/auth) |
 
-Schema: `convex/schema.ts`. Field validators: `convex/profileFields.ts`.
+Schema: [convex/schema.ts](../convex/schema.ts). Field validators: [convex/profileFields.ts](../convex/profileFields.ts).
 
 ## Shared validation pattern
 
-Client and server import the same modules under `shared/`:
+Client and server import the same modules under [shared/](../shared/README.md):
 
 - **Registration:** `registrationPayloadSchema` in `schema.ts`; server entry `validateRegistrationPayload()` in `validation.ts`
 - **Password:** `validatePasswordRequirements()` in `shared/auth/password.ts`
-- **Sanitization:** `shared/lib/sanitizeInput.ts` used inside Zod transforms
+- **Sanitization:** `shared/lib/sanitizeInput.ts` inside Zod transforms
 
 Client validation gives immediate field feedback; server validation is authoritative.
 
@@ -112,10 +117,10 @@ Client validation gives immediate field feedback; server validation is authorita
 
 | Path | Guard | Purpose |
 | --- | --- | --- |
-| `/` | routing query | Redirect to sign-in, register, or profile |
-| `/sign-in` | public | Password sign-up / sign-in + OTP verify |
-| `/register` | auth, not submitted | Application form with autosave |
-| `/profile` | auth | Applicant dashboard (read-only) |
+| / | routing query | Redirect to sign-in, register, or profile |
+| /sign-in | public | Password sign-up / sign-in + OTP verify |
+| /register | auth, not submitted | Application form with autosave |
+| /profile | auth | Applicant dashboard (read-only) |
 
 Route guards use `applicant:getApplicantRoutingState`.
 
@@ -125,7 +130,7 @@ Contact form lives in **hackuta-2026-registration**, not this repo.
 
 | Component | Host | Config |
 | --- | --- | --- |
-| SPA | Vercel | `VITE_*` env vars, `vercel.json` headers |
+| SPA | Vercel | `VITE_*` env vars, vercel.json headers |
 | Backend | Convex Cloud | `npx convex env set`, separate dev/prod deployments |
 
 Dev deployment: `standing-manatee-425`. Production: `brilliant-ostrich-892`.

@@ -12,7 +12,7 @@ if (!convexUrl || !authToken) {
 const client = new ConvexHttpClient(convexUrl);
 client.setAuth(authToken);
 
-const hackathon = await client.query("queries:getHackathonBySlug", {
+const hackathon = await client.query("hackathons:getHackathonBySlug", {
   slug: "hackuta-2026",
 });
 if (!hackathon) {

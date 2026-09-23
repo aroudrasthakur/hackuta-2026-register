@@ -25,7 +25,7 @@ function getConvexSiteUrl() {
 }
 
 const registerRef = makeFunctionReference<"mutation">("registrations:register");
-const deleteResumeUploadRef = makeFunctionReference<"mutation">("registrations:deleteResumeUpload");
+const discardUploadSessionRef = makeFunctionReference<"mutation">("resumeUploads:discardUploadSession");
 
 export type ResumeUploadSession = {
   storageId: string;
@@ -33,7 +33,7 @@ export type ResumeUploadSession = {
 };
 
 async function callConvexMutation<T>(
-  mutation: typeof registerRef | typeof deleteResumeUploadRef,
+  mutation: typeof registerRef | typeof discardUploadSessionRef,
   args: Record<string, unknown>,
 ): Promise<T> {
   if (USE_MOCK_API) {
@@ -111,7 +111,7 @@ export async function discardResumeUpload(uploadToken: string) {
 
   const client = getConvexClient();
   if (!client) return;
-  await client.mutation(deleteResumeUploadRef, { uploadToken }).catch(() => undefined);
+  await client.mutation(discardUploadSessionRef, { uploadToken }).catch(() => undefined);
 }
 
 export async function submitRegistration(

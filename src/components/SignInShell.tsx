@@ -12,7 +12,7 @@ type SignInShellProps = {
 export function SignInShell({
   children,
   title = "Sign in",
-  subtitle = "Enter your email to receive a one-time code.",
+  subtitle = "Sign in with your email and password to continue your application.",
 }: SignInShellProps) {
   return (
     <main className="sign-in-page relative min-h-screen overflow-hidden">

@@ -10,16 +10,16 @@ import {
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../shared/registration/resume";
 import { validateResumePdfBytes } from "./pdfValidation";
-import { getRegistrationAllowedOrigins, isOriginAllowed } from "./registrationSecurity";
+import { getResumeUploadAllowedOrigins, isOriginAllowed } from "./resumeUploadSecurity";
 
 const http = httpRouter();
 auth.addHttpRoutes(http);
 
-const reserveResumeUploadRef = makeFunctionReference<"mutation">(
-  "registrations:reserveResumeUpload",
+const assertUploadRateLimitRef = makeFunctionReference<"mutation">(
+  "resumeUploads:assertUploadRateLimit",
 );
-const recordVerifiedResumeUploadRef = makeFunctionReference<"mutation">(
-  "registrations:recordVerifiedResumeUpload",
+const createVerifiedUploadSessionRef = makeFunctionReference<"mutation">(
+  "resumeUploads:createVerifiedUploadSession",
 );
 
 const CONVEX_TEST_ORIGIN = "https://hackuta.test";
@@ -30,7 +30,7 @@ function requestOrigin(request: Request) {
 
 function allowedOrigin(request: Request): string | undefined {
   const origin = requestOrigin(request);
-  const allowed = getRegistrationAllowedOrigins();
+  const allowed = getResumeUploadAllowedOrigins();
   if (allowed.length > 0) {
     return isOriginAllowed(origin, allowed) ? origin : undefined;
   }
@@ -118,7 +118,7 @@ const uploadResume = httpAction(async (ctx, request) => {
   }
 
   try {
-    await ctx.runMutation(reserveResumeUploadRef, {
+    await ctx.runMutation(assertUploadRateLimitRef, {
       requestKey: await requestRateKey(await clientAddress(ctx)),
     });
   } catch {
@@ -145,7 +145,7 @@ const uploadResume = httpAction(async (ctx, request) => {
   try {
     storageId = await ctx.storage.store(new Blob([bytes], { type: "application/pdf" }));
     const uploadToken = createCapabilityToken();
-    await ctx.runMutation(recordVerifiedResumeUploadRef, { uploadToken, storageId });
+    await ctx.runMutation(createVerifiedUploadSessionRef, { uploadToken, storageId });
     return response(request, { storageId, uploadToken }, 201, origin);
   } catch {
     if (storageId) await ctx.storage.delete(storageId);

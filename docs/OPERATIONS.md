@@ -47,7 +47,7 @@ Dev sync helper: `node scripts/sync-dev-convex-env.mjs` (copies mail settings, s
 
 | Job | Schedule | Function |
 | --- | --- | --- |
-| Resume session cleanup | Every 15 min | `registrations:cleanupExpiredResumeUploads` |
+| Resume session cleanup | Every 15 min | `resumeUploads:cleanupExpiredUploadSessions` |
 
 Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned storage.
 
@@ -66,7 +66,7 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 
 - **Convex dashboard:** function error rates, HTTP action 4xx/5xx on `/resume-upload`
 - **Vercel:** deployment status, edge 5xx
-- **SMTP:** OTP and contact delivery (cPanel mail logs)
+- **SMTP:** OTP and confirmation email delivery (cPanel mail logs)
 - **CI:** GitHub Actions on `main` / `dev`
 
 ### Symptom → likely cause
@@ -77,14 +77,13 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | Resume upload 403 | `REGISTRATION_ALLOWED_ORIGINS` vs actual frontend URL |
 | Resume upload 429 | IP or global upload rate limit; possible abuse |
 | Submit fails “already submitted” | Expected — one submission per user |
-| Contact form generic error | SMTP or contact rate limit |
 
 ### Incident response (upload abuse)
 
 1. Confirm spike in `/resume-upload` 429s in Convex logs
 2. Origin allowlist already blocks non-register domains
 3. Rate limits auto-recover after 10 minutes per IP
-4. If needed, temporarily tighten global limit in `convex/registrations.ts` and redeploy
+4. If needed, temporarily tighten global limit in `convex/resumeUploads.ts` and redeploy
 
 ## Backups & data retention
 
