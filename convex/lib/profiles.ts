@@ -129,11 +129,11 @@ export async function syncAuthUserNameFromProfile(
 
   if (!name) {
     if (user.name !== undefined) {
-      const rest = { ...user };
-      delete rest.name;
-      delete rest._id;
-      delete rest._creationTime;
-      await ctx.db.replace(authUserId, rest);
+      const { _id, _creationTime, name: removedName, ...replacement } = user;
+      void _id;
+      void _creationTime;
+      void removedName;
+      await ctx.db.replace(authUserId, replacement);
     }
     return;
   }
