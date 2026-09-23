@@ -10,7 +10,7 @@ This app deploys separately from the marketing landing page ([hackuta-2026-repos
 | --- | --- | --- |
 | Shared dev | [127.0.0.1:5273](http://127.0.0.1:5273) | standing-manatee-425 |
 | Local personal | [127.0.0.1:5273](http://127.0.0.1:5273) | npx convex dev (your deployment) |
-| Production | [register.hackuta.com](https://register.hackuta.com) | brilliant-ostrich-892 |
+| Production | [register.hackuta.com](https://register.hackuta.com) | <ask director> |
 
 Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
