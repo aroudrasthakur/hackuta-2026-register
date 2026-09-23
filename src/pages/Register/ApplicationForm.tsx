@@ -86,13 +86,17 @@ function ApplicationFormContent({
   savedDraft,
   saveDraft,
   hasConvexClient,
+  initialForm = INITIAL_FORM,
+  draftHydrated = true,
 }: {
   onSubmitted: () => void;
   savedDraft: SavedDraft;
   saveDraft: ((args: { patch: ReturnType<typeof formToDraftPatch> }) => Promise<unknown>) | null;
   hasConvexClient: boolean;
+  initialForm?: ApplicationFormData;
+  draftHydrated?: boolean;
 }) {
-  const [form, setForm] = useState<ApplicationFormData>(INITIAL_FORM);
+  const [form, setForm] = useState<ApplicationFormData>(initialForm);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -103,23 +107,13 @@ function ApplicationFormContent({
     session: ResumeUploadSession;
   } | null>(null);
   const resumeUploadRef = useRef(resumeUpload);
-  const draftHydratedRef = useRef(false);
 
   useEffect(() => {
     resumeUploadRef.current = resumeUpload;
   }, [resumeUpload]);
 
   useEffect(() => {
-    if (draftHydratedRef.current) return;
-    if (savedDraft === undefined) return;
-    if (savedDraft?.draft) {
-      setForm((prev) => ({ ...prev, ...savedDraft.draft }));
-    }
-    draftHydratedRef.current = true;
-  }, [savedDraft]);
-
-  useEffect(() => {
-    if (!hasConvexClient || !saveDraft || !routing.isAuthenticated || !draftHydratedRef.current) {
+    if (!hasConvexClient || !saveDraft || !routing.isAuthenticated || !draftHydrated) {
       return;
     }
     if (savedDraft && savedDraft.status !== "draft") return;
@@ -129,7 +123,7 @@ function ApplicationFormContent({
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [form, hasConvexClient, routing.isAuthenticated, saveDraft, savedDraft]);
+  }, [form, hasConvexClient, routing.isAuthenticated, saveDraft, savedDraft, draftHydrated]);
 
   const discardPendingResume = useCallback(async () => {
     const pending = resumeUploadRef.current;
@@ -913,13 +907,21 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
     client && routing.isAuthenticated ? {} : "skip",
   );
   const saveDraft = useMutation(saveProfileDraftRef);
+  const isDraftLoading = savedDraft === undefined;
+  const initialForm =
+    !isDraftLoading && savedDraft?.draft
+      ? { ...INITIAL_FORM, ...savedDraft.draft }
+      : INITIAL_FORM;
 
   return (
     <ApplicationFormContent
+      key={isDraftLoading ? "draft-loading" : "draft-ready"}
       onSubmitted={onSubmitted}
-      savedDraft={savedDraft}
+      savedDraft={savedDraft ?? null}
       saveDraft={saveDraft}
       hasConvexClient={Boolean(client)}
+      initialForm={initialForm}
+      draftHydrated={!isDraftLoading}
     />
   );
 }

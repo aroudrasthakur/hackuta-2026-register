@@ -58,11 +58,10 @@ export const getMyApplicantTimeline = query({
   args: {
     hackathonId: v.optional(v.string()),
   },
-  handler: async (ctx, { hackathonId = HACKATHON_ID }) => {
+  handler: async (ctx) => {
     const authUser = await getAuthUser(ctx);
     if (!authUser) return null;
 
-    const profile = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
     const source = resolveHackathonTimelineSource(HACKATHON_SCHEDULE);
     return buildHackathonTimeline(source);
   },
