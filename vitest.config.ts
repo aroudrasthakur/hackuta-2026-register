@@ -9,7 +9,6 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     env: {
       REGISTRATION_ALLOWED_ORIGINS: "https://hackuta.test",
-      REGISTRATION_ADMIN_IDENTITY_KEYS: "provider-user",
     },
     coverage: {
       provider: "istanbul",

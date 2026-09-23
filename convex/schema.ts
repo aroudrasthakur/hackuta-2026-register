@@ -22,7 +22,7 @@ export default defineSchema({
     image: v.optional(v.string()),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
-    /** Event points (admin-managed; optional until points system launches). */
+    /** Event points (optional until points system launches). */
     points: v.optional(v.number()),
   }).index("email", ["email"]),
 

@@ -26,7 +26,7 @@ export const eligibilityStatus = v.union(
   v.literal("ineligible"),
 );
 
-/** Attendance confirmation after acceptance (set by admin or applicant). */
+/** Attendance confirmation after acceptance (set by organizers or applicant). */
 export const confirmationStatus = v.union(
   v.literal("unconfirmed"),
   v.literal("confirmed"),

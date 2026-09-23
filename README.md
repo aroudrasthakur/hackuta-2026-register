@@ -2,7 +2,7 @@
 
 Sign-up, sign-in, application (with draft autosave), and applicant profile for **HackUTA 2026** — a 24-hour hackathon at the University of Texas at Arlington (**November 14–15, 2026**).
 
-Contact form lives in [hackuta-2026-registration](https://github.com/aroudrasthakur/hackuta-2026-registration); organizer tools in [hackuta-2026-admin](https://github.com/aroudrasthakur/hackuta-2026-admin).
+Contact form lives in [hackuta-2026-registration](https://github.com/aroudrasthakur/hackuta-2026-registration).
 
 This app deploys separately from the marketing landing page ([hackuta-2026-repository](https://github.com/aroudrasthakur/hackuta-2026-repository)). The landing site’s “Apply” button links here.
 
@@ -21,7 +21,6 @@ Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 | [hackuta-2026-repository](https://github.com/aroudrasthakur/hackuta-2026-repository) | Public marketing site (`hackuta.com`) |
 | **hackuta-2026-register** (this repo) | Auth, application form, draft save, profile |
 | [hackuta-2026-registration](https://github.com/aroudrasthakur/hackuta-2026-registration) | Contact form (legacy registration repo) |
-| [hackuta-2026-admin](https://github.com/aroudrasthakur/hackuta-2026-admin) | Organizer dashboard (reads `profiles`) |
 | [hackuta-2026-profile](https://github.com/aroudrasthakur/hackuta-2026-profile) | Future profile work (if split out) |
 
 ## Stack
@@ -149,7 +148,6 @@ See [docs/API.md](docs/API.md#rate-limits) for server-side enforcement details.
 | --- | --- |
 | `SITE_URL` | Frontend origin for Convex Auth redirects |
 | `REGISTRATION_ALLOWED_ORIGINS` | Comma-separated browser origins allowed for resume upload CORS (also includes `SITE_URL` origin) |
-| `REGISTRATION_ADMIN_IDENTITY_KEYS` | Comma-separated Convex Auth `tokenIdentifier` values for admin queries |
 | `JWT_PRIVATE_KEY`, `JWKS` | Convex Auth signing keys (from `scripts/generateAuthKeys.mjs`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | cPanel SMTP |
 | `EMAIL_FROM` | From address for outbound mail |
@@ -193,7 +191,7 @@ convex/                 Schema, queries, mutations, actions, HTTP routes, auth, 
   registrations.ts      Application submit, resume sessions
   applicant.ts          Routing state, ensureApplicantProfile
   rateLimits.ts         OTP and upload rate limiting
-  queries.ts            User and hackathon queries (incl. admin)
+  queries.ts            User and hackathon queries
   email/                SMTP send actions and templates
 shared/
   auth/                 Password rules, OTP rate-limit helpers
@@ -251,14 +249,12 @@ See **[docs/SECURITY.md](docs/SECURITY.md)** for the full security model. Summar
 - Server-side input sanitization on registration forms
 - Resume uploads: PDF-only allowlist, Content-Length pre-check, isolated Convex storage, rate limits
 - OTP codes hashed; registration email taken from verified JWT only
-- Admin queries gated by `REGISTRATION_ADMIN_IDENTITY_KEYS`
-
-## Admin and maintenance
+## Maintenance
 
 | Task | Command |
 | --- | --- |
 | Seed hackathon record | `npx convex run seed:seedHackathon` |
-| Reset all data | `npx convex run admin:resetAllData --prod` |
+| Reset all data | Convex dashboard → internal `maintenance:resetAllData` (or `npx convex run maintenance:resetAllData --prod`) |
 | Clear OTP limits for an email | Run internal mutation `rateLimits:clearOtpSendLimitsForEmail` from the Convex dashboard (Functions → internal) |
 
 Resume upload sessions and stale rate-limit rows are purged automatically every 15 minutes via `convex/crons.ts`.

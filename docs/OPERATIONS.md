@@ -36,7 +36,7 @@ Set in project settings (Production + Preview as appropriate):
 npx convex env set --prod SITE_URL https://register.hackuta.com
 npx convex env set --prod REGISTRATION_ALLOWED_ORIGINS https://register.hackuta.com
 npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
-# SMTP, JWT keys, EMAIL_FROM, REGISTRATION_ADMIN_IDENTITY_KEYS
+# SMTP, JWT keys, EMAIL_FROM
 ```
 
 JWT keys: `node scripts/generateAuthKeys.mjs` — generate **per environment**, never reuse prod keys in dev.
@@ -56,7 +56,7 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | Task | Command |
 | --- | --- |
 | Seed hackathon record | `npx convex run seed:seedHackathon` |
-| Reset all data (**destructive**) | `npx convex run admin:resetAllData --prod` |
+| Reset all data (**destructive**) | Convex dashboard → internal `maintenance:resetAllData` |
 | Clear OTP rate limit for email | Convex dashboard → internal `rateLimits:clearOtpSendLimitsForEmail` |
 | Unset stale env var | `npx convex env unset VAR_NAME` |
 

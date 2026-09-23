@@ -6,7 +6,7 @@ How HackUTA registration protects applicant data, blocks abuse, and limits attac
 
 | Asset | Primary risks | Mitigations |
 | --- | --- | --- |
-| Applicant PII | XSS, stored injection, admin export | Server validation, React text rendering, email HTML escaping |
+| Applicant PII | XSS, stored injection | Server validation, React text rendering, email HTML escaping |
 | Auth sessions | OTP brute force, enumeration | Rate limits, hashed codes, generic errors |
 | Resume uploads | Malware, DoS, storage abuse | Allowlist, size caps, isolated Convex storage, rate limits |
 | Contact form | Spam, header injection, XSS | Honeypot, CRLF block, sanitization, rate limits |
@@ -39,8 +39,6 @@ All user-derived values in HTML emails pass through `escapeHtml()` in `convex/em
 
 - Email OTP via `@convex-dev/auth` — codes hashed, 10-minute expiry, never logged or returned in API responses
 - Registration email is **always** taken from the verified JWT, not from the form payload
-- Admin query `getApplicationsByHackathon` requires `REGISTRATION_ADMIN_IDENTITY_KEYS`
-
 ### Content Security Policy
 
 Defined in `security/csp.ts`; deployed via `vercel.json`. Tests in `tests/unit/security.test.ts` keep them in sync.
@@ -96,7 +94,6 @@ Rotate SMTP and JWT independently per environment. Dev keys must not be copied t
 
 | Task | Command / location |
 | --- | --- |
-| Wipe all data (destructive) | `npx convex run admin:resetAllData --prod` |
 | Clear OTP limits (support) | Internal `rateLimits:clearOtpSendLimitsForEmail` |
 | Dependency audit | CI `npm audit --audit-level=high` |
 | Secret scan | CI Gitleaks |

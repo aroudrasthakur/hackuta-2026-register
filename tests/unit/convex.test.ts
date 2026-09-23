@@ -634,9 +634,8 @@ describe("convex queries", () => {
     );
   });
 
-  it("allows owned application reads and admin hackathon listings", async () => {
+  it("allows owned application reads and hides other users' applications", async () => {
     const base = createTest();
-    vi.stubEnv("REGISTRATION_ADMIN_IDENTITY_KEYS", "email|sam@example.com");
     const t = base.withIdentity({
       tokenIdentifier: "email|sam@example.com",
       email: "sam@example.com",
@@ -657,14 +656,6 @@ describe("convex queries", () => {
     }) as unknown as ConvexTestClient;
     await seedAuthUser(foreignUser, { email: "foreign@example.com" });
     await expect(foreignUser.query("queries:getMyApplication", {})).resolves.toBeNull();
-
-    await expect(
-      t.query("queries:getApplicationsByHackathon", { hackathonId: "hackuta-2026" }),
-    ).resolves.toHaveLength(1);
-
-    await expect(
-      foreignUser.query("queries:getApplicationsByHackathon", { hackathonId: "hackuta-2026" }),
-    ).rejects.toThrow("Not authorized to access hackathon registrations");
   });
 });
 

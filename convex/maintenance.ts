@@ -45,7 +45,7 @@ async function deleteAllStorage(ctx: MutationCtx) {
 
 /**
  * Wipes all application and auth data from the deployment.
- * Run: npx convex run admin:resetAllData --prod
+ * Run from Convex dashboard (internal) or: npx convex run maintenance:resetAllData --prod
  */
 export const resetAllData = internalMutation({
   args: {},

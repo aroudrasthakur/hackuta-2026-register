@@ -2,7 +2,6 @@ import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { HACKATHON_ID } from "../shared/registration/constants";
 import { getAuthUser, getProfileByUserAndHackathon } from "./lib/profiles";
-import { isRegistrationAdmin } from "./registrationSecurity";
 
 export const getCurrentUser = query({
   args: {},
@@ -30,44 +29,6 @@ export const getMyApplication = query({
     const authUser = await getAuthUser(ctx);
     if (!authUser) return null;
     return getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
-  },
-});
-
-export const getApplicationsByHackathon = query({
-  args: { hackathonId: v.string() },
-  handler: async (ctx, { hackathonId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Authentication required.");
-    }
-    if (!isRegistrationAdmin(identity.tokenIdentifier)) {
-      throw new Error("Not authorized to access hackathon registrations.");
-    }
-
-    const profiles = await ctx.db
-      .query("profiles")
-      .withIndex("by_hackathon_status", (q) => q.eq("hackathonId", hackathonId))
-      .filter((q) => q.eq(q.field("status"), "submitted"))
-      .collect();
-
-    const results = profiles.map((profile) => ({
-      profileId: profile._id,
-      authUserId: profile.authUserId,
-      email: profile.email,
-      application: profile,
-    }));
-
-    console.log(
-      JSON.stringify({
-        event: "admin_applications_access",
-        identityKey: identity.tokenIdentifier,
-        hackathonId,
-        resultCount: results.length,
-        at: Date.now(),
-      }),
-    );
-
-    return results;
   },
 });
 

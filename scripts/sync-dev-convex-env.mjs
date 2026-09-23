@@ -22,7 +22,6 @@ const COPY_FROM_PROD = [
   "SMTP_PASSWORD",
   "EMAIL_FROM",
   "CONTACT_EMAIL_TO",
-  "REGISTRATION_ADMIN_IDENTITY_KEYS",
 ];
 
 /** Dev-only values — never copied from prod. */

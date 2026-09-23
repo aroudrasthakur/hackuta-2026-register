@@ -10,11 +10,10 @@ hackuta.com (marketing) ──link──► register.hackuta.com (this app)
                                         ├── Vite/React SPA (Vercel)
                                         └── Convex (DB, auth, HTTP, storage, cron)
 
-hackuta-2026-admin (organizer dashboard) ──reads──► same Convex `profiles` table
 hackuta-2026-registration (legacy repo) ──contact form only (separate deployment)
 ```
 
-Related repos: marketing site (`hackuta-2026-repository`), applicant profile split (`hackuta-2026-profile`), organizer admin (`hackuta-2026-admin`).
+Related repos: marketing site (`hackuta-2026-repository`), applicant profile split (`hackuta-2026-profile`).
 
 ## Repository layout
 
@@ -128,13 +127,12 @@ Contact form lives in **hackuta-2026-registration**, not this repo.
 | --- | --- | --- |
 | SPA | Vercel | `VITE_*` env vars, `vercel.json` headers |
 | Backend | Convex Cloud | `npx convex env set`, separate dev/prod deployments |
-| Admin | Separate Vercel app | Reads `profiles` from register Convex deployment |
 
 Dev deployment: `standing-manatee-425`. Production: `brilliant-ostrich-892`.
 
 ## Key design decisions
 
-1. **Profiles table** — separates auth from application data; enables draft rows and admin queries without nested objects.
+1. **Profiles table** — separates auth from application data; enables draft rows without nested objects.
 2. **Password + OTP verify** — passwords for return visits; email verification via 6-digit OTP on sign-up.
 3. **Capability-token resume upload** — HTTP upload is unauthenticated; security is origin allowlist + token redemption at mutation time.
 4. **Duplicate mutation aliases** — `register` and `submitRegistration` share one handler (public API stability).

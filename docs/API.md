@@ -252,22 +252,12 @@ Not callable from the public client.
 
 User content in HTML emails is escaped via `escapeHtml()`.
 
-### Admin / seed
+### Maintenance / seed
 
 | Function | Purpose |
 | --- | --- |
-| `admin:resetAllData` | Wipe all data + storage |
+| `maintenance:resetAllData` | Internal — wipe all data + storage |
 | `seed:seedHackathon` | Insert `hackuta-2026` if missing |
-
----
-
-## Admin queries
-
-### `queries:getApplicationsByHackathon`
-
-**Auth:** admin — `tokenIdentifier` in `REGISTRATION_ADMIN_IDENTITY_KEYS`.
-
-`{ hackathonId: string }` — lists submitted profiles for a hackathon.
 
 ---
 
