@@ -37,6 +37,8 @@ export const profileRecord = {
   eligibilityStatus,
   createdAt: v.number(),
   updatedAt: v.number(),
+  /** Set to true when the registration form is successfully submitted; never cleared. */
+  formSubmitted: v.optional(v.boolean()),
   submittedAt: v.optional(v.number()),
   reviewedAt: v.optional(v.number()),
   reviewedBy: v.optional(v.string()),

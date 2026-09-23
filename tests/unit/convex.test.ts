@@ -4,7 +4,9 @@ import { makeFunctionReference } from "convex/server";
 import { describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
 import { RESUME_UPLOAD_BUCKET } from "../../convex/lib/rateLimitBuckets";
+import { formToDraftPatch } from "../../shared/registration/draftPatch";
 import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
+import { INITIAL_FORM } from "../../shared/registration/types";
 import {
   RESUME_FILENAME_HEADER,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
@@ -820,7 +822,11 @@ describe("convex applicant auth flows", () => {
   it("saves draft profile fields before submission", async () => {
     const t = await authTest();
     await t.mutation("profiles:saveProfileDraft", {
-      patch: { firstName: "Draft", lastName: "User" },
+      patch: formToDraftPatch({
+        ...INITIAL_FORM,
+        firstName: "Draft",
+        lastName: "User",
+      }),
     });
     const draft = await t.query("profiles:getMyProfileDraft", {});
     expect(draft).toMatchObject({

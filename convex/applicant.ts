@@ -6,7 +6,12 @@ import {
   resolveHackathonTimelineSource,
 } from "../shared/hackathon/schedule";
 import { buildHackathonTimeline } from "../shared/hackathon/timeline";
-import { ensureDraftProfile, getAuthUser, getProfileByUserAndHackathon } from "./lib/profiles";
+import {
+  ensureDraftProfile,
+  getAuthUser,
+  getProfileByUserAndHackathon,
+  profileFormWasSubmitted,
+} from "./lib/profiles";
 import { normalizeEmail } from "./lib/normalizeEmail";
 
 export const ensureApplicantProfile = mutation({
@@ -41,7 +46,7 @@ export const getApplicantRoutingState = query({
     const emailVerified = Boolean(authUser.emailVerificationTime);
 
     const hasSubmittedRegistration =
-      profile !== null && profile.status === "submitted";
+      profile !== null && profileFormWasSubmitted(profile);
 
     return {
       authenticated: true as const,

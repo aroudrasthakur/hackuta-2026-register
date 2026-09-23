@@ -11,6 +11,7 @@ import {
   ensureDraftProfile,
   findProfileByResume,
   getProfileByUserAndHackathon,
+  profileFormWasSubmitted,
   requireAuthUser,
   syncAuthUserNameFromProfile,
 } from "./lib/profiles";
@@ -125,7 +126,7 @@ async function upsertRegistration(
   const existing = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
   const draftProfile = existing ?? (await ensureDraftProfile(ctx, hackathonId));
 
-  if (draftProfile.status === "submitted") {
+  if (profileFormWasSubmitted(draftProfile)) {
     throw new Error("You have already submitted an application.");
   }
 
@@ -188,6 +189,7 @@ async function upsertRegistration(
     emailVerificationTime: authUser.emailVerificationTime,
     hackathonId,
     status: "submitted",
+    formSubmitted: true,
     confirmationStatus: "unconfirmed",
     submittedAt,
     updatedAt: submittedAt,

@@ -54,6 +54,11 @@ export async function getProfileByUserAndHackathon(
     .first();
 }
 
+/** Whether the applicant completed a successful registration form submit. */
+export function profileFormWasSubmitted(profile: Pick<ProfileDoc, "formSubmitted" | "submittedAt">) {
+  return profile.formSubmitted === true || profile.submittedAt != null;
+}
+
 export async function ensureDraftProfile(
   ctx: MutationCtx,
   hackathonId: string = HACKATHON_ID,
