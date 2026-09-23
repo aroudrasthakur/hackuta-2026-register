@@ -55,9 +55,7 @@ describe("useApplicantRouting", () => {
     expect(result.current).toMatchObject({
       isAuthenticated: false,
       verifiedEmail: null,
-      hasRegistration: false,
       hasSubmittedRegistration: false,
-      registrationStatus: null,
     });
   });
 
@@ -65,8 +63,6 @@ describe("useApplicantRouting", () => {
     vi.mocked(useQuery).mockReturnValue({
       authenticated: true,
       verifiedEmail: "live@example.com",
-      hasRegistration: true,
-      registrationStatus: "submitted",
       hasSubmittedRegistration: true,
     });
 
@@ -81,9 +77,7 @@ describe("useApplicantRouting", () => {
     expect(result.current).toMatchObject({
       isAuthenticated: true,
       verifiedEmail: "live@example.com",
-      hasRegistration: true,
       hasSubmittedRegistration: true,
-      registrationStatus: "submitted",
     });
   });
 

@@ -9,7 +9,6 @@ How HackUTA registration protects applicant data, blocks abuse, and limits attac
 | Applicant PII | XSS, stored injection | Server validation, React text rendering, email HTML escaping |
 | Auth sessions | OTP brute force, enumeration | Rate limits, hashed codes, generic errors |
 | Resume uploads | Malware, DoS, storage abuse | Allowlist, size caps, isolated Convex storage, rate limits |
-| Contact form | Spam, header injection, XSS | Honeypot, CRLF block, sanitization, rate limits |
 | Frontend | Script injection, clickjacking | Strict CSP, Trusted Types, HSTS |
 
 There is **no SQL layer** — Convex uses typed queries. Injection focus is on **XSS** and **upload abuse**.
@@ -24,16 +23,15 @@ Browser CSP ──► Client Zod (UX) ──► Convex handler ──► Shared 
 
 | Surface | Module | Server behavior |
 | --- | --- | --- |
-| Registration | `shared/registration/schema.ts` | Zod `.strict()`; rejects HTML/script patterns via `shared/lib/sanitizeInput.ts` |
-| Contact | `shared/contact/validation.ts` | Length limits, email syntax, honeypot, CRLF rejection, sanitization |
-| Resume upload | `convex/http.ts`, `convex/pdfValidation.ts` | See [Upload security](#resume-upload-security) |
-| OTP email lookup | `rateLimits:getOtpSendCooldown` | Neutral response when rate-limited |
+| Registration | shared/registration/schema.ts | Zod `.strict()`; rejects HTML/script patterns via shared/lib/sanitizeInput.ts |
+| Resume upload | convex/http.ts, convex/pdfValidation.ts | See [Upload security](#resume-upload-security) |
+| OTP email lookup | rateLimits:getOtpSendCooldown | Neutral response when rate-limited |
 
 Free-text fields allow plain text only — no HTML tags, `javascript:` URLs, or event handlers.
 
 ### Email output
 
-All user-derived values in HTML emails pass through `escapeHtml()` in `convex/email/templates.ts`. Contact `replyTo` rejects CRLF in addresses.
+All user-derived values in HTML emails pass through `escapeHtml()` in convex/email/templates.ts.
 
 ### Authentication
 
@@ -49,7 +47,7 @@ Also deployed: HSTS, `X-Frame-Options: DENY`, Permissions-Policy (camera/mic dis
 
 ### Origin policy (resume upload)
 
-`convex/registrationSecurity.ts` builds the allowlist from `REGISTRATION_ALLOWED_ORIGINS` and `SITE_URL`. Dev deployment may set `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS=true` for localhost — **never on production**.
+`convex/resumeUploadSecurity.ts` builds the allowlist from `REGISTRATION_ALLOWED_ORIGINS` and `SITE_URL`. Dev deployment may set `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS=true` for localhost — **never on production**.
 
 ## Resume upload security
 

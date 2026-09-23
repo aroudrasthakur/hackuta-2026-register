@@ -5,10 +5,6 @@ import { useMockAuth } from "./useMockAuth";
 type SessionAuthValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
-  signIn: (
-    provider: string,
-    params?: Record<string, string>,
-  ) => Promise<{ signingIn: boolean }>;
   signOut: () => Promise<void>;
 };
 
@@ -16,17 +12,13 @@ const SessionAuthContext = createContext<SessionAuthValue | null>(null);
 
 function ConvexSessionBridge({ children }: { children: ReactNode }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
-  const { signIn, signOut } = useAuthActions();
+  const { signOut } = useAuthActions();
 
   return (
     <SessionAuthContext.Provider
       value={{
         isLoading,
         isAuthenticated,
-        signIn: async (provider, params) => {
-          const result = await signIn(provider, params);
-          return { signingIn: result.signingIn };
-        },
         signOut,
       }}
     >
@@ -43,7 +35,6 @@ function MockSessionBridge({ children }: { children: ReactNode }) {
       value={{
         isLoading: mock.isLoading,
         isAuthenticated: mock.isAuthenticated,
-        signIn: async () => ({ signingIn: mock.isAuthenticated }),
         signOut: async () => {
           mock.signOut();
         },

@@ -1,3 +1,9 @@
+/**
+ * Applicant drafts and dashboard data.
+ *
+ * Owns draft load/save and the profile page payload. Profile bootstrap and
+ * routing state live in applicant.ts.
+ */
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { HACKATHON_ID } from "../shared/registration/constants";
@@ -7,6 +13,7 @@ import {
 } from "../shared/hackathon/schedule";
 import { buildHackathonTimeline } from "../shared/hackathon/timeline";
 import { profileDraftPatch } from "./profileFields";
+import { requireAuthIdentity } from "./lib/auth";
 import {
   ensureDraftProfile,
   formatProfileFullName,
@@ -94,10 +101,7 @@ export const getMyApplicantDashboard = query({
     hackathonId: v.optional(v.string()),
   },
   handler: async (ctx, { hackathonId = HACKATHON_ID }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Authentication required.");
-    }
+    const identity = await requireAuthIdentity(ctx);
 
     const authUser = await getAuthUser(ctx);
     const profile = authUser

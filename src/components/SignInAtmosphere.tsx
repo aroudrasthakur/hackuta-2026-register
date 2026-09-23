@@ -2,17 +2,7 @@ import {
   Dithering,
   type PaperShaderElement,
 } from "@paper-design/shaders-react";
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-} from "react";
-
-type SignInAtmosphereHandle = {
-  update: (storm: number) => void;
-};
+import { useCallback, useEffect, useRef } from "react";
 
 type SignInAtmosphereProps = {
   motionEnabled: boolean;
@@ -26,10 +16,7 @@ function clamp01(value: number) {
   return Math.min(1, Math.max(0, value));
 }
 
-export const SignInAtmosphere = forwardRef<
-  SignInAtmosphereHandle,
-  SignInAtmosphereProps
->(function SignInAtmosphere({ motionEnabled, storm }, ref) {
+export function SignInAtmosphere({ motionEnabled, storm }: SignInAtmosphereProps) {
   const shaderRef = useRef<PaperShaderElement>(null);
   const stormRef = useRef(clamp01(storm));
 
@@ -52,8 +39,6 @@ export const SignInAtmosphere = forwardRef<
     },
     [motionEnabled],
   );
-
-  useImperativeHandle(ref, () => ({ update }), [update]);
 
   useEffect(() => {
     const element = shaderRef.current;
@@ -153,4 +138,4 @@ export const SignInAtmosphere = forwardRef<
       aria-hidden="true"
     />
   );
-});
+}

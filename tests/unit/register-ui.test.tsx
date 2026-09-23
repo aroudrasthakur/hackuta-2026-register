@@ -24,7 +24,6 @@ vi.mock("../../src/hooks/useSessionAuth", () => ({
   useSessionAuth: () => ({
     isLoading: false,
     isAuthenticated: true,
-    signIn: vi.fn(),
     signOut: vi.fn(),
   }),
 }));
@@ -34,9 +33,7 @@ vi.mock("../../src/hooks/useApplicantRouting", () => ({
     isLoading: false,
     isAuthenticated: true,
     verifiedEmail: "applicant@example.com",
-    hasRegistration: false,
     hasSubmittedRegistration: false,
-    registrationStatus: null,
   }),
 }));
 

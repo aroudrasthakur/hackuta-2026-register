@@ -48,10 +48,12 @@ Update docs when you change:
 
 | Change | Update |
 | --- | --- |
-| New/changed API | [API.md](API.md) |
-| Security behavior | [SECURITY.md](SECURITY.md) |
-| Deploy/env vars | [README.md](../README.md), [OPERATIONS.md](OPERATIONS.md) |
+| New/changed API | [API.md](API.md), [convex/README.md](../convex/README.md) |
+| Security behavior | [SECURITY.md](SECURITY.md), [security/README.md](../security/README.md) |
+| Deploy/env vars | [README.md](../README.md), [OPERATIONS.md](OPERATIONS.md), [scripts/README.md](../scripts/README.md) |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Shared validation | [shared/README.md](../shared/README.md) |
+| Tests | [tests/README.md](../tests/README.md), [TESTING.md](TESTING.md) |
 
 ## Related docs
 

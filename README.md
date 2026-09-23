@@ -8,20 +8,18 @@ This app deploys separately from the marketing landing page ([hackuta-2026-repos
 
 | Environment | Frontend | Convex |
 | --- | --- | --- |
-| Development | local / [127.0.0.1:5273](http://127.0.0.1:5273) | `standing-manatee-425` (dev deployment) |
-| Production | [register.hackuta.com](https://register.hackuta.com) | `brilliant-ostrich-892` (prod deployment) |
-| Local dev | `http://127.0.0.1:5273` | `npx convex dev` (personal dev deployment) |
+| Shared dev | [127.0.0.1:5273](http://127.0.0.1:5273) | standing-manatee-425 |
+| Local personal | [127.0.0.1:5273](http://127.0.0.1:5273) | npx convex dev (your deployment) |
+| Production | [register.hackuta.com](https://register.hackuta.com) | brilliant-ostrich-892 |
 
 Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
 ## Related repositories
 
-| Repo | Role |
-| --- | --- |
-| [hackuta-2026-repository](https://github.com/aroudrasthakur/hackuta-2026-repository) | Public marketing site (`hackuta.com`) |
-| **hackuta-2026-register** (this repo) | Auth, application form, draft save, profile |
-| [hackuta-2026-registration](https://github.com/aroudrasthakur/hackuta-2026-registration) | Contact form (legacy registration repo) |
-| [hackuta-2026-profile](https://github.com/aroudrasthakur/hackuta-2026-profile) | Future profile work (if split out) |
+| Repo                                                                                 | Role                                        |
+| ------------------------------------------------------------------------------------ | ------------------------------------------- |
+| [hackuta-2026-repository](https://github.com/aroudrasthakur/hackuta-2026-repository) | Public marketing site (`hackuta.com`)       |
+| **hackuta-2026-register** (this repo)                                                | Auth, application form, draft save, profile |
 
 ## Stack
 
@@ -35,15 +33,27 @@ Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
 | Doc | Contents |
 | --- | --- |
-| **[docs/README.md](docs/README.md)** | Documentation index |
-| **[docs/API.md](docs/API.md)** | Endpoints, payloads, errors, validation, rate limits |
-| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Codebase layout, data flows, design decisions |
-| **[docs/SECURITY.md](docs/SECURITY.md)** | Input validation, CSP, upload hardening, secrets |
-| **[docs/OPERATIONS.md](docs/OPERATIONS.md)** | Deploy checklist, env vars, maintenance, incidents |
-| **[docs/TESTING.md](docs/TESTING.md)** | Unit/e2e tests, CI, coverage |
-| **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** | PR workflow and conventions |
-| [HACKUTA_DESIGN_CONTEXT.md](HACKUTA_DESIGN_CONTEXT.md) | Odyssey theme, palette, UX principles |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [docs/API.md](docs/API.md) | Endpoints, payloads, errors, validation, rate limits |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Codebase layout, data flows, design decisions |
+| [docs/SECURITY.md](docs/SECURITY.md) | Input validation, CSP, upload hardening, secrets |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Deploy checklist, env vars, maintenance, incidents |
+| [docs/TESTING.md](docs/TESTING.md) | Unit/e2e tests, CI, coverage |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | PR workflow and conventions |
+| [docs/DESIGN.md](docs/DESIGN.md) | Odyssey theme, palette, UX principles |
 | [.env.example](.env.example) | Environment variable template |
+
+### Directory READMEs
+
+| Path | Contents |
+| --- | --- |
+| [convex/README.md](convex/README.md) | Backend modules, public API, ops commands |
+| [src/README.md](src/README.md) | React SPA routes and bootstrap |
+| [shared/README.md](shared/README.md) | Isomorphic validation and constants |
+| [tests/README.md](tests/README.md) | Unit and e2e test map |
+| [scripts/README.md](scripts/README.md) | Codegen stub, deploy verify, generators |
+| [public/README.md](public/README.md) | Static fonts, images, trusted-types |
+| [security/README.md](security/README.md) | CSP and response headers |
 
 ## Getting started
 
@@ -51,7 +61,7 @@ Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
 - Node.js 22+
 - A Convex account and CLI (`npm i -g convex` or use `npx convex`)
-- cPanel mailbox credentials for OTP and contact email (production)
+- cPanel mailbox credentials for OTP and confirmation email (production)
 
 ### Local setup
 
@@ -107,55 +117,53 @@ npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
 3. After verification, Convex Auth establishes a JWT session and ensures a draft `profiles` row exists.
 4. The app routes to `/register` (not yet submitted) or `/profile` (already submitted).
 5. On `/register`, form fields autosave every ~800ms; applicants can leave and resume later.
-6. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:register`.
+6. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:register`. Unneeded uploads can be discarded via `resumeUploads:discardUploadSession`.
 7. Sign-out returns the visitor to `/sign-in`.
 
 ### OTP rate limits
 
-| Limit | Value |
-| --- | --- |
-| Resend cooldown | 30 seconds (shared across email step and OTP step) |
-| Sends per hour | 5 per email address |
-| Code expiry | 10 minutes |
-| Failed verify attempts | 5 per hour (Convex Auth) |
+| Limit                  | Value                                              |
+| ---------------------- | -------------------------------------------------- |
+| Resend cooldown        | 30 seconds (shared across email step and OTP step) |
+| Sends per hour         | 5 per email address                                |
+| Code expiry            | 10 minutes                                         |
+| Failed verify attempts | 5 per hour (Convex Auth)                           |
 
 See [docs/API.md](docs/API.md#rate-limits) for server-side enforcement details.
 
 ## Frontend routes
 
-| Path | Access | Purpose |
-| --- | --- | --- |
-| `/` | Public | Redirects authenticated users to `/register` or `/profile`; others to `/sign-in` |
-| `/sign-in` | Public | Password sign-up / sign-in + OTP verify |
-| `/register` | Authenticated, not yet submitted | Multi-step application form with draft autosave |
-| `/profile` | Authenticated | Applicant dashboard (status, timeline, sign-out) |
+| Path        | Access                           | Purpose                                                                          |
+| ----------- | -------------------------------- | -------------------------------------------------------------------------------- |
+| `/`         | Public                           | Redirects authenticated users to `/register` or `/profile`; others to `/sign-in` |
+| `/sign-in`  | Public                           | Password sign-up / sign-in + OTP verify                                          |
+| `/register` | Authenticated, not yet submitted | Multi-step application form with draft autosave                                  |
+| `/profile`  | Authenticated                    | Applicant dashboard (status, timeline, sign-out)                                 |
 
 ## Environment variables
 
 ### Vite (build-time — set in Vercel or `.env.local`)
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `VITE_CONVEX_URL` | Yes | Convex deployment URL (`https://<name>.convex.cloud`) |
-| `VITE_CONVEX_SITE_URL` | Yes | Convex HTTP actions URL (`https://<name>.convex.site`) |
-| `VITE_LANDING_URL` | Yes | Marketing site for “back to home” links (prod: `https://hackuta.com`) |
-| `VITE_USE_MOCK_API` | No | `true` bypasses Convex Auth for UI dev/CI; **never** on live production |
-| `CONVEX_DEPLOYMENT` | Local/CI | Convex CLI deployment selector |
+| Variable               | Required | Purpose                                                                 |
+| ---------------------- | -------- | ----------------------------------------------------------------------- |
+| `VITE_CONVEX_URL`      | Yes      | Convex deployment URL (`https://<name>.convex.cloud`)                   |
+| `VITE_CONVEX_SITE_URL` | Yes      | Convex HTTP actions URL (`https://<name>.convex.site`)                  |
+| `VITE_LANDING_URL`     | Yes      | Marketing site for “back to home” links (prod: `https://hackuta.com`)   |
+| `VITE_USE_MOCK_API`    | No       | `true` bypasses Convex Auth for UI dev/CI; **never** on live production |
+| `CONVEX_DEPLOYMENT`    | Local/CI | Convex CLI deployment selector                                          |
 
 ### Convex deployment (`npx convex env set`)
 
-| Variable | Purpose |
-| --- | --- |
-| `SITE_URL` | Frontend origin for Convex Auth redirects |
-| `REGISTRATION_ALLOWED_ORIGINS` | Comma-separated browser origins allowed for resume upload CORS (also includes `SITE_URL` origin) |
-| `JWT_PRIVATE_KEY`, `JWKS` | Convex Auth signing keys (from `scripts/generateAuthKeys.mjs`) |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | cPanel SMTP |
-| `EMAIL_FROM` | From address for outbound mail |
-| `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` | Dev only — allow `localhost:5273` resume uploads |
+| Variable                                               | Purpose                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `SITE_URL`                                             | Frontend origin for Convex Auth redirects                                                        |
+| `REGISTRATION_ALLOWED_ORIGINS`                         | Comma-separated browser origins allowed for resume upload CORS (also includes `SITE_URL` origin) |
+| `JWT_PRIVATE_KEY`, `JWKS`                              | Convex Auth signing keys (from `scripts/generateAuthKeys.mjs`)                                   |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | cPanel SMTP                                                                                      |
+| `EMAIL_FROM`                                           | From address for outbound mail                                                                   |
+| `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS`                 | Dev only — allow `localhost:5273` resume uploads                                                 |
 
 **Do not** set SMTP or JWT values as `VITE_*` — they belong only on the Convex deployment.
-
-`REGISTRATION_TOKEN_SECRET` in `.env.example` is unused legacy; safe to ignore.
 
 ### cPanel SMTP
 
@@ -183,44 +191,32 @@ CI builds with mock mode enabled for Playwright CSP tests. Live Vercel productio
 
 ## Project layout
 
-```
-convex/                 Schema, queries, mutations, actions, HTTP routes, auth, email
-  auth.ts               Convex Auth (password + email OTP verify)
-  profiles.ts           Draft save/load, applicant dashboard
-  http.ts               Resume upload HTTP action + Auth OIDC/JWKS routes
-  registrations.ts      Application submit, resume sessions
-  applicant.ts          Routing state, ensureApplicantProfile
-  rateLimits.ts         OTP and upload rate limiting
-  queries.ts            User and hackathon queries
-  email/                SMTP send actions and templates
-shared/
-  auth/                 Password rules, OTP rate-limit helpers
-  registration/         Zod validation, types, resume policy, draftPatch
-  lib/                  sanitizeInput, normalizeEmail
-security/               CSP + response headers (must match vercel.json)
-docs/                   API, architecture, security, operations, testing
-src/pages/
-  SignIn/               Password auth + OTP verify
-  Register/             Multi-step application form (autosave)
-  Profile/              Applicant dashboard
-tests/                  Vitest unit tests and Playwright specs
-```
+| Path | README | Role |
+| --- | --- | --- |
+| convex/ | [convex/README.md](convex/README.md) | Schema, mutations, actions, HTTP routes, auth, email |
+| src/ | [src/README.md](src/README.md) | React SPA — sign-in, register, profile |
+| shared/ | [shared/README.md](shared/README.md) | Zod validation, enums, resume policy (client + Convex) |
+| public/ | [public/README.md](public/README.md) | Fonts, Odyssey art, logos, trusted-types |
+| security/ | [security/README.md](security/README.md) | CSP + response headers (sync with vercel.json) |
+| scripts/ | [scripts/README.md](scripts/README.md) | Codegen stub, deploy verify, MLH/country generators |
+| tests/ | [tests/README.md](tests/README.md) | Vitest unit tests and Playwright e2e |
+| docs/ | [docs/README.md](docs/README.md) | API, architecture, security, operations, testing |
 
 ## Scripts
 
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Vite dev server on `127.0.0.1:5273` |
-| `npm run build` | Typecheck and production build to `dist/` |
-| `npm run preview` | Serve `dist/` with production CSP headers |
-| `npm run lint` | ESLint over app, Convex, shared, security, scripts |
-| `npm run typecheck` | App/test types plus Convex schema |
-| `npm run test:unit` | Vitest |
-| `npm run test:unit:coverage` | Vitest with 80% Istanbul thresholds |
-| `npm run test:e2e` | Playwright against dev server or production build |
-| `npm run convex:dev` | Convex dev deployment watcher |
-| `npm run convex:deploy` | Push functions and schema to Convex |
-| `npm run convex:verify` | Verify deployment connectivity |
+| Script                       | Description                                        |
+| ---------------------------- | -------------------------------------------------- |
+| `npm run dev`                | Vite dev server on `127.0.0.1:5273`                |
+| `npm run build`              | Typecheck and production build to `dist/`          |
+| `npm run preview`            | Serve `dist/` with production CSP headers          |
+| `npm run lint`               | ESLint over app, Convex, shared, security, scripts |
+| `npm run typecheck`          | App/test types plus Convex schema                  |
+| `npm run test:unit`          | Vitest                                             |
+| `npm run test:unit:coverage` | Vitest with 80% Istanbul thresholds                |
+| `npm run test:e2e`           | Playwright against dev server or production build  |
+| `npm run convex:dev`         | Convex dev deployment watcher                      |
+| `npm run convex:deploy`      | Push functions and schema to Convex                |
+| `npm run convex:verify`      | Verify deployment connectivity                     |
 
 Run Playwright against the production build (same path CI uses):
 
@@ -232,29 +228,30 @@ PLAYWRIGHT_USE_BUILD=true npm run test:e2e
 
 GitHub Actions on pushes/PRs to `main` and `dev`:
 
-| Job | Steps |
-| --- | --- |
-| **quality** | lint → typecheck → unit tests with coverage → production build |
-| **e2e** | Playwright against uploaded production build artifact |
-| **dependency-audit** | `npm audit --omit=dev --audit-level=high` |
-| **secrets** | Gitleaks full-history scan |
+| Job                  | Steps                                                          |
+| -------------------- | -------------------------------------------------------------- |
+| **quality**          | lint → typecheck → unit tests with coverage → production build |
+| **e2e**              | Playwright against uploaded production build artifact          |
+| **dependency-audit** | `npm audit --omit=dev --audit-level=high`                      |
+| **secrets**          | Gitleaks full-history scan                                     |
 
 See [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ## Security notes
 
-See **[docs/SECURITY.md](docs/SECURITY.md)** for the full security model. Summary:
+See [docs/SECURITY.md](docs/SECURITY.md) for the full security model. Summary:
 
 - Strict CSP + Trusted Types (`security/csp.ts`, synced with `vercel.json`)
 - Server-side input sanitization on registration forms
 - Resume uploads: PDF-only allowlist, Content-Length pre-check, isolated Convex storage, rate limits
 - OTP codes hashed; registration email taken from verified JWT only
+
 ## Maintenance
 
-| Task | Command |
-| --- | --- |
-| Seed hackathon record | `npx convex run seed:seedHackathon` |
-| Reset all data | Convex dashboard → internal `maintenance:resetAllData` (or `npx convex run maintenance:resetAllData --prod`) |
+| Task                          | Command                                                                                                        |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Seed hackathon record         | `npx convex run seed:seedHackathon`                                                                            |
+| Reset all data                | Convex dashboard → internal `maintenance:resetAllData` (or `npx convex run maintenance:resetAllData --prod`)   |
 | Clear OTP limits for an email | Run internal mutation `rateLimits:clearOtpSendLimitsForEmail` from the Convex dashboard (Functions → internal) |
 
-Resume upload sessions and stale rate-limit rows are purged automatically every 15 minutes via `convex/crons.ts`.
+Resume upload sessions and stale rate-limit rows are purged automatically every 15 minutes via `resumeUploads:cleanupExpiredUploadSessions` in [convex/crons.ts](convex/crons.ts).

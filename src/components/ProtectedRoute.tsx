@@ -5,16 +5,12 @@ type ProtectedRouteProps = {
   children: React.ReactNode;
   requireAuth?: boolean;
   requireNoSubmittedRegistration?: boolean;
-  requireSubmittedRegistration?: boolean;
-  requireRegistration?: boolean;
 };
 
 export function ProtectedRoute({
   children,
   requireAuth = true,
   requireNoSubmittedRegistration = false,
-  requireSubmittedRegistration = false,
-  requireRegistration = false,
 }: ProtectedRouteProps) {
   const location = useLocation();
   const routing = useApplicantRouting();
@@ -35,14 +31,6 @@ export function ProtectedRoute({
 
   if (requireNoSubmittedRegistration && routing.hasSubmittedRegistration) {
     return <Navigate to="/profile" replace />;
-  }
-
-  if (requireSubmittedRegistration && !routing.hasSubmittedRegistration) {
-    return <Navigate to="/register" replace />;
-  }
-
-  if (requireRegistration && !routing.hasRegistration) {
-    return <Navigate to="/register" replace />;
   }
 
   return children;

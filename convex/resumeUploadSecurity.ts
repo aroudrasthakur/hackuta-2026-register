@@ -1,5 +1,5 @@
 /** Local Vite dev server origins — allowed only when REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS is set. */
-export const LOCAL_REGISTRATION_DEV_ORIGINS = [
+export const LOCAL_RESUME_UPLOAD_DEV_ORIGINS = [
   "http://127.0.0.1:5273",
   "http://localhost:5273",
 ] as const;
@@ -9,7 +9,7 @@ function isLocalDevOriginsEnabled(): boolean {
   return value === "true" || value === "1" || value === "yes";
 }
 
-function isLocalRegistrationDevOrigin(origin: string): boolean {
+function isLocalResumeUploadDevOrigin(origin: string): boolean {
   try {
     const { hostname } = new URL(origin);
     return hostname === "localhost" || hostname === "127.0.0.1";
@@ -19,7 +19,7 @@ function isLocalRegistrationDevOrigin(origin: string): boolean {
 }
 
 function addOriginIfAllowed(origins: Set<string>, origin: string) {
-  if (isLocalRegistrationDevOrigin(origin) && !isLocalDevOriginsEnabled()) {
+  if (isLocalResumeUploadDevOrigin(origin) && !isLocalDevOriginsEnabled()) {
     return;
   }
   origins.add(origin);
@@ -43,11 +43,11 @@ function localDevOriginVariants(siteUrl: string): string[] {
   }
 }
 
-export function getRegistrationAllowedOrigins(): string[] {
+export function getResumeUploadAllowedOrigins(): string[] {
   const origins = new Set<string>();
 
   if (isLocalDevOriginsEnabled()) {
-    for (const origin of LOCAL_REGISTRATION_DEV_ORIGINS) {
+    for (const origin of LOCAL_RESUME_UPLOAD_DEV_ORIGINS) {
       origins.add(origin);
     }
   }

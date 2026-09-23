@@ -4,6 +4,8 @@ import type {
   GenericMutationCtx,
   GenericQueryCtx,
 } from "convex/server";
+import { v } from "convex/values";
+import { query } from "./_generated/server";
 import type schema from "./schema";
 import { HACKATHON_SCHEDULE } from "../shared/hackathon/schedule";
 
@@ -11,9 +13,11 @@ type DataModel = DataModelFromSchemaDefinition<typeof schema>;
 type HackathonDoc = DocumentByName<DataModel, "hackathons">;
 type DbCtx = GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>;
 
-const HACKATHON_SEEDS = {
-  "hackuta-2026": {
-    slug: "hackuta-2026",
+export const HACKATHON_DEFAULT_SLUG = "hackuta-2026" as const;
+
+export const HACKATHON_SEEDS = {
+  [HACKATHON_DEFAULT_SLUG]: {
+    slug: HACKATHON_DEFAULT_SLUG,
     name: "HackUTA 2026",
     ...HACKATHON_SCHEDULE,
   },
@@ -72,3 +76,15 @@ export async function ensureHackathon(
   }
   return hackathon;
 }
+
+export const getHackathonBySlug = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    return (
+      (await ctx.db
+        .query("hackathons")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .first()) ?? null
+    );
+  },
+});

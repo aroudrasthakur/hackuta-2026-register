@@ -16,7 +16,6 @@ describe("AuthBootstrap", () => {
     mockUseSessionAuth.mockReturnValue({
       isLoading: true,
       isAuthenticated: false,
-      signIn: vi.fn(),
       signOut,
     });
 
@@ -31,7 +30,6 @@ describe("AuthBootstrap", () => {
     mockUseSessionAuth.mockReturnValue({
       isLoading: false,
       isAuthenticated: false,
-      signIn: vi.fn(),
       signOut,
     });
     rerender(
@@ -45,7 +43,6 @@ describe("AuthBootstrap", () => {
     mockUseSessionAuth.mockReturnValue({
       isLoading: true,
       isAuthenticated: false,
-      signIn: vi.fn(),
       signOut,
     });
     rerender(

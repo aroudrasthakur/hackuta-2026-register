@@ -1,7 +1,7 @@
 /** Storm intensity for the sign-in backdrop when motion is enabled. */
 export const SIGN_IN_AMBIENT_STORM = 0.72;
 
-export type RainDrop = {
+type RainDrop = {
   left: string;
   delay: string;
   duration: string;

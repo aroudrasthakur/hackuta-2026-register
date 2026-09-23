@@ -1,4 +1,4 @@
-export const LOGO_WIDTHS = [120, 240, 400, 640] as const;
+const LOGO_WIDTHS = [120, 240, 400, 640] as const;
 
 const LOGO_FILES = {
   light: "hackuta-logo",
@@ -6,12 +6,10 @@ const LOGO_FILES = {
 } as const;
 
 export type LogoVariant = keyof typeof LOGO_FILES;
-export type LogoLayout = "header" | "hero" | "footer";
+export type LogoLayout = "header";
 
 export const LOGO_SIZES: Record<LogoLayout, string> = {
   header: "44px",
-  hero: "(max-width: 599px) 200px, 320px",
-  footer: "40px",
 };
 
 export function logoSrcSet(variant: LogoVariant) {
