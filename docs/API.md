@@ -13,9 +13,9 @@ Function names use Convex `module:function` notation (e.g. `registrations:regist
 
 ## Authentication
 
-Auth uses [@convex-dev/auth](https://labs.convex.dev/auth) with the **Password** provider plus **email OTP verification** on sign-up.
+Auth uses [@convex-dev/auth](https://labs.convex.dev/auth) with the **Password** provider (via [HackutaPassword](../convex/lib/hackutaPassword.ts)) plus **email OTP verification** on sign-up and **email OTP password reset**.
 
-Password rules (client + server): min 8 characters, at least one uppercase, one lowercase, and one digit.
+Password rules (client + server): min 8 characters, at least one uppercase, one lowercase, and one digit. Password reset rejects a new password that matches the current password.
 
 ### Sign up / sign in (action)
 
@@ -27,7 +27,18 @@ Password rules (client + server): min 8 characters, at least one uppercase, one 
 | Verify email | `email`, `code`, `flow=email-verification` | `{ signingIn: true }`; establishes JWT session |
 | Sign in | `email`, `password`, `flow=signIn` | `{ signingIn: true }` when email already verified |
 
-OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Resend cooldown **30 s**; max **5 sends/hour**; max **5 failed verifications/hour**.
+Sign-up OTP provider: `email-verification`. Resend cooldown **30 s**; max **5 sends/hour** (bucket `otp_send`); max **5 failed verifications/hour** (Convex Auth `authRateLimits`).
+
+### Forgot password (action)
+
+| Step | FormData fields | Result |
+| --- | --- | --- |
+| Request reset | `email`, `flow=reset` | Sends 6-digit reset email when account exists; client always shows neutral confirmation copy |
+| Reset password | `email`, `code`, `newPassword`, `flow=reset-verification` | Verifies reset OTP, updates password hash, invalidates other sessions; client signs out and returns to sign-in |
+
+Reset OTP provider: `password-reset` (separate from sign-up verification). Resend cooldown **30 s**; max **5 sends/hour** (bucket `password_reset_send`). Sign-up OTPs cannot authorize password reset.
+
+Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Reused passwords are rejected before OTP consumption.
 
 ### Sign out (action)
 
@@ -50,23 +61,23 @@ OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Re
 
 ### `profiles:getMyProfileDraft`
 
-**Auth:** required · `{ hackathonId?: string }` — draft profile fields for autosave hydration (null if none).
+**Auth:** required · no args — draft profile fields for autosave hydration (null if none).
 
 ### `profiles:saveProfileDraft`
 
-**Auth:** required · `{ hackathonId?: string, patch: ProfileDraftPatch }` — upserts draft profile; only writable while status is `draft`.
+**Auth:** required · `{ patch: ProfileDraftPatch }` — upserts draft profile; only writable while status is `draft`.
 
 ### `profiles:getMyApplicantDashboard`
 
-**Auth:** required · `{ hackathonId?: string }` — profile page payload (status, answers, timeline).
+**Auth:** required · no args — profile page payload (status, answers, timeline).
 
-### `hackathons:getHackathonBySlug`
+### `eventConfig:getPublicEventConfig`
 
-**Auth:** none · `{ slug: string }` — public hackathon metadata.
+**Auth:** none · no args — public hackathon display name for the registration UI.
 
 ### `applicant:getApplicantRoutingState`
 
-**Auth:** optional · `{ hackathonId?: string }` — routing for guards and `/` redirect.
+**Auth:** optional · no args — routing for guards and `/` redirect.
 
 ### `rateLimits:getOtpSendCooldown`
 
@@ -77,6 +88,12 @@ OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Re
 ```
 
 Lookup attempts are rate-limited; invalid emails get a neutral response.
+
+### `rateLimits:getPasswordResetSendCooldown`
+
+**Type:** mutation · **Auth:** none · `{ email: string }`
+
+Same response shape as `getOtpSendCooldown`. Tracks the `password_reset_send` bucket separately from sign-up OTP sends.
 
 ---
 
@@ -102,17 +119,22 @@ First submit creates the applicant record; sign-in alone does not write applicat
 | Message | Cause |
 | --- | --- |
 | `You have already submitted an application.` | Duplicate submit |
-| `Please upload a valid PDF resume of 5 MB or smaller.` | Bad/missing resume metadata or token |
+| `Please upload a valid PDF resume of 2 MB or smaller.` | Bad/missing resume metadata or token |
+| `Your resume exceeds the 2 MB limit. Please upload a smaller PDF.` | Resume exceeds size limit |
 | `This resume is already attached to another application.` | Storage ID reuse |
 | `Authentication required.` | Missing/invalid session |
 
 ### `resumeUploads:discardUploadSession`
 
-**Auth:** none (capability token) · `{ uploadToken: string }` — deletes unconsumed session + storage.
+**Auth:** required · `{ uploadToken: string }` — deletes an unconsumed session owned by the caller and its storage.
 
 ### `applicant:ensureApplicantProfile`
 
 **Auth:** required · `{}` — ensures a draft `profiles` row exists after sign-in.
+
+### `passwordReset:invalidateSessionsAfterPasswordReset`
+
+**Auth:** required · `{}` — deletes all `authSessions` and linked `authRefreshTokens` for the current user. Called after a successful `reset-verification` sign-in so the user must sign in again with the new password.
 
 ---
 
@@ -124,14 +146,15 @@ Base URL: `VITE_CONVEX_SITE_URL`
 
 Upload a PDF resume before form submission.
 
-**Auth:** browser origin allowlist (`REGISTRATION_ALLOWED_ORIGINS` + `SITE_URL`). No JWT.
+**Auth:** JWT session (`Authorization: Bearer <token>`) **and** browser origin allowlist (`REGISTRATION_ALLOWED_ORIGINS` + `SITE_URL`).
 
 **Request headers:**
 
 | Header | Required | Value |
 | --- | --- | --- |
+| `Authorization` | Yes | `Bearer <convex-auth-jwt>` |
 | `Content-Type` | Yes | `application/pdf` |
-| `Content-Length` | Yes | 1 – 5,242,880 (5 MB). Rejected **before** body read if missing or too large |
+| `Content-Length` | Yes | 1 – 2,097,152 (2 MB). Rejected **before** body read if missing or too large |
 | `Origin` | Yes | Must match allowlist |
 | `X-Resume-Filename` | Yes | Must end in `.pdf`; no `/` or `\` |
 
@@ -161,6 +184,7 @@ Upload a PDF resume before form submission.
 | Status | Condition |
 | --- | --- |
 | `400` | Invalid Content-Length format |
+| `401` | Missing or invalid auth session |
 | `403` | Origin not allowed |
 | `411` | Missing Content-Length |
 | `413` | Empty, oversize, or length mismatch |
@@ -171,11 +195,11 @@ Upload a PDF resume before form submission.
 
 Client maps these to friendly copy via `shared/registration/submitErrors.ts`.
 
-**Rate limits:** 5 uploads / IP / 10 min · 100 global / 10 min.
+**Rate limits:** 5 uploads / IP / 10 min · 5 uploads / authenticated user / 10 min · 100 global / 10 min.
 
 ### `OPTIONS /resume-upload`
 
-CORS preflight. Allowed headers: `Content-Type`, `X-Resume-Filename`.
+CORS preflight. Allowed headers: `Content-Type`, `Authorization`, `X-Resume-Filename`.
 
 ---
 
@@ -193,7 +217,7 @@ Responses include `X-Content-Type-Options: nosniff` and `Cache-Control: no-store
 
 ### Mutations and actions
 
-Convex throws `Error` with a string message. The client maps known messages through `mapConvexErrorToUserMessage()` / `mapUploadError()`; unknown errors become generic copy.
+Convex throws `Error` with a string message. The client maps known messages through `mapConvexErrorToUserMessage()` / `mapUploadError()` / `mapAuthError()` / `mapPasswordResetError()`; unknown errors become generic copy.
 
 ### Registration field validation
 
@@ -209,7 +233,9 @@ Client-side Zod errors return per-field messages from `shared/registration/schem
 | Registration server | `shared/registration/validation.ts` | `validateRegistrationPayload()` |
 | Sanitization | `shared/lib/sanitizeInput.ts` | Control chars stripped; markup patterns rejected |
 | Password | `shared/auth/password.ts` | Length, upper/lower/digit |
-| Resume (client) | `shared/registration/resume.ts` | `.pdf` only, ≤ 5 MB |
+| Password reset copy | `shared/auth/passwordResetMessages.ts` | Neutral request confirmation, success, reuse, and rate-limit messages |
+| Auth error mapping | `shared/auth/errorMessages.ts` | mapAuthError, mapPasswordResetError |
+| Resume (client) | `shared/registration/resume.ts` | `.pdf` only, ≤ 2 MB |
 | Resume (server) | `convex/pdfValidation.ts` | Magic bytes, parse, ≤ 25 pages |
 
 Full field list: `shared/registration/schema.ts` and `shared/registration/constants.ts`.
@@ -224,8 +250,10 @@ Not callable from the public client.
 
 | Function | Purpose |
 | --- | --- |
-| `assertOtpSendAllowed` | OTP cooldown / hourly cap |
+| `assertOtpSendAllowed` | Sign-up OTP cooldown / hourly cap |
 | `recordOtpSend` | Bucket `otp_send` |
+| `assertPasswordResetSendAllowed` | Password-reset OTP cooldown / hourly cap |
+| `recordPasswordResetSend` | Bucket `password_reset_send` |
 | `clearOtpSendLimitsForEmail` | Support/testing reset |
 ### Resume pipeline (`resumeUploads`)
 
@@ -239,17 +267,17 @@ Not callable from the public client.
 
 | Function | Purpose |
 | --- | --- |
-| `email/sendOtpEmail:sendOtpEmail` | OTP / verification mail |
+| `email/sendOtpEmail:sendOtpEmail` | Sign-up verification mail |
+| `email/sendPasswordResetEmail:sendPasswordResetEmail` | Password reset mail |
 | `email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail` | Post-submit confirmation |
 
 User content in HTML emails is escaped via `escapeHtml()`.
 
-### Maintenance / seed
+### Maintenance
 
 | Function | Purpose |
 | --- | --- |
 | `maintenance:resetAllData` | Internal — wipe all data + storage |
-| `seed:seedHackathon` | Insert `hackuta-2026` if missing |
 
 ---
 
@@ -259,6 +287,8 @@ User content in HTML emails is escaped via `escapeHtml()`.
 | --- | --- | --- | --- |
 | `otp_send` | normalized email | 5 sends | 1 hour |
 | `otp_send` | normalized email | 30 s cooldown | between sends |
+| `password_reset_send` | normalized email | 5 sends | 1 hour |
+| `password_reset_send` | normalized email | 30 s cooldown | between sends |
 | `resume_upload` | client IP hash | 5 uploads | 10 minutes |
 | `resume_upload` | global | 100 uploads | 10 minutes |
 
@@ -274,12 +304,11 @@ Convex Auth identity only (email, verification timestamps). Password hashes live
 
 ### `profiles`
 
-One row per auth user per hackathon. All application form fields are top-level columns.
+One row per auth user. All application form fields are top-level columns.
 
 | Field | Notes |
 | --- | --- |
 | `authUserId` | FK to `users` |
-| `hackathonId` | `"hackuta-2026"` |
 | `email` | Copied from verified auth email |
 | `status` | `draft` \| `submitted` \| `accepted` \| `waitlisted` \| `rejected` \| `withdrawn` |
 | `eligibilityStatus` | `unreviewed` \| `eligible` \| `ineligible` |
@@ -290,7 +319,7 @@ One row per auth user per hackathon. All application form fields are top-level c
 
 | Table | Purpose |
 | --- | --- |
-| `hackathons` | Event dates and registration window |
+| `eventConfig` | Server-side hackathon display name (single row) |
 | `rateLimits` | Throttle counters |
 | `resumeUploadSessions` | Upload capability tokens |
 | Auth tables | Managed by `@convex-dev/auth` |
@@ -310,7 +339,8 @@ One row per auth user per hackathon. All application form fields are top-level c
 | UI | API |
 | --- | --- |
 | Sign-in / sign-up | `auth:signIn`, `auth:signOut` |
-| OTP cooldown | `rateLimits:getOtpSendCooldown` |
+| Forgot password | `auth:signIn` (`flow=reset`, `flow=reset-verification`), `passwordReset:invalidateSessionsAfterPasswordReset` |
+| OTP cooldown | `rateLimits:getOtpSendCooldown`, `rateLimits:getPasswordResetSendCooldown` |
 | Ensure profile | `applicant:ensureApplicantProfile` |
 | Route guards | `applicant:getApplicantRoutingState` |
 | Applicant dashboard | `profiles:getMyApplicantDashboard` |

@@ -7,10 +7,14 @@ import {
   MAX_RESUME_BYTES,
   parseResumeContentLength,
   RESUME_FILENAME_HEADER,
+  RESUME_EMPTY_ERROR_MESSAGE,
+  RESUME_SIZE_ERROR_MESSAGE,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../shared/registration/resume";
+import { requireAuthUserId } from "./lib/auth";
 import { validateResumePdfBytes } from "./pdfValidation";
 import { getResumeUploadAllowedOrigins, isOriginAllowed } from "./resumeUploadSecurity";
+import { RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE } from "../shared/registration/submitErrors";
 
 const http = httpRouter();
 auth.addHttpRoutes(http);
@@ -80,6 +84,19 @@ const uploadResume = httpAction(async (ctx, request) => {
   if (!origin) {
     return response(request, { error: "Origin is not allowed." }, 403);
   }
+
+  let authUserId;
+  try {
+    authUserId = await requireAuthUserId(ctx);
+  } catch {
+    return response(
+      request,
+      { error: RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE },
+      401,
+      origin,
+    );
+  }
+
   if (
     request.headers.get("content-type")?.split(";", 1)[0]?.trim() !==
     ALLOWED_RESUME_CONTENT_TYPE
@@ -106,8 +123,11 @@ const uploadResume = httpAction(async (ctx, request) => {
         origin,
       );
     }
-    if (contentLength.reason === "too_large" || contentLength.reason === "empty") {
-      return response(request, { error: "The PDF is too large." }, 413, origin);
+    if (contentLength.reason === "too_large") {
+      return response(request, { error: RESUME_SIZE_ERROR_MESSAGE }, 413, origin);
+    }
+    if (contentLength.reason === "empty") {
+      return response(request, { error: RESUME_EMPTY_ERROR_MESSAGE }, 413, origin);
     }
     return response(request, { error: "Invalid upload request." }, 400, origin);
   }
@@ -120,6 +140,7 @@ const uploadResume = httpAction(async (ctx, request) => {
   try {
     await ctx.runMutation(assertUploadRateLimitRef, {
       requestKey: await requestRateKey(await clientAddress(ctx)),
+      authUserId,
     });
   } catch {
     return response(request, { error: "Too many uploads. Please try again later." }, 429, origin);
@@ -127,7 +148,7 @@ const uploadResume = httpAction(async (ctx, request) => {
 
   const bytes = new Uint8Array(await request.arrayBuffer());
   if (bytes.length !== contentLength.length || bytes.length > MAX_RESUME_BYTES) {
-    return response(request, { error: "The PDF must be between 1 byte and 5 MB." }, 413, origin);
+    return response(request, { error: RESUME_SIZE_ERROR_MESSAGE }, 413, origin);
   }
 
   try {
@@ -145,7 +166,11 @@ const uploadResume = httpAction(async (ctx, request) => {
   try {
     storageId = await ctx.storage.store(new Blob([bytes], { type: "application/pdf" }));
     const uploadToken = createCapabilityToken();
-    await ctx.runMutation(createVerifiedUploadSessionRef, { uploadToken, storageId });
+    await ctx.runMutation(createVerifiedUploadSessionRef, {
+      uploadToken,
+      storageId,
+      authUserId,
+    });
     return response(request, { storageId, uploadToken }, 201, origin);
   } catch {
     if (storageId) await ctx.storage.delete(storageId);
@@ -164,7 +189,7 @@ http.route({
     result.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
     result.headers.set(
       "Access-Control-Allow-Headers",
-      `Content-Type, ${RESUME_FILENAME_HEADER}`,
+      `Content-Type, Authorization, ${RESUME_FILENAME_HEADER}`,
     );
     result.headers.set("Access-Control-Max-Age", "600");
     return result;

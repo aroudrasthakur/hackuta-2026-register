@@ -3,7 +3,11 @@ import { OTP_SEND_MAX_PER_HOUR } from "../shared/auth/otpRateLimit";
 import { internalMutation, mutation } from "./_generated/server";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import { lookupOtpSendStatus, OTP_SEND_WINDOW_MS } from "./lib/otpSendStatus";
-import { OTP_SEND_BUCKET, OTP_STATUS_LOOKUP_BUCKET } from "./lib/rateLimitBuckets";
+import {
+  OTP_SEND_BUCKET,
+  OTP_STATUS_LOOKUP_BUCKET,
+  PASSWORD_RESET_SEND_BUCKET,
+} from "./lib/rateLimitBuckets";
 
 export { OTP_RESEND_COOLDOWN_MS, OTP_SEND_WINDOW_MS } from "./lib/otpSendStatus";
 export { OTP_SEND_MAX_PER_HOUR };
@@ -117,6 +121,88 @@ export const recordOtpSend = internalMutation({
     const stale = await ctx.db
       .query("rateLimits")
       .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
+      .filter((q) => q.eq(q.field("key"), normalized))
+      .collect();
+
+    for (const entry of stale) {
+      if (entry.createdAt < cutoff) {
+        await ctx.db.delete(entry._id);
+      }
+    }
+  },
+});
+
+export const getPasswordResetSendCooldown = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized) {
+      return NEUTRAL_OTP_STATUS;
+    }
+
+    const now = Date.now();
+    const lookupWindowStart = now - OTP_STATUS_LOOKUP_WINDOW_MS;
+    const lookups = await countRecentRateLimits(
+      ctx,
+      OTP_STATUS_LOOKUP_BUCKET,
+      normalized,
+      lookupWindowStart,
+    );
+
+    await ctx.db.insert("rateLimits", {
+      bucket: OTP_STATUS_LOOKUP_BUCKET,
+      key: normalized,
+      createdAt: now,
+    });
+
+    if (lookups.length >= OTP_STATUS_LOOKUP_MAX_PER_HOUR) {
+      return NEUTRAL_OTP_STATUS;
+    }
+
+    return lookupOtpSendStatus(ctx, normalized, now, PASSWORD_RESET_SEND_BUCKET);
+  },
+});
+
+export const assertPasswordResetSendAllowed = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized) {
+      throw new Error("Invalid email.");
+    }
+
+    const status = await lookupOtpSendStatus(
+      ctx,
+      normalized,
+      Date.now(),
+      PASSWORD_RESET_SEND_BUCKET,
+    );
+    if (status.hourlyLimitReached) {
+      throw new Error("Too many reset requests. Please try again later.");
+    }
+    if (status.waitSeconds > 0) {
+      throw new Error("Please wait before requesting another code.");
+    }
+  },
+});
+
+export const recordPasswordResetSend = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return;
+
+    const now = Date.now();
+    await ctx.db.insert("rateLimits", {
+      bucket: PASSWORD_RESET_SEND_BUCKET,
+      key: normalized,
+      createdAt: now,
+    });
+
+    const cutoff = now - OTP_SEND_WINDOW_MS;
+    const stale = await ctx.db
+      .query("rateLimits")
+      .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", PASSWORD_RESET_SEND_BUCKET))
       .filter((q) => q.eq(q.field("key"), normalized))
       .collect();
 

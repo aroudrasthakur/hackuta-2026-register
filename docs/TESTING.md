@@ -28,7 +28,7 @@ PLAYWRIGHT_USE_BUILD=true npm run test:e2e   # against production build (CI path
 | Area | Example files |
 | --- | --- |
 | Registration Zod | registration-validation.test.ts |
-| Password auth | password.test.ts, sign-in.test.tsx, sign-in-extended.test.tsx |
+| Password auth | password.test.ts, sign-in.test.tsx, sign-in-extended.test.tsx, forgot-password.test.tsx, auth-error-messages.test.ts |
 | Profile drafts + submit | convex.test.ts, register-ui.test.tsx, register-api.test.ts |
 | Input sanitization | sanitize-input.test.ts |
 | Resume upload | resume-upload-policy.test.ts, resume-upload-security.test.ts, convex.test.ts |
@@ -36,6 +36,7 @@ PLAYWRIGHT_USE_BUILD=true npm run test:e2e   # against production build (CI path
 | Error mapping | submit-errors.test.ts |
 | CSP / headers sync | security.test.ts, csp.test.ts |
 | Convex integration | convex.test.ts, rate-limits.test.ts |
+| Register dropdowns | searchable-select.test.tsx, select-field.test.tsx |
 
 Convex tests use `convex-test` with `import.meta.glob` over `convex/**/*.ts`. Local runs copy a server stub via scripts/ensure-convex-server-stub.mjs when `convex/_generated/` is absent.
 

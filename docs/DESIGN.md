@@ -9,7 +9,7 @@ Last updated: September 2026
 | Item | Detail |
 | --- | --- |
 | Repository | hackuta-2026-register |
-| Scope | Sign-in (password + OTP), application form with draft autosave, applicant profile dashboard |
+| Scope | Sign-in (password + OTP), forgot-password reset, application form with draft autosave, applicant profile dashboard |
 | Implemented routes | /sign-in, /register, /profile |
 | Theme tokens | [src/styles/index.css](../src/styles/index.css) (`--color-*` / `--ink`, `--clay`, etc.) |
 

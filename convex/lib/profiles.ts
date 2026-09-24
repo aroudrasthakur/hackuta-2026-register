@@ -4,7 +4,7 @@ import type {
   GenericMutationCtx,
 } from "convex/server";
 import type { GenericId } from "convex/values";
-import { HACKATHON_ID } from "../../shared/registration/constants";
+import { ensureEventConfig } from "./eventConfig";
 import { normalizeEmail } from "./normalizeEmail";
 import { getAuthUser, requireAuthUser, type AuthCtx } from "./auth";
 import type schema from "../schema";
@@ -15,16 +15,13 @@ type DataModel = DataModelFromSchemaDefinition<typeof schema>;
 type ProfileDoc = DocumentByName<DataModel, "profiles">;
 type MutationCtx = GenericMutationCtx<DataModel>;
 
-export async function getProfileByUserAndHackathon(
+export async function getProfileByUser(
   ctx: AuthCtx,
   authUserId: GenericId<"users">,
-  hackathonId: string,
 ) {
   return ctx.db
     .query("profiles")
-    .withIndex("by_auth_user_hackathon", (q) =>
-      q.eq("authUserId", authUserId).eq("hackathonId", hackathonId),
-    )
+    .withIndex("by_auth_user", (q) => q.eq("authUserId", authUserId))
     .first();
 }
 
@@ -33,17 +30,15 @@ export function profileFormWasSubmitted(profile: Pick<ProfileDoc, "formSubmitted
   return profile.formSubmitted === true || profile.submittedAt != null;
 }
 
-export async function ensureDraftProfile(
-  ctx: MutationCtx,
-  hackathonId: string = HACKATHON_ID,
-) {
+export async function ensureDraftProfile(ctx: MutationCtx) {
+  await ensureEventConfig(ctx);
   const authUser = await requireAuthUser(ctx);
   const email = normalizeEmail(authUser.email);
   if (!email) {
     throw new Error("A verified email is required.");
   }
 
-  const existing = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
+  const existing = await getProfileByUser(ctx, authUser._id);
   if (existing) {
     const emailVerificationTime =
       authUser.emailVerificationTime ?? existing.emailVerificationTime;
@@ -62,7 +57,6 @@ export async function ensureDraftProfile(
     authUserId: authUser._id,
     email,
     emailVerificationTime: authUser.emailVerificationTime,
-    hackathonId,
     status: "draft",
     eligibilityStatus: "unreviewed",
     confirmationStatus: "unconfirmed",

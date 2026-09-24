@@ -16,7 +16,7 @@ Deploy, configure, monitor, and maintain the registration app in production.
 2. **Convex prod:** `npm run convex:deploy` (or `npx convex deploy --prod`)
 3. **Verify env:** `npm run convex:verify` (if configured)
 4. **Vercel:** push to `main` or promote deployment
-5. **Smoke test:** sign-up + OTP, sign-in, draft autosave, submit test application, resume upload
+5. **Smoke test:** sign-up + OTP, sign-in, forgot-password reset, draft autosave, submit test application, resume upload
 6. **Confirm prod Convex env:** no `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS`; origins point to `register.hackuta.com` only
 
 ### Vercel environment variables
@@ -55,9 +55,10 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 
 | Task | Command |
 | --- | --- |
-| Seed hackathon record | `npx convex run seed:seedHackathon` |
+| Update hackathon display name | `npx convex run eventConfig:setHackathonName '{ "name": "HackUTA 2026" }'` |
+| Remove an orphaned table (not in schema) | Convex dashboard → **Data** → table → **⋮** → **Delete table** |
 | Reset all data (**destructive**) | Convex dashboard → internal `maintenance:resetAllData` |
-| Clear OTP rate limit for email | Convex dashboard → internal `rateLimits:clearOtpSendLimitsForEmail` |
+| Clear sign-up OTP rate limit for email | Convex dashboard → internal `rateLimits:clearOtpSendLimitsForEmail` |
 | Unset stale env var | `npx convex env unset VAR_NAME` |
 
 ## Monitoring & incidents
@@ -66,14 +67,14 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 
 - **Convex dashboard:** function error rates, HTTP action 4xx/5xx on `/resume-upload`
 - **Vercel:** deployment status, edge 5xx
-- **SMTP:** OTP and confirmation email delivery (cPanel mail logs)
+- **SMTP:** Sign-up OTP, password-reset OTP, and confirmation email delivery (cPanel mail logs)
 - **CI:** GitHub Actions on `main` / `dev`
 
 ### Symptom → likely cause
 
 | Symptom | Check |
 | --- | --- |
-| OTP not received | SMTP env vars, SPF/DKIM, rate limit (5/hour) |
+| OTP not received | SMTP env vars, SPF/DKIM, rate limit (5/hour per bucket: `otp_send`, `password_reset_send`) |
 | Resume upload 403 | `REGISTRATION_ALLOWED_ORIGINS` vs actual frontend URL |
 | Resume upload 429 | IP or global upload rate limit; possible abuse |
 | Submit fails “already submitted” | Expected — one submission per user |

@@ -1,4 +1,4 @@
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -16,33 +16,28 @@ import {
   OTP_RESEND_COOLDOWN_SECONDS,
   startCooldownExpiry,
 } from "../../../shared/auth/otpRateLimit";
+import {
+  AUTH_FAILED_MESSAGE,
+  mapAuthError,
+  OTP_INVALID_MESSAGE,
+} from "../../../shared/auth/errorMessages";
 import { isValidEmailSyntax, normalizeEmail } from "../../../shared/lib/normalizeEmail";
 import { OtpCodeInput } from "../../components/OtpCodeInput";
 import { SignInShell } from "../../components/SignInShell";
 import { useMockAuth } from "../../hooks/useMockAuth";
-import { ensureApplicantProfileRef, getOtpSendCooldownRef } from "../../convex/api";
+import {
+  ensureApplicantProfileRef,
+  getOtpSendCooldownRef,
+  invalidateSessionsAfterPasswordResetRef,
+} from "../../convex/api";
+import { ForgotPasswordFlow } from "./ForgotPasswordFlow";
 import { getConvexClient } from "../../convex/client";
 import { useApplicantRouting } from "../../hooks/useApplicantRouting";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
 
-const OTP_INVALID_MESSAGE = "The verification code is invalid or expired.";
-const AUTH_FAILED_MESSAGE = "We couldn't sign you in. Check your email and password.";
-
 type AuthMode = "signUp" | "signIn";
 type SignInStep = "credentials" | "verify";
-
-function mapAuthError(error: unknown) {
-  if (error instanceof Error) {
-    if (error.message.includes("Invalid password")) {
-      return PASSWORD_REQUIREMENTS_MESSAGE;
-    }
-    if (error.message.includes("Passwords do not match")) {
-      return "Passwords do not match.";
-    }
-    return error.message;
-  }
-  return AUTH_FAILED_MESSAGE;
-}
+type SignInView = "auth" | "forgotPassword";
 
 type ConvexPasswordSignIn = (
   provider: string,
@@ -50,13 +45,22 @@ type ConvexPasswordSignIn = (
 ) => Promise<{ signingIn: boolean }>;
 
 type EnsureProfileMutation = (args: Record<string, never>) => Promise<unknown>;
+type FetchAccessToken = (args: { forceRefreshToken: boolean }) => Promise<string | null>;
+
+type ConvexSignOut = () => Promise<void>;
 
 function SignInPageContent({
   convexSignIn,
+  convexSignOut,
   ensureProfile,
+  fetchAccessToken,
+  invalidateSessionsAfterReset,
 }: {
   convexSignIn: ConvexPasswordSignIn | null;
+  convexSignOut?: ConvexSignOut | null;
   ensureProfile: EnsureProfileMutation | null;
+  fetchAccessToken?: FetchAccessToken | null;
+  invalidateSessionsAfterReset?: (() => Promise<void>) | null;
 }) {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useSessionAuth();
@@ -64,8 +68,10 @@ function SignInPageContent({
   const routing = useApplicantRouting();
   const client = getConvexClient();
 
+  const [view, setView] = useState<SignInView>("auth");
   const [mode, setMode] = useState<AuthMode>("signUp");
   const [step, setStep] = useState<SignInStep>("credentials");
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -90,12 +96,15 @@ function SignInPageContent({
       return;
     }
 
-    if (client && ensureProfile) {
-      await ensureProfile({}).catch(() => undefined);
+    if (client && ensureProfile && fetchAccessToken) {
+      const token = await fetchAccessToken({ forceRefreshToken: true });
+      if (token) {
+        await ensureProfile({}).catch(() => undefined);
+      }
     }
 
     navigate(routing.hasSubmittedRegistration ? "/profile" : "/register", { replace: true });
-  }, [client, ensureProfile, mockAuth, navigate, routing.hasSubmittedRegistration]);
+  }, [client, ensureProfile, fetchAccessToken, mockAuth, navigate, routing.hasSubmittedRegistration]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && !routing.isLoading && routing.isAuthenticated) {
@@ -103,11 +112,38 @@ function SignInPageContent({
     }
   }, [isAuthenticated, isLoading, routeAfterSignIn, routing.isAuthenticated, routing.isLoading]);
 
-  if (!isLoading && isAuthenticated && routing.isAuthenticated) {
+  if (
+    view === "auth" &&
+    !isLoading &&
+    isAuthenticated &&
+    routing.isAuthenticated
+  ) {
     return (
       <Navigate
         to={routing.hasSubmittedRegistration ? "/profile" : "/register"}
         replace
+      />
+    );
+  }
+
+  if (view === "forgotPassword") {
+    return (
+      <ForgotPasswordFlow
+        convexSignIn={convexSignIn}
+        convexSignOut={convexSignOut ?? null}
+        invalidateSessions={invalidateSessionsAfterReset ?? null}
+        onComplete={(message) => {
+          setResetSuccessMessage(message);
+          setView("auth");
+          setMode("signIn");
+          setStep("credentials");
+          setError(null);
+        }}
+        onCancel={() => {
+          setView("auth");
+          setMode("signIn");
+          setError(null);
+        }}
       />
     );
   }
@@ -138,7 +174,7 @@ function SignInPageContent({
         validatePasswordRequirements(password);
         validatePasswordConfirmation(password, confirmPassword);
       } catch (err) {
-        setError(mapAuthError(err));
+        setError(mapAuthError(err, mode));
         return;
       }
     }
@@ -185,7 +221,7 @@ function SignInPageContent({
       setCode("");
       setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
     } catch (err) {
-      setError(mapAuthError(err));
+        setError(mapAuthError(err, mode));
     } finally {
       setPending(false);
     }
@@ -266,7 +302,7 @@ function SignInPageContent({
         setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
       }
     } catch (err) {
-      setError(mapAuthError(err));
+      setError(mapAuthError(err, mode));
     } finally {
       setPending(false);
     }
@@ -362,6 +398,12 @@ function SignInPageContent({
             <p className="sign-in-message">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
           ) : null}
 
+          {resetSuccessMessage ? (
+            <p className="sign-in-message sign-in-message--info" role="status" aria-live="polite">
+              {resetSuccessMessage}
+            </p>
+          ) : null}
+
           {error ? (
             <p className="sign-in-message sign-in-message--error" role="alert" aria-live="polite">
               {error}
@@ -378,6 +420,20 @@ function SignInPageContent({
                 : "Sign in"}
           </button>
 
+          {mode === "signIn" ? (
+            <button
+              type="button"
+              className="sign-in-link"
+              onClick={() => {
+                setView("forgotPassword");
+                setError(null);
+                setResetSuccessMessage(null);
+              }}
+            >
+              Forgot password?
+            </button>
+          ) : null}
+
           <button
             type="button"
             className="sign-in-link"
@@ -385,6 +441,7 @@ function SignInPageContent({
               setMode(mode === "signUp" ? "signIn" : "signUp");
               setError(null);
               setConfirmPassword("");
+              setResetSuccessMessage(null);
             }}
           >
             {mode === "signUp"
@@ -439,12 +496,19 @@ function SignInPageContent({
 }
 
 function SignInPageWithConvex() {
-  const { signIn } = useAuthActions();
+  const { signIn, signOut } = useAuthActions();
+  const { fetchAccessToken } = useConvexAuth();
   const ensureProfile = useMutation(ensureApplicantProfileRef);
+  const invalidateSessionsAfterReset = useMutation(
+    invalidateSessionsAfterPasswordResetRef,
+  );
   return (
     <SignInPageContent
       convexSignIn={signIn}
+      convexSignOut={signOut}
       ensureProfile={ensureProfile}
+      fetchAccessToken={fetchAccessToken}
+      invalidateSessionsAfterReset={() => invalidateSessionsAfterReset({})}
     />
   );
 }

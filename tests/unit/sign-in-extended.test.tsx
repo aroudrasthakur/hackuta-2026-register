@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { OTP_INVALID_MESSAGE } from "../../shared/auth/errorMessages";
 import { MockAuthProvider } from "../../src/components/MockAuthProvider";
 import { MOCK_OTP } from "../../src/constants/mockAuth";
 import { SessionAuthProvider } from "../../src/hooks/useSessionAuth";
@@ -162,9 +163,7 @@ describe("SignInPage extended", () => {
     await user.paste("111111");
     await user.click(screen.getByRole("button", { name: "Verify email" }));
 
-    expect(
-      await screen.findByText("The verification code is invalid or expired."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(OTP_INVALID_MESSAGE)).toBeInTheDocument();
   });
 
   it("keeps verify disabled until six digits are entered", async () => {
@@ -197,6 +196,14 @@ describe("SignInPage extended", () => {
 
     const verifyButton = screen.getByRole("button", { name: "Verify email" });
     expect(verifyButton).not.toBeDisabled();
+  });
+
+  it("shows the forgot password entry point in sign-in mode", async () => {
+    const user = userEvent.setup();
+    renderSignIn();
+
+    await user.click(screen.getByRole("button", { name: /Already have an account/i }));
+    expect(screen.getByRole("button", { name: "Forgot password?" })).toBeInTheDocument();
   });
 
   it("switches between sign up and sign in modes", async () => {

@@ -10,7 +10,7 @@ Shared React UI for the HackUTA registration app: auth shell, route guards, them
 | [AuthBootstrap.tsx](AuthBootstrap.tsx) | Clears any persisted session on full page load, then renders the app |
 | [MockAuthProvider.tsx](MockAuthProvider.tsx) | In-memory auth when VITE_USE_MOCK_API=true (dev/tests only) |
 | [OdysseyButton.tsx](OdysseyButton.tsx) | Primary CTA: internal Link, external anchor, or button |
-| [OtpCodeInput.tsx](OtpCodeInput.tsx) | Six-digit email verification input (signup verify step) |
+| [OtpCodeInput.tsx](OtpCodeInput.tsx) | Six-digit OTP input (sign-up verify and forgot-password verify steps) |
 | [PageShell.tsx](PageShell.tsx) | Register/profile content frame with logo header and clay background |
 | [ProtectedRoute.tsx](ProtectedRoute.tsx) | Auth guard and redirect when registration already submitted |
 | [SignInAtmosphere.tsx](SignInAtmosphere.tsx) | WebGL dithering shader layer for storm backdrop (lazy-loaded) |
@@ -27,7 +27,7 @@ Shared React UI for the HackUTA registration app: auth shell, route guards, them
 | AuthBootstrap | [main.tsx](../main.tsx) |
 | MockAuthProvider | [main.tsx](../main.tsx), unit tests |
 | ProtectedRoute | [main.tsx](../main.tsx) — /register (requireNoSubmittedRegistration), /profile |
-| SignInShell, OtpCodeInput | [SignInPage](../pages/SignIn/SignInPage.tsx) |
+| SignInShell, OtpCodeInput | [SignInPage](../pages/SignIn/SignInPage.tsx), [ForgotPasswordFlow](../pages/SignIn/ForgotPasswordFlow.tsx) |
 | StormPageFrame, PageShell, SignOutButton | [RegisterPage](../pages/Register/RegisterPage.tsx), [ProfilePage](../pages/Profile/ProfilePage.tsx) |
 | OdysseyButton | Register form, profile, success step, sign-out |
 | SignInStormBackdrop | SignInShell, StormPageFrame |

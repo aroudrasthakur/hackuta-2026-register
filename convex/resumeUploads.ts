@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalMutation, mutation } from "./_generated/server";
 import type schema from "./schema";
 import { MAX_RESUME_BYTES } from "../shared/registration/resume";
+import { requireAuthUser } from "./lib/auth";
 import { findProfileByResume } from "./lib/profiles";
 import { RESUME_UPLOAD_BUCKET } from "./lib/rateLimitBuckets";
 import { RESUME_UPLOAD_EXPIRY_MS } from "./lib/resumeUpload";
@@ -19,33 +20,46 @@ const cleanupExpiredUploadSessionsRef = makeFunctionReference<"mutation">(
   "resumeUploads:cleanupExpiredUploadSessions",
 );
 
+async function countRecentUploadAttempts(
+  ctx: MutationCtx,
+  key: string,
+  windowStart: number,
+) {
+  return ctx.db
+    .query("rateLimits")
+    .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", RESUME_UPLOAD_BUCKET))
+    .filter((q) =>
+      q.and(
+        q.eq(q.field("key"), key),
+        q.gte(q.field("createdAt"), windowStart),
+      ),
+    )
+    .collect();
+}
+
 export const assertUploadRateLimit = internalMutation({
   args: {
     requestKey: v.string(),
+    authUserId: v.id("users"),
   },
-  handler: async (ctx: MutationCtx, { requestKey }) => {
+  handler: async (ctx: MutationCtx, { requestKey, authUserId }) => {
     const now = Date.now();
     const windowStart = now - RESUME_UPLOAD_WINDOW_MS;
-    const [recentClientRequests, recentGlobalRequests] = await Promise.all([
-      ctx.db
-        .query("rateLimits")
-        .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", RESUME_UPLOAD_BUCKET))
-        .filter((q) =>
-          q.and(
-            q.eq(q.field("key"), requestKey),
-            q.gte(q.field("createdAt"), windowStart),
-          ),
-        )
-        .collect(),
-      ctx.db
-        .query("rateLimits")
-        .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", RESUME_UPLOAD_BUCKET))
-        .filter((q) => q.gte(q.field("createdAt"), windowStart))
-        .take(MAX_GLOBAL_RESUME_UPLOADS_PER_WINDOW),
-    ]);
+    const userRateKey = `user:${authUserId}`;
+    const [recentClientRequests, recentUserRequests, recentGlobalRequests] =
+      await Promise.all([
+        countRecentUploadAttempts(ctx, requestKey, windowStart),
+        countRecentUploadAttempts(ctx, userRateKey, windowStart),
+        ctx.db
+          .query("rateLimits")
+          .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", RESUME_UPLOAD_BUCKET))
+          .filter((q) => q.gte(q.field("createdAt"), windowStart))
+          .take(MAX_GLOBAL_RESUME_UPLOADS_PER_WINDOW),
+      ]);
 
     if (
       recentClientRequests.length >= MAX_RESUME_UPLOADS_PER_WINDOW ||
+      recentUserRequests.length >= MAX_RESUME_UPLOADS_PER_WINDOW ||
       recentGlobalRequests.length >= MAX_GLOBAL_RESUME_UPLOADS_PER_WINDOW
     ) {
       throw new Error("Too many resume upload attempts. Please wait a few minutes and try again.");
@@ -56,6 +70,11 @@ export const assertUploadRateLimit = internalMutation({
       key: requestKey,
       createdAt: now,
     });
+    await ctx.db.insert("rateLimits", {
+      bucket: RESUME_UPLOAD_BUCKET,
+      key: userRateKey,
+      createdAt: now,
+    });
   },
 });
 
@@ -63,8 +82,9 @@ export const createVerifiedUploadSession = internalMutation({
   args: {
     uploadToken: v.string(),
     storageId: v.id("_storage"),
+    authUserId: v.id("users"),
   },
-  handler: async (ctx: MutationCtx, { uploadToken, storageId }) => {
+  handler: async (ctx: MutationCtx, { uploadToken, storageId, authUserId }) => {
     const [existingToken, metadata] = await Promise.all([
       ctx.db
         .query("resumeUploadSessions")
@@ -83,6 +103,7 @@ export const createVerifiedUploadSession = internalMutation({
     const now = Date.now();
     await ctx.db.insert("resumeUploadSessions", {
       token: uploadToken,
+      authUserId,
       storageId,
       createdAt: now,
       verifiedAt: now,
@@ -94,11 +115,14 @@ export const createVerifiedUploadSession = internalMutation({
 export const discardUploadSession = mutation({
   args: { uploadToken: v.string() },
   handler: async (ctx: MutationCtx, { uploadToken }) => {
+    const authUser = await requireAuthUser(ctx);
     const session = await ctx.db
       .query("resumeUploadSessions")
       .withIndex("by_token", (q) => q.eq("token", uploadToken))
       .first();
-    if (!session || session.consumedAt) return { ok: true as const };
+    if (!session || session.consumedAt || session.authUserId !== authUser._id) {
+      return { ok: true as const };
+    }
 
     if (session.storageId) {
       const attachment = await findProfileByResume(ctx, session.storageId);

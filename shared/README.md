@@ -37,6 +37,8 @@ Convex profile validators in [convex/profileFields.ts](../convex/profileFields.t
 | --- | --- |
 | [password.ts](auth/password.ts) | Password strength rules (client + server) |
 | [otpRateLimit.ts](auth/otpRateLimit.ts) | OTP send cooldown math shared with Convex |
+| [passwordResetMessages.ts](auth/passwordResetMessages.ts) | Forgot-password user-facing copy (neutral request, success, reuse, rate limits) |
+| [errorMessages.ts](auth/errorMessages.ts) | mapAuthError and mapPasswordResetError — safe sign-in and reset error copy |
 
 ## Hackathon (`hackathon/`)
 
@@ -45,7 +47,7 @@ Convex profile validators in [convex/profileFields.ts](../convex/profileFields.t
 | [schedule.ts](hackathon/schedule.ts) | Registration window and event timestamps |
 | [timeline.ts](hackathon/timeline.ts) | Applicant-facing timeline labels from schedule |
 
-Used by [convex/hackathons.ts](../convex/hackathons.ts) and profiles:getMyApplicantDashboard in [convex/profiles.ts](../convex/profiles.ts).
+Schedule dates used by profiles:getMyApplicantDashboard. Display name lives in the `eventConfig` table ([convex/eventConfig.ts](../convex/eventConfig.ts)).
 
 ## Lib (`lib/`)
 

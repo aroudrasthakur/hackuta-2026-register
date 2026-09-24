@@ -26,6 +26,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | sanitize-input.test.ts | Input sanitization |
 | normalize-email.test.ts | Email normalization |
 | password.test.ts | Password rules |
+| auth-error-messages.test.ts | mapAuthError and mapPasswordResetError |
 | otp-rate-limit.test.ts | OTP cooldown helpers |
 | submit-errors.test.ts | Error message mapping |
 | resume-upload-policy.test.ts | Client resume policy |
@@ -40,7 +41,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | --- | --- |
 | convex.test.ts | Registrations, resume HTTP route, drafts, seed, cleanup |
 | resume-upload-security.test.ts | Upload origin allowlist |
-| rate-limits.test.ts | OTP rate-limit mutations |
+| rate-limits.test.ts | Sign-up and password-reset OTP rate-limit mutations |
 | email-actions.test.ts | Email action wiring |
 | email-service.test.ts | SMTP helper |
 
@@ -49,6 +50,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | File | Covers |
 | --- | --- |
 | sign-in.test.tsx, sign-in-extended.test.tsx | Sign-in / OTP UI |
+| forgot-password.test.tsx | Forgot-password flow (mock auth) |
 | register-ui.test.tsx, register-api.test.ts | Application form and API client |
 | resume-upload.test.tsx | Resume widget |
 | profile-page.test.tsx | Applicant dashboard |
@@ -57,6 +59,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | use-session-auth.test.tsx, use-applicant-routing.test.tsx | Auth hooks |
 | applicant-timeline.test.tsx | Profile timeline UI |
 | searchable-select.test.tsx | School search control |
+| select-field.test.tsx | Custom SelectField listbox |
 | weather-mood.test.tsx | Sign-in weather toggle |
 
 ### Security

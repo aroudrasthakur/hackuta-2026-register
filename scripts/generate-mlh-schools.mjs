@@ -5,17 +5,11 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 
-const csvCandidates = [
-  path.resolve(repoRoot, "shared/registration/data/schools.csv"),
-  path.resolve(
-    repoRoot,
-    "../.cursor/projects/c-Users-aroud-OneDrive-Documents-GitHub-Website-hackuta-2026-repository/uploads/schools-0.csv",
-  ),
-];
-
-const csvPath = csvCandidates.find((candidate) => fs.existsSync(candidate));
-if (!csvPath) {
-  throw new Error("MLH schools CSV not found. Place schools.csv in shared/registration/data/.");
+const csvPath = path.resolve(repoRoot, "shared/registration/data/schools.csv");
+if (!fs.existsSync(csvPath)) {
+  throw new Error(
+    `MLH schools CSV not found at ${csvPath}. Download schools.csv from MLH and place it there.`,
+  );
 }
 
 const raw = fs.readFileSync(csvPath, "utf8");

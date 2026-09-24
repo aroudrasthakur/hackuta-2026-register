@@ -5,13 +5,16 @@ import { mutation } from "./_generated/server";
 import type schema from "./schema";
 import { validateRegistrationPayload } from "../shared/registration/validation";
 import type { RegistrationPayload } from "../shared/registration/types";
-import { MAX_RESUME_BYTES } from "../shared/registration/resume";
-import { ensureHackathon } from "./hackathons";
+import {
+  MAX_RESUME_BYTES,
+  RESUME_SIZE_ERROR_MESSAGE,
+} from "../shared/registration/resume";
+import { getHackathonName } from "./lib/eventConfig";
 import { requireVerifiedAuthUser } from "./lib/auth";
 import {
   ensureDraftProfile,
   findProfileByResume,
-  getProfileByUserAndHackathon,
+  getProfileByUser,
   profileFormWasSubmitted,
   syncAuthUserNameFromProfile,
 } from "./lib/profiles";
@@ -19,6 +22,7 @@ import { normalizeEmail } from "./lib/normalizeEmail";
 import {
   findUploadSessionByToken,
   isVerifiedUploadSessionValid,
+  uploadSessionOwnedByUser,
 } from "./lib/resumeUpload";
 
 type MutationCtx = GenericMutationCtx<DataModelFromSchemaDefinition<typeof schema>>;
@@ -39,11 +43,10 @@ async function upsertRegistration(
     throw new Error("Authentication required.");
   }
 
-  const { hackathonId, resumeStorageId: rawStorageId, ...fields } = data;
-  await ensureHackathon(ctx, hackathonId);
+  const { resumeStorageId: rawStorageId, ...fields } = data;
 
-  const existing = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
-  const draftProfile = existing ?? (await ensureDraftProfile(ctx, hackathonId));
+  const existing = await getProfileByUser(ctx, authUser._id);
+  const draftProfile = existing ?? (await ensureDraftProfile(ctx));
 
   if (profileFormWasSubmitted(draftProfile)) {
     throw new Error("You have already submitted an application.");
@@ -70,20 +73,22 @@ async function upsertRegistration(
     const session = resumeUploadToken
       ? await findUploadSessionByToken(ctx, resumeUploadToken)
       : null;
-    const validSession = isVerifiedUploadSessionValid(
-      session,
-      resumeStorageId!,
-      now,
-    );
+    const validSession =
+      isVerifiedUploadSessionValid(session, resumeStorageId!, now) &&
+      uploadSessionOwnedByUser(session, authUser._id);
 
-    if (
+    if (metadata?.size != null && metadata.size > MAX_RESUME_BYTES) {
+      throw new Error(RESUME_SIZE_ERROR_MESSAGE);
+    }
+
+    const resumeInvalid =
       !metadata ||
       metadata.contentType !== "application/pdf" ||
       metadata.size === 0 ||
-      metadata.size > MAX_RESUME_BYTES ||
-      (!retainingOwnResume && !validSession)
-    ) {
-      throw new Error("Please upload a valid PDF resume of 5 MB or smaller.");
+      (!retainingOwnResume && !validSession);
+
+    if (resumeInvalid) {
+      throw new Error("Please upload a valid PDF resume of 2 MB or smaller.");
     }
 
     if (validSession && session) {
@@ -101,7 +106,6 @@ async function upsertRegistration(
     otherHearAbout: draftProfile.otherHearAbout,
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
-    hackathonId,
     status: "submitted",
     formSubmitted: true,
     confirmationStatus: "unconfirmed",
@@ -121,6 +125,7 @@ async function upsertRegistration(
     firstName: data.firstName,
     lastName: data.lastName,
     submittedAt,
+    hackathonName: await getHackathonName(ctx),
   });
 
   return {

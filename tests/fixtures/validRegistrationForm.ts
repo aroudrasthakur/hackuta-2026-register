@@ -27,6 +27,7 @@ export function validRegistrationForm(): ApplicationFormData {
     graduationYear: String(MIN_GRADUATION_YEAR),
     gender: VALID_GENDER,
     eatsBeef: false,
+    eatsPork: false,
     tshirtSize: "M",
     firstHackathon: true,
     hearAbout: "Discord",

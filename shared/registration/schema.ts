@@ -5,7 +5,6 @@ import {
   DIETARY_OPTIONS,
   FIELD_LIMITS,
   GENDERS,
-  HACKATHON_ID,
   HEAR_ABOUT_OPTIONS,
   HEAR_ABOUT_OTHER_OPTION,
   LEVELS_OF_STUDY,
@@ -178,6 +177,9 @@ export const registrationPayloadSchema = z
     eatsBeef: z.boolean({
       message: "Please let us know if you eat beef.",
     }),
+    eatsPork: z.boolean({
+      message: "Please let us know if you eat pork.",
+    }),
     otherDietary: safeOptionalPlainText({
       max: FIELD_LIMITS.otherDietary,
       tooLongMessage: "Dietary details are too long.",
@@ -220,7 +222,6 @@ export const registrationPayloadSchema = z
       message: "You must authorize sharing your info with MLH to register.",
     }),
     mlhCommunicationsConsent: z.boolean(),
-    hackathonId: z.literal(HACKATHON_ID).default(HACKATHON_ID),
   })
   .strict()
   .superRefine((data, ctx) => {

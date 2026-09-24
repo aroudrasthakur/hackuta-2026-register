@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   DIETARY_OPTIONS,
   GENDERS,
-  HACKATHON_ID,
   HEAR_ABOUT_OPTIONS,
   LEVELS_OF_STUDY,
   MAX_AGE,
@@ -15,14 +14,6 @@ import {
 import { MAX_RESUME_BYTES } from "../../shared/registration/resume";
 
 describe("registration constants", () => {
-  describe("hackathon identifiers", () => {
-    it("has valid hackathon ID", () => {
-      expect(HACKATHON_ID).toBe("hackuta-2026");
-      expect(typeof HACKATHON_ID).toBe("string");
-      expect(HACKATHON_ID.length).toBeGreaterThan(0);
-    });
-  });
-
   describe("graduation year constraints", () => {
     it("has reasonable min graduation year", () => {
       expect(MIN_GRADUATION_YEAR).toBeGreaterThanOrEqual(2024);
@@ -59,8 +50,8 @@ describe("registration constants", () => {
       expect(MAX_RESUME_BYTES).toBeLessThanOrEqual(10 * 1024 * 1024);
     });
 
-    it("is 5MB", () => {
-      const expected = 5 * 1024 * 1024;
+    it("is 2MB", () => {
+      const expected = 2 * 1024 * 1024;
       expect(typeof MAX_RESUME_BYTES).toBe("number");
       expect(MAX_RESUME_BYTES).toBe(expected);
     });

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildApplicationConfirmationEmailContent,
   buildOtpEmailContent,
+  buildPasswordResetEmailContent,
 } from "../../convex/email/templates";
 
 describe("buildApplicationConfirmationEmailContent", () => {
@@ -9,6 +10,7 @@ describe("buildApplicationConfirmationEmailContent", () => {
     const content = buildApplicationConfirmationEmailContent({
       applicantName: "Aroudra Syamantak",
       submittedAt: Date.parse("2026-09-21T22:06:00.000Z"),
+      hackathonName: "HackUTA 2026",
     });
 
     expect(content.subject).toBe("HackUTA 2026 application received");
@@ -31,6 +33,16 @@ describe("buildOtpEmailContent", () => {
     expect(content.text).toContain("042681");
     expect(content.text).toContain("10 minutes");
     expect(content.subject).toBe("Your HackUTA verification code");
+  });
+});
+
+describe("buildPasswordResetEmailContent", () => {
+  it("includes reset-specific copy and expiry guidance", () => {
+    const content = buildPasswordResetEmailContent("042681");
+    expect(content.text).toContain("042681");
+    expect(content.text).toContain("password reset");
+    expect(content.text).toContain("10 minutes");
+    expect(content.subject).toBe("Your HackUTA password reset code");
   });
 });
 

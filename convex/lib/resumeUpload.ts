@@ -6,11 +6,19 @@ export const RESUME_UPLOAD_EXPIRY_MS = 30 * 60 * 1000;
 type UploadSession = {
   _id: GenericId<"resumeUploadSessions">;
   token: string;
+  authUserId: GenericId<"users">;
   storageId?: GenericId<"_storage">;
   createdAt: number;
   verifiedAt?: number;
   consumedAt?: number;
 };
+
+export function uploadSessionOwnedByUser(
+  session: UploadSession | null,
+  authUserId: GenericId<"users">,
+): session is UploadSession {
+  return !!session && session.authUserId === authUserId;
+}
 
 export function isVerifiedUploadSessionValid(
   session: UploadSession | null,
