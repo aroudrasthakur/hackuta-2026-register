@@ -14,12 +14,10 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     env: {
       REGISTRATION_ALLOWED_ORIGINS: "https://hackuta.test",
-      // convex-test scheduled confirmation emails read process.env in Node actions.
-      SMTP_HOST: "mail.example.com",
-      SMTP_PORT: "587",
-      SMTP_USER: "no-reply@example.com",
-      SMTP_PASSWORD: "secret",
-      EMAIL_FROM: "no-reply@example.com",
+      // convex-test scheduled confirmation emails read process.env in Node actions;
+      // tests/unit/setup.ts answers requests to this URL.
+      EMAIL_SERVICE_URL: "https://emailservice.test",
+      EMAIL_SERVICE_API_KEY: "test-email-service-key",
     },
     coverage: {
       provider: "istanbul",

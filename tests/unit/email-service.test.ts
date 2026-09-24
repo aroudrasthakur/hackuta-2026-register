@@ -1,4 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  getEmailServiceConfig,
+  sendMailMessage,
+} from "../../convex/email/emailService";
 import {
   buildApplicationConfirmationEmailContent,
   buildOtpEmailContent,
@@ -55,126 +59,181 @@ describe("buildPasswordResetEmailContent", () => {
   });
 });
 
-describe("smtp config", () => {
+const SERVICE_URL = "https://emailservice.example.test";
+const API_KEY = "test-api-key-123";
+
+function stubServiceEnv(url = SERVICE_URL, apiKey = API_KEY) {
+  vi.stubEnv("EMAIL_SERVICE_URL", url);
+  vi.stubEnv("EMAIL_SERVICE_API_KEY", apiKey);
+}
+
+async function rejectionOf(promise: Promise<unknown>): Promise<Error> {
+  try {
+    await promise;
+  } catch (error) {
+    return error as Error;
+  }
+  throw new Error("Expected the promise to reject.");
+}
+
+function jsonResponse(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+describe("getEmailServiceConfig", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("requires SMTP environment variables", async () => {
-    vi.unstubAllEnvs();
-    for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM"]) {
-      delete process.env[key];
-    }
-    vi.resetModules();
-    const { getSmtpConfig } = await import("../../convex/email/smtp");
-    expect(() => getSmtpConfig()).toThrow("Email is not configured.");
+  it("requires both the service URL and API key", () => {
+    vi.stubEnv("EMAIL_SERVICE_URL", "");
+    vi.stubEnv("EMAIL_SERVICE_API_KEY", "");
+    expect(() => getEmailServiceConfig()).toThrow("Email is not configured.");
+
+    stubServiceEnv(SERVICE_URL, "   ");
+    expect(() => getEmailServiceConfig()).toThrow("Email is not configured.");
+
+    stubServiceEnv("", API_KEY);
+    expect(() => getEmailServiceConfig()).toThrow("Email is not configured.");
   });
 
-  it("derives secure transport from port 465", async () => {
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "465");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
-    vi.resetModules();
-    const { getSmtpConfig } = await import("../../convex/email/smtp");
-    expect(getSmtpConfig()).toMatchObject({ secure: true, port: 465 });
+  it("rejects malformed URLs and plain HTTP to remote hosts", () => {
+    stubServiceEnv("not a url");
+    expect(() => getEmailServiceConfig()).toThrow("Email is not configured.");
+
+    stubServiceEnv("http://emailservice.example.test");
+    expect(() => getEmailServiceConfig()).toThrow("Email is not configured.");
+
+    stubServiceEnv("ftp://emailservice.example.test");
+    expect(() => getEmailServiceConfig()).toThrow("Email is not configured.");
   });
 
-  it("uses STARTTLS mode for port 587", async () => {
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "587");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
-    vi.resetModules();
-    const { getSmtpConfig } = await import("../../convex/email/smtp");
-    expect(getSmtpConfig()).toMatchObject({ secure: false, port: 587 });
+  it("accepts HTTPS URLs and strips trailing slashes", () => {
+    stubServiceEnv(`  ${SERVICE_URL}//  `, `  ${API_KEY}  `);
+    expect(getEmailServiceConfig()).toEqual({ url: SERVICE_URL, apiKey: API_KEY });
   });
 
-  it("rejects invalid SMTP ports", async () => {
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "not-a-port");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
-    vi.resetModules();
-    const { getSmtpConfig } = await import("../../convex/email/smtp");
-    expect(() => getSmtpConfig()).toThrow("Email is not configured.");
+  it("allows plain HTTP only for a local test service", () => {
+    stubServiceEnv("http://127.0.0.1:4010");
+    expect(getEmailServiceConfig().url).toBe("http://127.0.0.1:4010");
+
+    stubServiceEnv("http://localhost:4010/");
+    expect(getEmailServiceConfig().url).toBe("http://localhost:4010");
   });
 });
 
 describe("sendMailMessage", () => {
+  const message = {
+    to: "applicant@example.com",
+    subject: "Your HackUTA verification code",
+    text: "Your code is 042681",
+  };
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    stubServiceEnv();
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
-    vi.resetModules();
-    vi.doUnmock("nodemailer");
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
-  it("sends mail with optional reply-to metadata", async () => {
-    const sendMail = vi.fn().mockResolvedValue({});
-    const createTransport = vi.fn(() => ({ sendMail }));
+  it("posts the plain-text body to /send-email and returns the queue ID", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: "912a97ef-229f-459f-981b-e7d1e9482800" }, 201));
 
-    vi.doMock("nodemailer", () => ({
-      default: { createTransport },
-    }));
-
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "587");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
-    vi.resetModules();
-
-    const { sendMailMessage } = await import("../../convex/email/smtp");
-    await sendMailMessage({
-      to: "applicant@example.com",
-      subject: "Test",
-      text: "Hello",
-      html: "<p>Hello</p>",
-      replyTo: "support@example.com",
-      fromName: "HackUTA Team",
+    await expect(sendMailMessage(message)).resolves.toEqual({
+      id: "912a97ef-229f-459f-981b-e7d1e9482800",
     });
 
-    expect(createTransport).toHaveBeenCalledWith(
-      expect.objectContaining({ requireTLS: true, secure: false }),
-    );
-    expect(sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "applicant@example.com",
-        replyTo: "support@example.com",
-        from: expect.stringContaining("HackUTA Team"),
-      }),
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe(`${SERVICE_URL}/send-email`);
+    expect(init).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(JSON.parse(init.body)).toEqual({
+      email: "applicant@example.com",
+      api_key: API_KEY,
+      subject: "Your HackUTA verification code",
+      body: "Your code is 042681",
+    });
+  });
+
+  it("includes the optional note when provided", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: "queued-1" }, 201));
+
+    await sendMailMessage({ ...message, note: "otp" });
+
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toMatchObject({ note: "otp" });
+  });
+
+  it("reports a rejected API key without echoing it", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ error: "unauthorized" }, 401));
+
+    const error = await rejectionOf(sendMailMessage(message));
+    expect(error.message).toBe("Email service rejected the API key.");
+    expect(error.message).not.toContain(API_KEY);
+  });
+
+  it("surfaces the service's error text and status for other failures", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ error: "email is required" }, 400));
+
+    const error = await rejectionOf(sendMailMessage(message));
+    expect(error.message).toBe("Email service error (HTTP 400): email is required");
+    expect(error.message).not.toContain(API_KEY);
+    expect(error.message).not.toContain("042681");
+  });
+
+  it("handles non-JSON error responses", async () => {
+    fetchMock.mockResolvedValue(new Response("<html>Bad gateway</html>", { status: 502 }));
+
+    await expect(sendMailMessage(message)).rejects.toThrow(
+      "Email service error (HTTP 502): unknown error",
     );
   });
 
-  it("reuses the cached transporter for repeated sends", async () => {
-    const sendMail = vi.fn().mockResolvedValue({});
-    const createTransport = vi.fn(() => ({ sendMail }));
+  it("treats a success response without an ID as a failure", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ ok: true }, 200));
+    await expect(sendMailMessage(message)).rejects.toThrow(
+      "Email service response did not include an email ID.",
+    );
 
-    vi.doMock("nodemailer", () => ({
-      default: { createTransport },
-    }));
+    fetchMock.mockResolvedValue(jsonResponse({ id: "   " }, 201));
+    await expect(sendMailMessage(message)).rejects.toThrow(
+      "Email service response did not include an email ID.",
+    );
+  });
 
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "465");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
-    vi.resetModules();
+  it("times out after 10 seconds", async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    fetchMock.mockImplementation(async () => {
+      controller.abort();
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    });
 
-    const { sendMailMessage } = await import("../../convex/email/smtp");
-    const payload = {
-      to: "applicant@example.com",
-      subject: "Test",
-      text: "Hello",
-      html: "<p>Hello</p>",
-    };
+    await expect(sendMailMessage(message)).rejects.toThrow("Email service timed out.");
+    expect(timeout).toHaveBeenCalledWith(10_000);
+  });
 
-    await sendMailMessage(payload);
-    await sendMailMessage(payload);
+  it("reports network failures separately from timeouts", async () => {
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    await expect(sendMailMessage(message)).rejects.toThrow("Email service is unreachable.");
+  });
 
-    expect(createTransport).toHaveBeenCalledTimes(1);
-    expect(sendMail).toHaveBeenCalledTimes(2);
+  it("does not call the service when it is not configured", async () => {
+    vi.stubEnv("EMAIL_SERVICE_API_KEY", "");
+
+    await expect(sendMailMessage(message)).rejects.toThrow("Email is not configured.");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

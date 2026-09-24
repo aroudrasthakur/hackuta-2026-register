@@ -4,13 +4,18 @@ import { afterEach, vi } from "vitest";
 
 process.env.REGISTRATION_ALLOWED_ORIGINS ??= "https://hackuta.test";
 
-vi.mock("nodemailer", () => ({
-  default: {
-    createTransport: vi.fn(() => ({
-      sendMail: vi.fn().mockResolvedValue({ messageId: "test-message-id" }),
-    })),
-  },
-}));
+const passthroughFetch = globalThis.fetch;
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = input instanceof Request ? input.url : String(input);
+  const serviceUrl = process.env.EMAIL_SERVICE_URL;
+  if (serviceUrl && url === `${serviceUrl}/send-email`) {
+    return new Response(JSON.stringify({ id: "test-email-id" }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  return passthroughFetch(input, init);
+}) as typeof fetch;
 
 afterEach(() => {
   cleanup();

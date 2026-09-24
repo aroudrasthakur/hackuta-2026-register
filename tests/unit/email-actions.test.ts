@@ -1,9 +1,9 @@
 import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
 
-const SMTP_ENV_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM"] as const;
+const EMAIL_SERVICE_ENV_KEYS = ["EMAIL_SERVICE_URL", "EMAIL_SERVICE_API_KEY"] as const;
 
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 
@@ -12,32 +12,39 @@ const sendPasswordResetEmail = makeFunctionReference<"action">(
   "email/sendPasswordResetEmail:sendPasswordResetEmail",
 );
 
-describe("email actions", () => {
+const createTest = () => convexTest(schema, modules);
+
+const expiresAt = () => Date.now() + 10 * 60 * 1000;
+
+describe("email actions without configuration", () => {
   beforeEach(() => {
-    vi.unstubAllEnvs();
-    for (const key of SMTP_ENV_KEYS) {
-      delete process.env[key];
+    for (const key of EMAIL_SERVICE_ENV_KEYS) {
+      vi.stubEnv(key, "");
     }
   });
 
-  it("requires SMTP configuration for OTP email delivery", async () => {
-    const test = convexTest(schema, modules);
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("requires email service configuration for OTP email delivery", async () => {
+    const test = createTest();
     await expect(
       test.action(sendOtpEmail, {
         email: "test@example.com",
         code: "123456",
-        expiresAt: Date.now() + 10 * 60 * 1000,
+        expiresAt: expiresAt(),
       }),
     ).rejects.toThrow("Email is not configured.");
   });
 
-  it("requires SMTP configuration for password reset email delivery", async () => {
-    const test = convexTest(schema, modules);
+  it("requires email service configuration for password reset email delivery", async () => {
+    const test = createTest();
     await expect(
       test.action(sendPasswordResetEmail, {
         email: "reset@example.com",
         code: "654321",
-        expiresAt: Date.now() + 10 * 60 * 1000,
+        expiresAt: expiresAt(),
       }),
     ).rejects.toThrow("Email is not configured.");
   });

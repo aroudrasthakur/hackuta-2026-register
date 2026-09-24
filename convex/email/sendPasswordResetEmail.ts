@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { buildPasswordResetEmailContent } from "./templates";
-import { sendMailMessage } from "./smtp";
+import { sendMailMessage } from "./emailService";
 
 export const sendPasswordResetEmail = internalAction({
   args: {
@@ -18,8 +18,6 @@ export const sendPasswordResetEmail = internalAction({
       to: email,
       subject: content.subject,
       text: content.text,
-      html: content.html,
-      fromName: "HackUTA",
     });
   },
 });

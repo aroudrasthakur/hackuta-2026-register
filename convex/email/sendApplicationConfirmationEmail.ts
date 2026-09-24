@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { buildApplicationConfirmationEmailContent } from "./templates";
-import { sendMailMessage } from "./smtp";
+import { sendMailMessage } from "./emailService";
 
 export const sendApplicationConfirmationEmail = internalAction({
   args: {
@@ -24,8 +24,6 @@ export const sendApplicationConfirmationEmail = internalAction({
       to: email,
       subject: content.subject,
       text: content.text,
-      html: content.html,
-      fromName: "HackUTA",
     });
   },
 });
