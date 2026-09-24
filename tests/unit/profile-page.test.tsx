@@ -104,6 +104,7 @@ describe("ProfilePage", () => {
     expect(screen.getByText("RSVP due")).toBeInTheDocument();
     expect(screen.getByText("The hackathon begins")).toBeInTheDocument();
     expect(screen.queryByText("Country of residence")).not.toBeInTheDocument();
+    expect(screen.queryByText("State of residence")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Continue application" })).not.toBeInTheDocument();
   });
 

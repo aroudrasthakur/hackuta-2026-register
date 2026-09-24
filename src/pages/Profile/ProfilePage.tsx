@@ -96,6 +96,7 @@ export default function ProfilePage() {
                 lastName: "Test",
                 school: "The University of Texas at Arlington",
                 countryOfResidence: "United States of America",
+                stateOfResidence: "Texas",
                 levelOfStudy: "Undergraduate University (3+ year)",
                 graduationYear: 2026,
               },
