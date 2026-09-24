@@ -60,7 +60,7 @@ Uploads never touch the Vercel filesystem. Files go to **Convex `_storage`** (ob
 3. **`Content-Length` required** — reject oversize **before** reading body (DoS / bill protection)
 4. **`X-Resume-Filename`** — must end in `.pdf`; no path segments
 5. Rate limit (IP + global)
-6. Read body; verify length matches header; max **5 MB**
+6. Read body; verify length matches header; max **2 MB**
 7. PDF magic bytes (`%PDF-`)
 8. Structural parse via `pdf-lib`; max **25 pages**
 9. Store with `contentType: application/pdf`

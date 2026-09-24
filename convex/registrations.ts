@@ -5,7 +5,10 @@ import { mutation } from "./_generated/server";
 import type schema from "./schema";
 import { validateRegistrationPayload } from "../shared/registration/validation";
 import type { RegistrationPayload } from "../shared/registration/types";
-import { MAX_RESUME_BYTES } from "../shared/registration/resume";
+import { 
+  MAX_RESUME_BYTES,
+  RESUME_SIZE_ERROR_MESSAGE,
+} from "../shared/registration/resume";
 import { ensureHackathon } from "./hackathons";
 import { requireVerifiedAuthUser } from "./lib/auth";
 import {
@@ -76,14 +79,16 @@ async function upsertRegistration(
       now,
     );
 
+    if (metadata?.size && metadata.size > MAX_RESUME_BYTES) {
+      throw new Error(RESUME_SIZE_ERROR_MESSAGE)
+    }
     if (
       !metadata ||
       metadata.contentType !== "application/pdf" ||
       metadata.size === 0 ||
-      metadata.size > MAX_RESUME_BYTES ||
       (!retainingOwnResume && !validSession)
     ) {
-      throw new Error("Please upload a valid PDF resume of 5 MB or smaller.");
+      throw new Error("Please upload a valid PDF resume of 2 MB or smaller.");
     }
 
     if (validSession && session) {

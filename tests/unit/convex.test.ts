@@ -8,7 +8,9 @@ import { formToDraftPatch } from "../../shared/registration/draftPatch";
 import { validRegistrationForm, validRegistrationPayload } from "../fixtures/validRegistrationForm";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import {
+  RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_FILENAME_HEADER,
+  RESUME_SIZE_ERROR_MESSAGE,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../../shared/registration/resume";
 
@@ -228,15 +230,15 @@ describe("convex registrations", () => {
   });
 
   it.each([
-    ["application/pdf", ""],
-    ["text/plain", "not a pdf"],
-    ["application/pdf", "x".repeat(5 * 1024 * 1024 + 1)],
-  ])("rejects invalid stored file metadata (%s)", async (type, contents) => {
+    ["application/pdf", "", "valid PDF resume"],
+    ["text/plain", "not a pdf", "valid PDF resume"],
+    ["application/pdf", "x".repeat(2 * 1024 * 1024 + 1), "2 MB limit"],
+  ])("rejects invalid stored file metadata (%s)", async (type, contents, expectedMessage) => {
     const t = await authTest();
     const storageId = await storeFile(t, contents, type);
     await expect(t.mutation("registrations:register", {
       data: { ...validRegistrationPayload(), resumeStorageId: storageId },
-    })).rejects.toThrow("valid PDF resume");
+    })).rejects.toThrow(expectedMessage);
   });
 
   it("rate limits by an API-derived client key, independent of applicant PII", async () => {
@@ -419,20 +421,28 @@ describe("resume HTTP validation and lifecycle", () => {
   it("rejects empty uploads and oversized bodies", async () => {
     const t = createTest();
     const emptyBody = new Uint8Array();
-    expect((await t.fetch("/resume-upload", {
+    const emptyResult = await t.fetch("/resume-upload", {
       method: "POST",
       headers: buildUploadHeaders(emptyBody),
       body: emptyBody,
-    })).status).toBe(413);
+    });
+    expect(emptyResult.status).toBe(413);
+    expect((await emptyResult.json() as { error: string }).error).toBe(
+      RESUME_EMPTY_ERROR_MESSAGE,
+    );
 
-    const oversizedLength = 5 * 1024 * 1024 + 1;
-    expect((await t.fetch("/resume-upload", {
+    const oversizedLength = 2 * 1024 * 1024 + 1;
+    const oversizedResult = await t.fetch("/resume-upload", {
       method: "POST",
       headers: buildUploadHeaders(new Uint8Array(1), {
         [RESUME_TEST_CONTENT_LENGTH_HEADER]: String(oversizedLength),
       }),
       body: new Uint8Array(1),
-    })).status).toBe(413);
+    });
+    expect(oversizedResult.status).toBe(413);
+    expect((await oversizedResult.json() as { error: string }).error).toBe(
+      RESUME_SIZE_ERROR_MESSAGE,
+    );
   });
 
   it("rejects uploads without Content-Length before reading the body", async () => {
