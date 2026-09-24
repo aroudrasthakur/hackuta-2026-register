@@ -53,13 +53,14 @@ export async function expectSignOutInViewport(page: Page) {
   });
   expect(fitsViewport).toBe(true);
 
-  const panel = page.locator(".max-w-\\[min\\(96rem\\,100\\%\\)\\]").first();
+  const panel = page
+    .locator(".rounded-2xl.border-2.border-\\(--sand\\).bg-\\(--light\\)")
+    .first();
   await expect(panel).toBeVisible();
-  const panelFitsViewport = await panel.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    return rect.left >= 0 && rect.right <= window.innerWidth + 1;
-  });
-  expect(panelFitsViewport).toBe(true);
+  const panelBox = await panel.boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(panelBox!.x).toBeGreaterThanOrEqual(0);
+  expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(viewport!.width + 1);
 }
 
 export async function expectSignOutClickable(page: Page) {

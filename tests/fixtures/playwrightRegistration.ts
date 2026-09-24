@@ -4,8 +4,16 @@ import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
 import { signUpAsNewApplicant } from "./playwrightAuth";
 
 async function selectListboxOption(page: Page, triggerId: string, optionName: string) {
-  await page.locator(`#${triggerId}`).click();
-  await page.getByRole("button", { name: optionName, exact: true }).click();
+  const trigger = page.locator(`#${triggerId}`);
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+  const listboxId = await trigger.getAttribute("aria-controls");
+  const option = listboxId
+    ? page.locator(`#${listboxId}`).getByRole("button", { name: optionName, exact: true })
+    : page.getByRole("button", { name: optionName, exact: true });
+  await expect(option).toBeVisible({ timeout: 10_000 });
+  await option.scrollIntoViewIfNeeded();
+  await option.click();
 }
 
 export async function fillApplicationForm(page: Page) {
@@ -42,8 +50,11 @@ export async function fillApplicationForm(page: Page) {
   await page.getByRole("checkbox", { name: /authorize HackUTA to share/i }).check({ force: true });
 }
 
-export async function signUpAndSubmitApplication(page: Page) {
-  await signUpAsNewApplicant(page);
+export async function signUpAndSubmitApplication(
+  page: Page,
+  email = "applicant@example.com",
+) {
+  await signUpAsNewApplicant(page, email);
   await fillApplicationForm(page);
 
   const resume = Buffer.from("%PDF-1.7\nTest resume\n%%EOF");

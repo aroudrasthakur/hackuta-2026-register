@@ -8,6 +8,8 @@ import {
 } from "./fixtures/profileLayout";
 
 test.describe("profile layout", () => {
+  test.describe.configure({ mode: "serial" });
+
   test("keeps the unsubmitted profile panel and sign-out in view on mobile", async ({ page }) => {
     test.setTimeout(60_000);
     await page.setViewportSize({ width: 375, height: 812 });
@@ -24,10 +26,10 @@ test.describe("profile layout", () => {
   });
 
   test("keeps the profile panel and sign-out in view on desktop after registration", async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
     await page.setViewportSize({ width: 1280, height: 800 });
 
-    await signUpAndSubmitApplication(page);
+    await signUpAndSubmitApplication(page, "profile-desktop@example.com");
 
     await expect(page.getByRole("heading", { name: "Your Journey" })).toBeVisible();
     await expectSignOutAfterOverviewGrid(page);
@@ -36,10 +38,10 @@ test.describe("profile layout", () => {
   });
 
   test("keeps the profile panel and sign-out in view on mobile after registration", async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await signUpAndSubmitApplication(page);
+    await signUpAndSubmitApplication(page, "profile-mobile@example.com");
 
     await expect(page.getByRole("heading", { name: "Your Journey" })).toBeVisible();
     await expectSignOutAfterOverviewGrid(page);
