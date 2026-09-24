@@ -335,6 +335,18 @@ describe("validateApplicationForm", () => {
 });
 
 describe("validateRegistrationPayload", () => {
+  it.each(["internationalStudent", "eatsBeef"] as const)("rejects non-boolean %s values without coercion", (field) => {
+    for (const value of [null, "true", "false", "Yes", "No", 0, 1]) {
+      expect(validateRegistrationPayload({ ...validPayloadFromForm(), [field]: value }).success).toBe(false);
+    }
+  });
+
+  it.each(["District of Columbia", "American Samoa", "Guam", "Northern Mariana Islands", "Puerto Rico", "U.S. Virgin Islands"])("accepts residence in %s", (stateOfResidence) => {
+    const result = validateRegistrationPayload({ ...validPayloadFromForm(), stateOfResidence });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.payload.stateOfResidence).toBe(stateOfResidence);
+  });
+
   it("accepts a valid payload", () => {
     const payload = validPayloadFromForm();
     const parsed = registrationPayloadSchema.safeParse(payload);

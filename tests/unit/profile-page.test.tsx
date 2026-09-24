@@ -150,6 +150,39 @@ describe("ProfilePage (Convex mode)", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
   });
 
+  it.each([undefined, "Outside the United States"])("renders persisted residence %s and tolerates legacy profiles", (stateOfResidence) => {
+    dashboardQueryResult.current = {
+      profile: { displayName: "Returning Applicant", verifiedEmail: "applicant@example.com" },
+      registration: {
+        status: "submitted", eligibilityStatus: "unreviewed",
+        submittedAt: 1_700_000_000_000, updatedAt: 1_700_000_000_000,
+        resumeStatus: "none",
+        answers: {
+          firstName: "Returning", countryOfResidence: "Canada",
+          ...(stateOfResidence ? { stateOfResidence } : {}),
+        },
+      },
+      hackathon: null,
+    };
+    render(
+      <MemoryRouter initialEntries={["/profile"]}>
+        <MockAuthProvider>
+          <SessionAuthProvider><ProfilePage /></SessionAuthProvider>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Returning Applicant")).toBeInTheDocument();
+    expect(screen.getByText("Canada")).toBeInTheDocument();
+    if (stateOfResidence) {
+      expect(screen.getByText("State of residence")).toBeInTheDocument();
+      expect(screen.getByText(stateOfResidence)).toBeInTheDocument();
+    } else {
+      expect(screen.queryByText("State of residence")).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(/international student/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/eat beef/i)).not.toBeInTheDocument();
+  });
+
   it("shows a loading state while the dashboard query is pending", () => {
     dashboardQueryResult.current = undefined;
 

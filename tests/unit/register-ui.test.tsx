@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -7,7 +8,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ApplicationFormData } from "../../shared/registration/types";
 import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
 import {
   VALID_COUNTRY,
@@ -15,6 +17,7 @@ import {
   VALID_LEVEL_OF_STUDY,
   VALID_MAJOR,
   VALID_SCHOOL,
+  validRegistrationForm,
 } from "../fixtures/validRegistrationForm";
 import { LANDING_URL } from "../../src/constants/site";
 import { ApplicationForm } from "../../src/pages/Register/ApplicationForm";
@@ -43,9 +46,14 @@ vi.mock("../../src/pages/Register/registerApi", () => ({
   discardResumeUpload: vi.fn(),
 }));
 
+const draftApi = vi.hoisted(() => ({
+  result: null as { status: string; draft: Partial<ApplicationFormData> } | null | undefined,
+  save: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
 vi.mock("convex/react", () => ({
-  useQuery: () => null,
-  useMutation: () => vi.fn().mockResolvedValue({ ok: true }),
+  useQuery: () => draftApi.result,
+  useMutation: () => draftApi.save,
 }));
 
 vi.mock("../../src/convex/client", () => ({
@@ -148,6 +156,8 @@ describe("SuccessStep", () => {
 
 describe("ApplicationForm", () => {
   beforeEach(async () => {
+    draftApi.result = null;
+    draftApi.save.mockClear();
     const api = await import("../../src/pages/Register/registerApi");
     vi.mocked(api.submitRegistration).mockResolvedValue({ ok: true });
     vi.mocked(api.uploadResume).mockResolvedValue({
@@ -155,6 +165,80 @@ describe("ApplicationForm", () => {
       uploadToken: "upload-token",
     });
     vi.mocked(api.discardResumeUpload).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it.each([true, false])("autosaves and restores new answers on remount (answer=%s)", async (answer) => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    vi.useFakeTimers();
+    const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/State of residence/), {
+      target: { value: "Outside the United States" },
+    });
+    for (const name of [/Are you an international student/, /Do you eat beef/]) {
+      fireEvent.click(within(screen.getByRole("group", { name })).getByLabelText(answer ? "Yes" : "No"));
+    }
+    fireEvent.click(within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("Halal"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    expect(draftApi.save).toHaveBeenCalledOnce();
+    const savedCall = draftApi.save.mock.calls[0];
+    if (!savedCall) throw new Error("Expected autosave to capture the form");
+    const { patch } = savedCall[0];
+    expect(patch).toMatchObject({
+      stateOfResidence: "Outside the United States",
+      internationalStudent: answer,
+      eatsBeef: answer,
+      dietaryRestrictions: ["Halal"],
+    });
+
+    view.unmount();
+    // Simulate a fresh page waiting for its persisted draft query.
+    draftApi.result = undefined;
+    const refreshed = render(<ApplicationForm onSubmitted={vi.fn()} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    expect(draftApi.save).toHaveBeenCalledOnce();
+    draftApi.result = { status: "draft", draft: patch };
+    refreshed.rerender(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.getByLabelText(/State of residence/)).toHaveValue("Outside the United States");
+    for (const name of [/Are you an international student/, /Do you eat beef/]) {
+      const group = within(screen.getByRole("group", { name }));
+      expect(group.getByLabelText(answer ? "Yes" : "No")).toBeChecked();
+      expect(group.getByLabelText(answer ? "No" : "Yes")).not.toBeChecked();
+    }
+    expect(screen.getByLabelText("Halal")).toBeChecked();
+    refreshed.unmount();
+  });
+
+  it("loads a legacy draft with the new questions unanswered", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    draftApi.result = { status: "draft", draft: { firstName: "Returning" } };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.getByLabelText(/First name/)).toHaveValue("Returning");
+    expect(screen.getByLabelText(/State of residence/)).toHaveValue("");
+    for (const name of [/Are you an international student/, /Do you eat beef/]) {
+      const group = within(screen.getByRole("group", { name }));
+      expect(group.getByLabelText("Yes")).not.toBeChecked();
+      expect(group.getByLabelText("No")).not.toBeChecked();
+    }
+  });
+
+  it.each([
+    ["stateOfResidence", "stateOfResidence"],
+    ["internationalStudent", "internationalStudent-yes"],
+    ["eatsBeef", "eatsBeef-yes"],
+  ] as const)("focuses unanswered %s on submit", (field, focusId) => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    draftApi.result = { status: "draft", draft: {
+      ...validRegistrationForm(),
+      [field]: field === "stateOfResidence" ? "" : null,
+    } };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+    expect(document.getElementById(focusId)).toHaveFocus();
   });
 
   it("shows the verified email as read-only context", () => {
