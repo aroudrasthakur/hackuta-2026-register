@@ -1,3 +1,4 @@
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import {
   useCallback,
@@ -90,6 +91,7 @@ function ApplicationFormContent({
   hasConvexClient,
   initialForm = INITIAL_FORM,
   draftHydrated = true,
+  getUploadAuthToken,
 }: {
   onSubmitted: () => void;
   savedDraft: SavedDraft;
@@ -97,6 +99,7 @@ function ApplicationFormContent({
   hasConvexClient: boolean;
   initialForm?: ApplicationFormData;
   draftHydrated?: boolean;
+  getUploadAuthToken?: () => Promise<string | null | undefined>;
 }) {
   const [form, setForm] = useState<ApplicationFormData>(initialForm);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -222,7 +225,8 @@ function ApplicationFormContent({
         } else {
           await discardPendingResume();
           try {
-            session = await uploadResume(form.resume);
+            const authToken = getUploadAuthToken ? await getUploadAuthToken() : null;
+            session = await uploadResume(form.resume, authToken);
             setResumeUpload({ fileKey, session });
           } catch (err) {
             const message = mapUploadError(err);
@@ -1043,6 +1047,21 @@ function ApplicationFormContent({
   );
 }
 
+function ApplicationFormWithUploadAuth(
+  props: Omit<
+    Parameters<typeof ApplicationFormContent>[0],
+    "getUploadAuthToken"
+  >,
+) {
+  const { fetchAccessToken } = useConvexAuth();
+  return (
+    <ApplicationFormContent
+      {...props}
+      getUploadAuthToken={() => fetchAccessToken({ forceRefreshToken: false })}
+    />
+  );
+}
+
 function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => void }) {
   const client = getConvexClient();
   const routing = useApplicantRouting();
@@ -1058,7 +1077,7 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
       : INITIAL_FORM;
 
   return (
-    <ApplicationFormContent
+    <ApplicationFormWithUploadAuth
       key={isDraftLoading ? "draft-loading" : "draft-ready"}
       onSubmitted={onSubmitted}
       savedDraft={savedDraft ?? null}
@@ -1078,6 +1097,7 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: () => void }) {
         savedDraft={null}
         saveDraft={null}
         hasConvexClient={false}
+        getUploadAuthToken={async () => "mock-auth-token"}
       />
     );
   }

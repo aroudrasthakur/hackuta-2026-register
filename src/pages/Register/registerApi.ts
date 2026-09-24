@@ -7,6 +7,7 @@ import {
 import {
   mapConvexErrorToUserMessage,
   mapResumeUploadHttpError,
+  RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE,
   RESUME_UPLOAD_ERROR_MESSAGE,
   SUBMIT_ERROR_MESSAGE,
 } from "../../../shared/registration/submitErrors";
@@ -56,12 +57,19 @@ async function callConvexMutation<T>(
   }
 }
 
-export async function uploadResume(file: File): Promise<ResumeUploadSession> {
+export async function uploadResume(
+  file: File,
+  authToken: string | null | undefined,
+): Promise<ResumeUploadSession> {
   const error = validateResume(file);
   if (error) throw new Error(error);
 
   if (USE_MOCK_API) {
     return { storageId: "mock-resume-id", uploadToken: "mock-upload-token" };
+  }
+
+  if (!authToken) {
+    throw new Error(RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE);
   }
 
   const convexSiteUrl = getConvexSiteUrl();
@@ -72,6 +80,7 @@ export async function uploadResume(file: File): Promise<ResumeUploadSession> {
     response = await fetch(`${convexSiteUrl}/resume-upload`, {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${authToken}`,
         "Content-Type": "application/pdf",
         [RESUME_FILENAME_HEADER]: file.name,
       },

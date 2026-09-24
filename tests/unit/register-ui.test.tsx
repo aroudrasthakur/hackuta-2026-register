@@ -56,6 +56,12 @@ vi.mock("convex/react", () => ({
   useMutation: () => draftApi.save,
 }));
 
+vi.mock("@convex-dev/auth/react", () => ({
+  useConvexAuth: () => ({
+    fetchAccessToken: vi.fn().mockResolvedValue("test-auth-token"),
+  }),
+}));
+
 vi.mock("../../src/convex/client", () => ({
   getConvexClient: () => ({}),
 }));
@@ -354,7 +360,7 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("Resume (optional)")).toBeDisabled();
 
     await waitFor(() => expect(submitRegistration).toHaveBeenCalledTimes(1));
-    expect(uploadResume).toHaveBeenCalledWith(resume);
+    expect(uploadResume).toHaveBeenCalledWith(resume, "test-auth-token");
     expect(submitRegistration).toHaveBeenCalledWith(
       expect.objectContaining({
         otherDietary: "No peanuts",

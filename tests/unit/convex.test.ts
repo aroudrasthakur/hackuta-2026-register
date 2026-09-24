@@ -8,14 +8,16 @@ import { formToDraftPatch } from "../../shared/registration/draftPatch";
 import { validRegistrationForm, validRegistrationPayload } from "../fixtures/validRegistrationForm";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import {
+  MAX_RESUME_BYTES,
+  MAX_RESUME_PAGES,
   RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_FILENAME_HEADER,
   RESUME_SIZE_ERROR_MESSAGE,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../../shared/registration/resume";
+import { RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE } from "../../shared/registration/submitErrors";
 
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
-const discardUpload = makeFunctionReference<"mutation">("resumeUploads:discardUploadSession");
 const assertRateLimit = makeFunctionReference<"mutation">("resumeUploads:assertUploadRateLimit");
 const cleanup = makeFunctionReference<"mutation">("resumeUploads:cleanupExpiredUploadSessions");
 
@@ -85,14 +87,29 @@ async function seedAuthUser(
 }
 
 async function authTest(identity: {
-  tokenIdentifier: string;
+  tokenIdentifier?: string;
   subject?: string;
   email?: string;
   name?: string;
-} = { tokenIdentifier: "email|applicant@example.com", email: "applicant@example.com" }) {
-  const t = createTest().withIdentity(identity) as unknown as ConvexTestClient;
-  await seedAuthUser(t, identity);
-  return t;
+} = { email: "applicant@example.com" }) {
+  const email = identity.email ?? "applicant@example.com";
+  const base = createTest();
+  await seedAuthUser(base as unknown as ConvexTestClient, { ...identity, email });
+  const userId = await base.run(async (ctx) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", email))
+      .first();
+    if (!user) throw new Error("Expected seeded auth user");
+    return user._id;
+  });
+  const tokenIdentifier = identity.tokenIdentifier ?? `email|${email}`;
+  return base.withIdentity({
+    ...identity,
+    email,
+    subject: userId,
+    tokenIdentifier,
+  }) as unknown as ConvexTestClient;
 }
 
 type RunnableTest = Pick<ReturnType<typeof createTest>, "run">;
@@ -101,6 +118,52 @@ async function pdfBytes() {
   const pdf = await PDFDocument.create();
   pdf.addPage([612, 792]);
   return new Uint8Array(await pdf.save()).buffer as ArrayBuffer;
+}
+
+async function pdfBytesWithPageCount(pageCount: number) {
+  const pdf = await PDFDocument.create();
+  for (let index = 0; index < pageCount; index += 1) {
+    pdf.addPage([612, 792]);
+  }
+  return new Uint8Array(await pdf.save());
+}
+
+/** Pad a minimal valid PDF with comments to an exact byte length. */
+async function pdfBytesAtExactly(targetLength: number): Promise<Uint8Array> {
+  const base = new Uint8Array(await pdfBytes());
+  if (base.byteLength >= targetLength) {
+    throw new Error(`Base PDF (${base.byteLength}b) must be smaller than ${targetLength}b`);
+  }
+
+  const eofMarker = new TextEncoder().encode("%%EOF");
+  let eofIndex = -1;
+  for (let index = 0; index <= base.byteLength - eofMarker.length; index += 1) {
+    if (eofMarker.every((byte, offset) => base[index + offset] === byte)) {
+      eofIndex = index;
+    }
+  }
+  if (eofIndex === -1) {
+    throw new Error("PDF missing %%EOF marker");
+  }
+
+  const commentPrefix = new TextEncoder().encode("\n% ");
+  const commentSuffix = new TextEncoder().encode("\n");
+  const insertLength = targetLength - base.byteLength;
+  const padLength = insertLength - commentPrefix.byteLength - commentSuffix.byteLength;
+  if (padLength < 0) {
+    throw new Error("Target length is too small for PDF comment padding");
+  }
+
+  const padding = new Uint8Array(padLength);
+  padding.fill("0".charCodeAt(0));
+
+  const padded = new Uint8Array(targetLength);
+  padded.set(base.subarray(0, eofIndex));
+  padded.set(commentPrefix, eofIndex);
+  padded.set(padding, eofIndex + commentPrefix.byteLength);
+  padded.set(commentSuffix, eofIndex + commentPrefix.byteLength + padLength);
+  padded.set(base.subarray(eofIndex), eofIndex + insertLength);
+  return padded;
 }
 
 async function storeFile(
@@ -116,10 +179,27 @@ async function storeFile(
   return storageId;
 }
 
-async function verifiedUpload(t: RunnableTest, token: string = crypto.randomUUID()) {
-  const storageId = await storeFile(t, await pdfBytes());
+async function ensureTestUserId(t: RunnableTest) {
+  return t.run(async (ctx) => {
+    const existing = await ctx.db.query("users").first();
+    if (existing) return existing._id;
+    return ctx.db.insert("users", {
+      email: "upload-test@example.com",
+      emailVerificationTime: Date.now(),
+    });
+  });
+}
+
+async function verifiedUpload(
+  t: RunnableTest,
+  token: string = crypto.randomUUID(),
+  contents?: BlobPart,
+) {
+  const storageId = await storeFile(t, contents ?? await pdfBytes());
+  const authUserId = await ensureTestUserId(t);
   await t.run((ctx) => ctx.db.insert("resumeUploadSessions", {
     token,
+    authUserId,
     storageId,
     createdAt: Date.now(),
     verifiedAt: Date.now(),
@@ -243,7 +323,7 @@ describe("convex registrations", () => {
   it.each([
     ["application/pdf", "", "valid PDF resume"],
     ["text/plain", "not a pdf", "valid PDF resume"],
-    ["application/pdf", "x".repeat(2 * 1024 * 1024 + 1), "2 MB limit"],
+    ["application/pdf", "x".repeat(MAX_RESUME_BYTES + 1), RESUME_SIZE_ERROR_MESSAGE],
   ])("rejects invalid stored file metadata (%s)", async (type, contents, expectedMessage) => {
     const t = await authTest();
     const storageId = await storeFile(t, contents, type);
@@ -252,24 +332,102 @@ describe("convex registrations", () => {
     })).rejects.toThrow(expectedMessage);
   });
 
+  it("accepts a stored resume exactly at the 2 MB limit", async () => {
+    const t = await authTest();
+    const bytes = await pdfBytesAtExactly(MAX_RESUME_BYTES);
+    const upload = await verifiedUpload(t, crypto.randomUUID(), bytes as BlobPart);
+    await expect(t.mutation("registrations:register", {
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
+      resumeUploadToken: upload.token,
+    })).resolves.toMatchObject({ ok: true, isNew: true });
+  }, 15_000);
+
   it("rate limits by an API-derived client key, independent of applicant PII", async () => {
     const t = createTest();
+    const authUserId = await ensureTestUserId(t);
     for (let index = 0; index < 5; index += 1) {
-      await t.mutation(assertRateLimit, { requestKey: "hashed-network-client" });
+      await t.mutation(assertRateLimit, { requestKey: "hashed-network-client", authUserId });
     }
-    await expect(t.mutation(assertRateLimit, { requestKey: "hashed-network-client" }))
+    await expect(t.mutation(assertRateLimit, { requestKey: "hashed-network-client", authUserId }))
       .rejects.toThrow("Too many resume upload attempts");
   });
 
   it("allows another upload once the rate-limit window passes", async () => {
     const t = createTest();
+    const authUserId = await ensureTestUserId(t);
     for (let index = 0; index < 5; index += 1) {
-      await t.mutation(assertRateLimit, { requestKey: "hashed-network-client" });
+      await t.mutation(assertRateLimit, { requestKey: "hashed-network-client", authUserId });
     }
     const now = Date.now();
     const clock = vi.spyOn(Date, "now").mockReturnValue(now + 11 * 60 * 1000);
-    await expect(t.mutation(assertRateLimit, { requestKey: "hashed-network-client" })).resolves.toBeNull();
+    await expect(t.mutation(assertRateLimit, { requestKey: "hashed-network-client", authUserId }))
+      .resolves.toBeNull();
     clock.mockRestore();
+  });
+
+  it("rate limits globally across distinct client keys", async () => {
+    const t = createTest();
+    const authUserId = await ensureTestUserId(t);
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      for (let index = 0; index < 100; index += 1) {
+        await ctx.db.insert("rateLimits", {
+          bucket: RESUME_UPLOAD_BUCKET,
+          key: `client-${index}`,
+          createdAt: now,
+        });
+      }
+    });
+    await expect(t.mutation(assertRateLimit, { requestKey: "fresh-client", authUserId }))
+      .rejects.toThrow("Too many resume upload attempts");
+  });
+
+  it("rejects registration when the upload belongs to another user", async () => {
+    const owner = await authTest({
+      tokenIdentifier: "email|owner-resume@example.com",
+      email: "owner-resume@example.com",
+    });
+    const upload = await verifiedUpload(owner);
+    const other = createTest().withIdentity({
+      tokenIdentifier: "email|other-resume@example.com",
+      email: "other-resume@example.com",
+    }) as unknown as ConvexTestClient;
+    await seedAuthUser(other, { email: "other-resume@example.com" });
+    await expect(other.mutation("registrations:register", {
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
+      resumeUploadToken: upload.token,
+    })).rejects.toThrow("valid PDF resume");
+  });
+
+  it("rejects registration with an expired upload capability", async () => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    const expiredAt = Date.now() - 31 * 60 * 1000;
+    await t.run(async (ctx) => {
+      const session = await ctx.db.query("resumeUploadSessions").first();
+      if (session) {
+        await ctx.db.patch(session._id, { createdAt: expiredAt, verifiedAt: expiredAt });
+      }
+    });
+    await expect(t.mutation("registrations:register", {
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
+      resumeUploadToken: upload.token,
+    })).rejects.toThrow("valid PDF resume");
+  });
+
+  it("rejects registration when the upload capability was already consumed", async () => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    await t.run(async (ctx) => {
+      const session = await ctx.db.query("resumeUploadSessions").first();
+      if (session) {
+        await ctx.db.patch(session._id, { consumedAt: Date.now() });
+      }
+    });
+    await expect(t.mutation("registrations:register", {
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
+      resumeUploadToken: upload.token,
+    })).rejects.toThrow("valid PDF resume");
   });
 
   it("accepts the submitRegistration alias", async () => {
@@ -340,8 +498,22 @@ describe("resume HTTP validation and lifecycle", () => {
     expect(await preflight.text()).toBe("");
   });
 
-  it("rejects uploads without an allowed browser origin", async () => {
+  it("rejects unauthenticated upload requests", async () => {
     const t = createTest();
+    const body = new Uint8Array(await pdfBytes());
+    const result = await t.fetch("/resume-upload", {
+      method: "POST",
+      headers: buildUploadHeaders(body),
+      body,
+    });
+    expect(result.status).toBe(401);
+    expect((await result.json() as { error: string }).error).toBe(
+      RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE,
+    );
+  });
+
+  it("rejects uploads without an allowed browser origin", async () => {
+    const t = await authTest();
     const result = await t.fetch("/resume-upload", {
       method: "POST",
       headers: { "Content-Type": "application/pdf", "X-Forwarded-For": "192.0.2.10" },
@@ -385,7 +557,7 @@ describe("resume HTTP validation and lifecycle", () => {
   });
 
   it("rejects a file that only has a PDF-looking prefix", async () => {
-    const t = createTest();
+    const t = await authTest();
     const body = "%PDF-1.7\nnot actually a PDF";
     const result = await t.fetch("/resume-upload", {
       method: "POST",
@@ -396,8 +568,21 @@ describe("resume HTTP validation and lifecycle", () => {
     expect(await t.run((ctx) => ctx.db.system.query("_storage").collect())).toEqual([]);
   });
 
+  it("rejects PDFs with too many pages through the HTTP upload route", async () => {
+    const t = await authTest();
+    const body = await pdfBytesWithPageCount(MAX_RESUME_PAGES + 1);
+    const result = await t.fetch("/resume-upload", {
+      method: "POST",
+      headers: buildUploadHeaders(body),
+      body,
+    });
+    expect(result.status).toBe(422);
+    expect((await result.json() as { error: string }).error).toBe("The PDF has too many pages.");
+    expect(await t.run((ctx) => ctx.db.system.query("_storage").collect())).toEqual([]);
+  });
+
   it("accepts PDF content types with parameters", async () => {
-    const t = createTest();
+    const t = await authTest();
     const body = new Uint8Array(await pdfBytes());
     const result = await t.fetch("/resume-upload", {
       method: "POST",
@@ -410,7 +595,7 @@ describe("resume HTTP validation and lifecycle", () => {
   });
 
   it("rejects non-PDF content types before reading the body", async () => {
-    const t = createTest();
+    const t = await authTest();
     const body = new Uint8Array(await pdfBytes());
     const result = await t.fetch("/resume-upload", {
       method: "POST",
@@ -421,7 +606,7 @@ describe("resume HTTP validation and lifecycle", () => {
   });
 
   it("rejects empty uploads and oversized bodies", async () => {
-    const t = createTest();
+    const t = await authTest();
     const emptyBody = new Uint8Array();
     const emptyResult = await t.fetch("/resume-upload", {
       method: "POST",
@@ -447,8 +632,23 @@ describe("resume HTTP validation and lifecycle", () => {
     );
   });
 
+  it("accepts a valid PDF upload exactly at the 2 MB limit", async () => {
+    const t = await authTest();
+    const body = await pdfBytesAtExactly(MAX_RESUME_BYTES);
+    const result = await t.fetch("/resume-upload", {
+      method: "POST",
+      headers: buildUploadHeaders(body as BodyInit),
+      body: body as BodyInit,
+    });
+    expect(result.status).toBe(201);
+    expect(await result.json()).toMatchObject({
+      storageId: expect.any(String),
+      uploadToken: expect.any(String),
+    });
+  }, 15_000);
+
   it("rejects uploads without Content-Length before reading the body", async () => {
-    const t = createTest();
+    const t = await authTest();
     const body = new Uint8Array(await pdfBytes());
     const result = await t.fetch("/resume-upload", {
       method: "POST",
@@ -462,7 +662,7 @@ describe("resume HTTP validation and lifecycle", () => {
   });
 
   it("rejects disallowed file extensions before storage", async () => {
-    const t = createTest();
+    const t = await authTest();
     const body = new Uint8Array(await pdfBytes());
     const result = await t.fetch("/resume-upload", {
       method: "POST",
@@ -473,7 +673,7 @@ describe("resume HTTP validation and lifecycle", () => {
   });
 
   it("rejects Content-Length mismatches", async () => {
-    const t = createTest();
+    const t = await authTest();
     const body = new Uint8Array(await pdfBytes());
     const result = await t.fetch("/resume-upload", {
       method: "POST",
@@ -486,7 +686,7 @@ describe("resume HTTP validation and lifecycle", () => {
   });
 
   it("rate limits repeated uploads from the same client address", async () => {
-    const t = createTest();
+    const t = await authTest();
     for (let index = 0; index < 5; index += 1) {
       const body = new Uint8Array(await pdfBytes());
       const ok = await t.fetch("/resume-upload", {
@@ -503,6 +703,9 @@ describe("resume HTTP validation and lifecycle", () => {
       body,
     });
     expect(limited.status).toBe(429);
+    expect((await limited.json() as { error: string }).error).toBe(
+      "Too many uploads. Please try again later.",
+    );
   });
 
   it("rejects CORS preflight from a disallowed origin", async () => {
@@ -561,11 +764,14 @@ describe("resume HTTP validation and lifecycle", () => {
   });
 
   it("deletes an unconsumed upload only with its capability", async () => {
-    const t = createTest();
+    const t = await authTest({
+      tokenIdentifier: "email|discard-upload@example.com",
+      email: "discard-upload@example.com",
+    });
     const upload = await verifiedUpload(t);
-    await t.mutation(discardUpload, { uploadToken: "guessed-or-wrong-token" });
+    await t.mutation("resumeUploads:discardUploadSession", { uploadToken: "guessed-or-wrong-token" });
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).not.toBeNull();
-    await t.mutation(discardUpload, { uploadToken: upload.token });
+    await t.mutation("resumeUploads:discardUploadSession", { uploadToken: upload.token });
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).toBeNull();
   });
 

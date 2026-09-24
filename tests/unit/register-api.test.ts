@@ -76,7 +76,7 @@ describe("uploadResume", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(JSON.stringify(response), { status: 201 }));
     const { uploadResume } = await import("../../src/pages/Register/registerApi");
-    await expect(uploadResume(new File(["%PDF-1.7"], "resume.pdf"))).rejects.toThrow(
+    await expect(uploadResume(new File(["%PDF-1.7"], "resume.pdf"), "test-token")).rejects.toThrow(
       "We couldn't upload your resume. Please try again.",
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -90,15 +90,27 @@ describe("uploadResume", () => {
       new Response(JSON.stringify({ error: "The file is not a valid PDF." }), { status: 422 }),
     );
     const { uploadResume } = await import("../../src/pages/Register/registerApi");
-    await expect(uploadResume(new File(["%PDF-1.7"], "resume.pdf"))).rejects.toThrow(
+    await expect(uploadResume(new File(["%PDF-1.7"], "resume.pdf"), "test-token")).rejects.toThrow(
       "The file is not a valid PDF.",
     );
+  });
+
+  it("rejects upload without an auth token", async () => {
+    vi.stubEnv("VITE_CONVEX_URL", "https://example.convex.cloud");
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    vi.resetModules();
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const { uploadResume } = await import("../../src/pages/Register/registerApi");
+    await expect(uploadResume(new File(["%PDF-1.7"], "resume.pdf"), null)).rejects.toThrow(
+      "Please sign in to upload your resume.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid file before contacting the upload API", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     const { uploadResume } = await import("../../src/pages/Register/registerApi");
-    await expect(uploadResume(new File(["text"], "resume.txt"))).rejects.toThrow("Please select a PDF");
+    await expect(uploadResume(new File(["text"], "resume.txt"), "test-token")).rejects.toThrow("Please select a PDF");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -107,7 +119,7 @@ describe("uploadResume", () => {
     vi.resetModules();
     const fetchMock = vi.spyOn(globalThis, "fetch");
     const { uploadResume } = await import("../../src/pages/Register/registerApi");
-    await expect(uploadResume(new File(["%PDF-1.7"], "resume.pdf"))).resolves.toEqual({
+    await expect(uploadResume(new File(["%PDF-1.7"], "resume.pdf"), null)).resolves.toEqual({
       storageId: "mock-resume-id",
       uploadToken: "mock-upload-token",
     });

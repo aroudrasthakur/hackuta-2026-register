@@ -5,7 +5,7 @@ import { mutation } from "./_generated/server";
 import type schema from "./schema";
 import { validateRegistrationPayload } from "../shared/registration/validation";
 import type { RegistrationPayload } from "../shared/registration/types";
-import { 
+import {
   MAX_RESUME_BYTES,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../shared/registration/resume";
@@ -22,6 +22,7 @@ import { normalizeEmail } from "./lib/normalizeEmail";
 import {
   findUploadSessionByToken,
   isVerifiedUploadSessionValid,
+  uploadSessionOwnedByUser,
 } from "./lib/resumeUpload";
 
 type MutationCtx = GenericMutationCtx<DataModelFromSchemaDefinition<typeof schema>>;
@@ -72,21 +73,21 @@ async function upsertRegistration(
     const session = resumeUploadToken
       ? await findUploadSessionByToken(ctx, resumeUploadToken)
       : null;
-    const validSession = isVerifiedUploadSessionValid(
-      session,
-      resumeStorageId!,
-      now,
-    );
+    const validSession =
+      isVerifiedUploadSessionValid(session, resumeStorageId!, now) &&
+      uploadSessionOwnedByUser(session, authUser._id);
 
-    if (metadata?.size && metadata.size > MAX_RESUME_BYTES) {
-      throw new Error(RESUME_SIZE_ERROR_MESSAGE)
+    if (metadata?.size != null && metadata.size > MAX_RESUME_BYTES) {
+      throw new Error(RESUME_SIZE_ERROR_MESSAGE);
     }
-    if (
+
+    const resumeInvalid =
       !metadata ||
       metadata.contentType !== "application/pdf" ||
       metadata.size === 0 ||
-      (!retainingOwnResume && !validSession)
-    ) {
+      (!retainingOwnResume && !validSession);
+
+    if (resumeInvalid) {
       throw new Error("Please upload a valid PDF resume of 2 MB or smaller.");
     }
 

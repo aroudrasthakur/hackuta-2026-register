@@ -42,9 +42,9 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | profiles:getMyApplicantDashboard | Required | [ProfilePage](../src/pages/Profile/ProfilePage.tsx) |
 | registrations:register | Required, verified email | [registerApi.ts](../src/pages/Register/registerApi.ts) |
 | registrations:submitRegistration | Required, verified email | Alias of register |
-| resumeUploads:discardUploadSession | Capability token only | [registerApi.ts](../src/pages/Register/registerApi.ts) |
+| resumeUploads:discardUploadSession | Required; session must belong to caller | [registerApi.ts](../src/pages/Register/registerApi.ts) |
 | rateLimits:getOtpSendCooldown | None | [SignInPage](../src/pages/SignIn/SignInPage.tsx) |
-HTTP: POST /resume-upload on the Convex site URL (origin allowlist, no JWT). See [http.ts](http.ts) and [docs/API.md](../docs/API.md).
+HTTP: POST /resume-upload on the Convex site URL (JWT + origin allowlist). See [http.ts](http.ts) and [docs/API.md](../docs/API.md).
 
 ## Configuration and operations
 

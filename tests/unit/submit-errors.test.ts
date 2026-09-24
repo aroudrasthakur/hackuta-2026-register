@@ -10,6 +10,7 @@ import {
   RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../../shared/registration/resume";
+import { RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE } from "../../shared/registration/submitErrors";
 
 describe("submit error mapping", () => {
   it("passes through known server messages in production mode", () => {
@@ -37,6 +38,8 @@ describe("submit error mapping", () => {
     );
     expect(mapResumeUploadHttpError(429, { error: "Too many uploads. Please try again later." }))
       .toBe("Too many uploads. Please try again later.");
+    expect(mapResumeUploadHttpError(429, {})).toBe("Too many uploads. Please try again later.");
+    expect(mapResumeUploadHttpError(401, {})).toBe(RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE);
     expect(mapResumeUploadHttpError(413, {})).toBe(RESUME_SIZE_ERROR_MESSAGE);
     expect(mapResumeUploadHttpError(415, {})).toBe("Please select a PDF file.");
     expect(mapResumeUploadHttpError(403, {})).toBe(
@@ -79,6 +82,7 @@ describe("submit error mapping", () => {
     "The PDF is too large.",
     "The PDF must be between 1 byte and 2 MB.",
     "The PDF must be between 1 byte and 5 MB.",
+    "Please upload a valid PDF resume of 5 MB or smaller.",
   ])("normalizes legacy oversized upload messages: %s", (legacyMessage) => {
     expect(mapUploadError(new Error(legacyMessage))).toBe(RESUME_SIZE_ERROR_MESSAGE);
     expect(mapResumeUploadHttpError(413, { error: legacyMessage })).toBe(
@@ -102,7 +106,7 @@ describe("submit error mapping", () => {
 
   it("ignores malformed error bodies", () => {
     expect(mapResumeUploadHttpError(429, { error: "  " })).toBe(
-      "Too many upload attempts. Please wait a few minutes and try again.",
+      "Too many uploads. Please try again later.",
     );
     expect(mapConvexErrorToUserMessage("not an error")).toBe(SUBMIT_ERROR_MESSAGE);
   });

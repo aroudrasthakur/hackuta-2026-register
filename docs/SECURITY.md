@@ -55,24 +55,26 @@ Uploads never touch the Vercel filesystem. Files go to **Convex `_storage`** (ob
 
 ### Pipeline (`POST /resume-upload`)
 
-1. Origin allowlist
-2. `Content-Type: application/pdf`
-3. **`Content-Length` required** — reject oversize **before** reading body (DoS / bill protection)
-4. **`X-Resume-Filename`** — must end in `.pdf`; no path segments
-5. Rate limit (IP + global)
-6. Read body; verify length matches header; max **2 MB**
-7. PDF magic bytes (`%PDF-`)
-8. Structural parse via `pdf-lib`; max **25 pages**
-9. Store with `contentType: application/pdf`
-10. Issue single-use capability token (30 min TTL)
+1. **Authenticated session** — JWT required; `authUserId` derived server-side (never from the client)
+2. Origin allowlist
+3. `Content-Type: application/pdf` (hint only; not trusted for validation)
+4. **`Content-Length` required** — reject oversize **before** reading body (DoS / bill protection)
+5. **`X-Resume-Filename`** — must end in `.pdf`; no path segments (UX hint; magic bytes + parser are authoritative)
+6. Rate limit (IP + authenticated user + global)
+7. Read body; verify length matches header; max **2 MB**
+8. PDF magic bytes (`%PDF-`)
+9. Structural parse via `pdf-lib`; max **25 pages**
+10. Store in private Convex `_storage` with server-generated storage ID (not the user's filename)
+11. Issue single-use capability token bound to the authenticated user (30 min TTL)
 
-Registration mutation verifies token, storage metadata, and PDF content type before attaching.
+Registration mutation verifies token ownership, storage metadata, and PDF content type before attaching. `discardUploadSession` requires the same authenticated user who created the session.
 
 ### Rate limits
 
 | Scope | Limit | Window |
 | --- | --- | --- |
 | Per client IP | 5 uploads | 10 minutes |
+| Per authenticated user | 5 uploads | 10 minutes |
 | Global | 100 uploads | 10 minutes |
 
 ## Error handling (security UX)

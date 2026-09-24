@@ -12,9 +12,13 @@ export const RESUME_UPLOAD_ERROR_MESSAGE =
 export const SIGN_IN_REQUIRED_MESSAGE =
   "Please sign in to submit your application.";
 
+export const RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE =
+  "Please sign in to upload your resume.";
+
 /** Server messages safe to show applicants in production. */
 const USER_FACING_SERVER_MESSAGES = new Set([
   SIGN_IN_REQUIRED_MESSAGE,
+  RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE,
   "You have already submitted an application.",
   "Please upload a valid PDF resume of 2 MB or smaller.",
   "This resume is already attached to another application.",
@@ -55,15 +59,28 @@ const UPLOAD_SERVER_MESSAGE_ALIASES: Record<string, string> = {
   "The PDF is too large.": RESUME_SIZE_ERROR_MESSAGE,
   "The PDF must be between 1 byte and 2 MB.": RESUME_SIZE_ERROR_MESSAGE,
   "The PDF must be between 1 byte and 5 MB.": RESUME_SIZE_ERROR_MESSAGE,
+  "Please upload a valid PDF resume of 5 MB or smaller.": RESUME_SIZE_ERROR_MESSAGE,
   "The PDF is empty.": RESUME_EMPTY_ERROR_MESSAGE,
   "The PDF is empty. Please select another file.": RESUME_EMPTY_ERROR_MESSAGE,
 };
+
+function isLegacyResumeSizeMessage(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("too large") ||
+    normalized.includes("between 1 byte and") ||
+    (normalized.includes("5 mb") && (normalized.includes("pdf") || normalized.includes("resume")))
+  );
+}
 
 function normalizeUploadServerMessage(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   if (UPLOAD_SERVER_MESSAGE_ALIASES[trimmed]) {
     return UPLOAD_SERVER_MESSAGE_ALIASES[trimmed];
+  }
+  if (isLegacyResumeSizeMessage(trimmed)) {
+    return RESUME_SIZE_ERROR_MESSAGE;
   }
   if (isResumeFieldMessage(trimmed)) {
     return trimmed;
@@ -99,8 +116,8 @@ export function mapConvexErrorToUserMessage(error: unknown): string {
   if (normalized.includes("already attached")) {
     return "This resume is already attached to another application.";
   }
-  if (normalized.includes("valid pdf") || (normalized.includes("resume") && normalized.includes("5 mb"))) {
-    return "Please upload a valid PDF resume of 5 MB or smaller.";
+  if (isLegacyResumeSizeMessage(detail)) {
+    return RESUME_SIZE_ERROR_MESSAGE;
   }
   if (isResumeFieldMessage(detail)) {
     return detail;
@@ -123,6 +140,8 @@ export function mapResumeUploadHttpError(
   }
 
   switch (status) {
+    case 401:
+      return RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE;
     case 400:
     case 411:
       return "We couldn't upload your resume. Please try again.";
@@ -133,7 +152,7 @@ export function mapResumeUploadHttpError(
     case 422:
       return "The file is not a valid PDF. Please choose another file.";
     case 429:
-      return "Too many upload attempts. Please wait a few minutes and try again.";
+      return "Too many uploads. Please try again later.";
     case 403:
       return "Resume upload is unavailable. Please try again later or contact us.";
     default:
