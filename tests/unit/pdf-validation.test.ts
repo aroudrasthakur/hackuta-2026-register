@@ -34,4 +34,26 @@ describe("validateResumePdfBytes", () => {
     );
   });
 
+  it("accepts a PDF exactly at the page limit", async () => {
+    const pdf = await PDFDocument.create();
+    for (let index = 0; index < MAX_RESUME_PAGES; index += 1) {
+      pdf.addPage([612, 792]);
+    }
+    await expect(validateResumePdfBytes(new Uint8Array(await pdf.save()))).resolves.toBeUndefined();
+  });
+
+  it("rejects a structurally valid PDF with no pages", async () => {
+    const pdf = await PDFDocument.create();
+    const bytes = await pdf.save({ addDefaultPage: false });
+    await expect(validateResumePdfBytes(new Uint8Array(bytes))).rejects.toThrow(
+      "A resume must have at least one page.",
+    );
+  });
+
+  it("rejects bytes without the PDF signature before parsing", async () => {
+    await expect(validateResumePdfBytes(new TextEncoder().encode("<html>"))).rejects.toThrow(
+      "The file is not a valid PDF.",
+    );
+  });
+
 });

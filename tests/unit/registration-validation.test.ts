@@ -467,6 +467,59 @@ describe("isValidPhone", () => {
     const { isValidPhone } = await import("../../shared/registration/schema");
     expect(isValidPhone("123")).toBe(false);
   });
+
+  it("enforces the 7 to 15 digit boundaries after stripping formatting", async () => {
+    const { isValidPhone } = await import("../../shared/registration/schema");
+    expect(isValidPhone("123-4567")).toBe(true);
+    expect(isValidPhone("123-456")).toBe(false);
+    expect(isValidPhone("+1 (234) 567-8901-234")).toBe(true);
+    expect(isValidPhone("1234567890123456")).toBe(false);
+  });
+});
+
+describe("validateApplicationForm resume and error reporting", () => {
+  it("accepts a valid PDF resume alongside a valid form", () => {
+    const resume = new File(["%PDF-1.7"], "resume.pdf", { type: "application/pdf" });
+    expect(validateApplicationForm({ ...validRegistrationForm(), resume }).success).toBe(true);
+  });
+
+  it("reports the resume error together with schema errors", () => {
+    const resume = new File(["x"], "resume.exe", { type: "application/octet-stream" });
+    const result = validateApplicationForm({ ...validRegistrationForm(), firstName: "", resume });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.resume).toBe("Please select a PDF file.");
+      expect(result.errors.firstName).toBeTruthy();
+    }
+  });
+
+  it("keeps only the first message per field", () => {
+    const result = validateApplicationForm({ ...validRegistrationForm(), firstName: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.errors.firstName).toBe("First name is required.");
+  });
+
+  it("fails on client-only conditional errors even when the payload parses", () => {
+    const result = validateApplicationForm({
+      ...validRegistrationForm(),
+      school: "Definitely Not A Real School" as never,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.errors.school).toBe("Please select a school from the list.");
+  });
+});
+
+describe("validateRegistrationPayload", () => {
+  it("returns only a failure flag so server callers never echo field details", () => {
+    expect(validateRegistrationPayload({ firstName: "x" })).toEqual({ success: false });
+    expect(validateRegistrationPayload(null)).toEqual({ success: false });
+  });
+});
+
+describe("focusFirstInvalidField focus targets", () => {
+  it("uses the mapped focus id for composite fields and tolerates missing elements", () => {
+    expect(() => focusFirstInvalidField({ codeOfConductAgreed: "Required" })).not.toThrow();
+  });
 });
 
 describe("toggleValue", () => {

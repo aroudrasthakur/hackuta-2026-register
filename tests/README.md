@@ -44,6 +44,9 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | rate-limits.test.ts | Sign-up and password-reset OTP rate-limit mutations |
 | email-actions.test.ts | Email action wiring |
 | email-service.test.ts | SMTP helper |
+| backend-authorization.test.ts | Auth boundaries, profile lifecycle, upload sessions, upload failure recovery, maintenance and migrations |
+| hackuta-password.test.ts | Password provider flows: sign-up, sign-in, reset, reset verification, email verification |
+| convex-auth-config.test.ts | Auth provider wiring, OTP generation, rate-limited email delivery |
 
 ### Frontend
 
@@ -51,7 +54,10 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | --- | --- |
 | sign-in.test.tsx, sign-in-extended.test.tsx | Sign-in / OTP UI |
 | forgot-password.test.tsx | Forgot-password flow (mock auth) |
+| sign-in-convex.test.tsx | Sign-in, OTP resend, and password reset against mocked Convex auth |
+| auth-components.test.tsx | OTP input, route guard, sign-out, mock auth provider |
 | register-ui.test.tsx, register-api.test.ts | Application form and API client |
+| register-form-workflows.test.tsx | Autosave retry, upload/submit failure recovery, resume reuse and cleanup |
 | resume-upload.test.tsx | Resume widget |
 | profile-page.test.tsx | Applicant dashboard |
 | home-redirect.test.tsx | / routing |
@@ -61,6 +67,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | searchable-select.test.tsx | School search control |
 | select-field.test.tsx | Custom SelectField listbox |
 | weather-mood.test.tsx | Sign-in weather toggle |
+| app-shell.test.tsx | main.tsx providers and routes, Convex client, storm backdrop, presentational components |
 
 ### Security
 
@@ -85,8 +92,8 @@ Contact-form e2e lives in the separate [hackuta-2026-registration](https://githu
 | Command | Purpose |
 | --- | --- |
 | npm run test:unit | All Vitest tests |
-| npm run test:unit:coverage | Vitest with Istanbul output |
-| npm run test:coverage:check | Enforce 80% thresholds ([check-coverage.mjs](../scripts/check-coverage.mjs)) |
+| npm run test:unit:coverage | Vitest with Istanbul output; fails below 85% globally or per area |
+| npm run test:coverage:check | Per-area coverage table and threshold check ([check-coverage.mjs](../scripts/check-coverage.mjs)) |
 | npm run test:e2e | Playwright |
 | PLAYWRIGHT_USE_BUILD=true npm run test:e2e | Playwright against dist/ (CI path) |
 
