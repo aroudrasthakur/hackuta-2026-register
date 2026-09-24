@@ -4,20 +4,20 @@ import type {
   GenericMutationCtx,
 } from "convex/server";
 import {
-  mergeDraftPatchIntoProfile,
+  mergeDraftPatchIntoApplication,
   type DraftPatchPayload,
 } from "../../shared/registration/draftPatch";
 import type schema from "../schema";
 
 type DataModel = DataModelFromSchemaDefinition<typeof schema>;
-type ProfileDoc = DocumentByName<DataModel, "profiles">;
+type ApplicationDoc = DocumentByName<DataModel, "applications">;
 type MutationCtx = GenericMutationCtx<DataModel>;
 
-export { mergeDraftPatchIntoProfile };
+export { mergeDraftPatchIntoApplication };
 
-export async function replaceProfileWithDraftPatch(
+export async function replaceApplicationWithDraftPatch(
   ctx: MutationCtx,
-  profile: ProfileDoc,
+  application: ApplicationDoc,
   patch: DraftPatchPayload,
   meta: {
     email: string;
@@ -25,6 +25,6 @@ export async function replaceProfileWithDraftPatch(
     updatedAt: number;
   },
 ) {
-  const replacement = mergeDraftPatchIntoProfile(profile, patch, meta);
-  await ctx.db.replace(profile._id, replacement);
+  const replacement = mergeDraftPatchIntoApplication(application, patch, meta);
+  await ctx.db.replace(application._id, replacement);
 }

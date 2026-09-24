@@ -31,7 +31,7 @@ Authenticated applicant dashboard: status, submitted answers, hackathon timeline
 
 | Location | Role |
 | --- | --- |
-| [convex/profiles.ts](../../../convex/profiles.ts) | getMyApplicantDashboard handler |
+| [convex/applications.ts](../../../convex/applications.ts) | getMyApplicantDashboard handler |
 | [tests/unit/profile-page.test.tsx](../../../tests/unit/profile-page.test.tsx) | Dashboard UI tests |
 
 Parent index: [../README.md](../README.md).

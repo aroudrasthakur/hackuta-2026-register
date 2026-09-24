@@ -1,7 +1,7 @@
 /**
  * Applicant drafts and dashboard data.
  *
- * Owns draft load/save and the profile page payload. Profile bootstrap and
+ * Owns draft load/save and the profile page payload. Application bootstrap and
  * routing state live in applicant.ts.
  */
 import { mutation, query } from "./_generated/server";
@@ -11,25 +11,25 @@ import {
 } from "../shared/hackathon/schedule";
 import { getHackathonName } from "./lib/eventConfig";
 import { buildHackathonTimeline } from "../shared/hackathon/timeline";
-import { profileDraftPatch } from "./profileFields";
+import { applicationDraftPatch } from "./applicationFields";
 import { requireAuthIdentity } from "./lib/auth";
 import {
-  ensureDraftProfile,
-  formatProfileFullName,
+  ensureDraftApplication,
+  formatApplicantFullName,
   getAuthUser,
-  getProfileByUser,
+  getApplicationByUser,
   projectApplicantAnswers,
-  syncAuthUserNameFromProfile,
-} from "./lib/profiles";
-import { replaceProfileWithDraftPatch } from "./lib/draftPatch";
+  syncAuthUserNameFromApplication,
+} from "./lib/applications";
+import { replaceApplicationWithDraftPatch } from "./lib/draftPatch";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
-import { profileToDraftForm } from "../shared/registration/draftMapping";
+import { applicationToDraftForm } from "../shared/registration/draftMapping";
 
-export const getMyProfileDraft = query({
+export const getMyApplicationDraft = query({
   args: {},
   handler: async (ctx) => {
     const authUser = await getAuthUser(ctx);
@@ -37,52 +37,52 @@ export const getMyProfileDraft = query({
       return null;
     }
 
-    const profile = await getProfileByUser(ctx, authUser._id);
-    if (!profile || profile.status !== "draft") {
-      return profile
+    const application = await getApplicationByUser(ctx, authUser._id);
+    if (!application || application.status !== "draft") {
+      return application
         ? {
-            status: profile.status,
+            status: application.status,
             draft: null,
           }
         : null;
     }
 
     return {
-      status: profile.status,
-      draft: profileToDraftForm(profile),
-      updatedAt: profile.updatedAt,
+      status: application.status,
+      draft: applicationToDraftForm(application),
+      updatedAt: application.updatedAt,
     };
   },
 });
 
-export const saveProfileDraft = mutation({
+export const saveApplicationDraft = mutation({
   args: {
-    patch: profileDraftPatch,
+    patch: applicationDraftPatch,
   },
   handler: async (ctx, { patch }) => {
-    const profile = await ensureDraftProfile(ctx);
-    if (profile.status !== "draft") {
+    const application = await ensureDraftApplication(ctx);
+    if (application.status !== "draft") {
       throw new Error("Your application has already been submitted.");
     }
 
     const authUser = await getAuthUser(ctx);
-    const email = normalizeEmail(authUser?.email) ?? profile.email;
+    const email = normalizeEmail(authUser?.email) ?? application.email;
     const updatedAt = Date.now();
 
-    await replaceProfileWithDraftPatch(
+    await replaceApplicationWithDraftPatch(
       ctx,
-      profile,
+      application,
       patch as DraftPatchPayload,
       {
         email,
         emailVerificationTime:
-          authUser?.emailVerificationTime ?? profile.emailVerificationTime,
+          authUser?.emailVerificationTime ?? application.emailVerificationTime,
         updatedAt,
       },
     );
 
     if (authUser) {
-      await syncAuthUserNameFromProfile(ctx, authUser._id, {
+      await syncAuthUserNameFromApplication(ctx, authUser._id, {
         firstName: isClearedDraftValue(patch.firstName) ? null : patch.firstName,
         lastName: isClearedDraftValue(patch.lastName) ? null : patch.lastName,
       });
@@ -98,16 +98,16 @@ export const getMyApplicantDashboard = query({
     const identity = await requireAuthIdentity(ctx);
 
     const authUser = await getAuthUser(ctx);
-    const profile = authUser ? await getProfileByUser(ctx, authUser._id) : null;
+    const application = authUser ? await getApplicationByUser(ctx, authUser._id) : null;
 
-    const resumeStatus: "none" | "attached" = profile?.resumeStorageId ? "attached" : "none";
-    const applicantAnswers = profile ? projectApplicantAnswers(profile) : null;
+    const resumeStatus: "none" | "attached" = application?.resumeStorageId ? "attached" : "none";
+    const applicantAnswers = application ? projectApplicantAnswers(application) : null;
     const timelineSource = resolveHackathonTimelineSource(null);
     const timeline = buildHackathonTimeline(timelineSource);
     const hackathonName = await getHackathonName(ctx);
 
     const displayName =
-      (profile ? formatProfileFullName(profile) : null) ??
+      (application ? formatApplicantFullName(application) : null) ??
       authUser?.name ??
       identity.name ??
       null;
@@ -117,13 +117,13 @@ export const getMyApplicantDashboard = query({
         displayName,
         verifiedEmail: normalizeEmail(authUser?.email ?? identity.email) ?? null,
       },
-      registration: profile
+      registration: application
         ? {
-            id: profile._id,
-            status: profile.status,
-            eligibilityStatus: profile.eligibilityStatus,
-            submittedAt: profile.submittedAt ?? null,
-            updatedAt: profile.updatedAt,
+            id: application._id,
+            status: application.status,
+            eligibilityStatus: application.eligibilityStatus,
+            submittedAt: application.submittedAt ?? null,
+            updatedAt: application.updatedAt,
             answers: applicantAnswers,
             resumeStatus,
           }

@@ -1,29 +1,15 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
-import { profileRecord } from "./profileFields";
+import { applicationRecord } from "./applicationFields";
 
-/**
- * Canonical Convex schema for hackuta-2026-register.
- *
- * Auth identity → `users` (+ Convex Auth tables from authTables).
- * Application data → `profiles` (one row per auth user).
- *
- * Deploy from this repo: npx convex dev | npx convex deploy --prod
- * Field validators: convex/profileFields.ts
- */
 export default defineSchema({
   ...authTables,
 
   users: defineTable({
-    /** Display name synced from profiles.firstName + lastName (not set at sign-up). */
     name: v.optional(v.string()),
-    /** OAuth avatar URL — unused with password auth; kept for Convex Auth compatibility. */
-    image: v.optional(v.string()),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
-    /** Event points (optional until points system launches). */
-    points: v.optional(v.number()),
   }).index("email", ["email"]),
 
   eventConfig: defineTable({
@@ -32,7 +18,7 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
-  profiles: defineTable(profileRecord)
+  applications: defineTable(applicationRecord)
     .index("by_auth_user", ["authUserId"])
     .index("by_email", ["email"])
     .index("by_status", ["status"])

@@ -8,7 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import { formToDraftPatch } from "../../../shared/registration/draftPatch";
-import { getMyProfileDraftRef, saveProfileDraftRef } from "../../convex/api";
+import { getMyApplicationDraftRef, saveApplicationDraftRef } from "../../convex/api";
 import { isMockApiEnabled } from "../../constants/mockAuth";
 import { getConvexClient } from "../../convex/client";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
@@ -1032,10 +1032,10 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
   const client = getConvexClient();
   const routing = useApplicantRouting();
   const savedDraft = useQuery(
-    getMyProfileDraftRef,
+    getMyApplicationDraftRef,
     client && routing.isAuthenticated ? {} : "skip",
   );
-  const saveDraft = useMutation(saveProfileDraftRef);
+  const saveDraft = useMutation(saveApplicationDraftRef);
   const isDraftLoading = savedDraft === undefined;
   const initialForm =
     !isDraftLoading && savedDraft?.draft

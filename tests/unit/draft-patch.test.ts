@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import { isClearedDraftValue } from "../../shared/registration/applicantFields";
 import {
+  applicationToDraftForm,
   formToDraftPatch,
-  mergeDraftPatchIntoProfile,
-  profileToDraftForm,
+  mergeDraftPatchIntoApplication,
 } from "../../shared/registration/draftMapping";
 
 describe("formToDraftPatch", () => {
@@ -37,9 +37,9 @@ describe("formToDraftPatch", () => {
   });
 });
 
-describe("profileToDraftForm", () => {
+describe("applicationToDraftForm", () => {
   it("loads older drafts without new answers as unanswered", () => {
-    const restored = profileToDraftForm({ firstName: "Returning" });
+    const restored = applicationToDraftForm({ firstName: "Returning" });
     expect(restored.stateOfResidence).toBe("");
     expect(restored.internationalStudent).toBeNull();
     expect(restored.eatsBeef).toBeNull();
@@ -47,10 +47,10 @@ describe("profileToDraftForm", () => {
   });
 });
 
-describe("mergeDraftPatchIntoProfile", () => {
-  it("removes cleared fields from the stored profile", () => {
-    const profile = {
-      _id: "profile1",
+describe("mergeDraftPatchIntoApplication", () => {
+  it("removes cleared fields from the stored application", () => {
+    const application = {
+      _id: "application1",
       _creationTime: 1,
       authUserId: "user1",
       email: "test@example.com",
@@ -65,8 +65,8 @@ describe("mergeDraftPatchIntoProfile", () => {
       school: "Old School",
     };
 
-    const merged = mergeDraftPatchIntoProfile(
-      profile as never,
+    const merged = mergeDraftPatchIntoApplication(
+      application as never,
       formToDraftPatch({
         ...INITIAL_FORM,
         firstName: "",

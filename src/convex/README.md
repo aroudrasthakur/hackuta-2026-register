@@ -1,35 +1,19 @@
-# Convex client (`src/convex/`)
+# Convex client refs (`src/convex/`)
 
-Browser-side Convex wiring. Server functions live in [convex/](../../convex/README.md).
+Typed `makeFunctionReference` wrappers for Convex queries and mutations. Import these instead of string paths so renames stay type-safe.
 
-## Overview
-
-| File | Summary |
+| Export | Convex function |
 | --- | --- |
-| [client.ts](client.ts) | ConvexReactClient from VITE_CONVEX_URL |
-| [api.ts](api.ts) | Typed function refs for queries/mutations used by the React app |
-
-## Function references (`api.ts`)
-
-| Reference | Handler |
-| --- | --- |
+| getPublicEventConfigRef | eventConfig:getPublicEventConfig |
 | getApplicantRoutingStateRef | applicant:getApplicantRoutingState |
-| getMyApplicantDashboardRef | profiles:getMyApplicantDashboard |
-| getMyProfileDraftRef | profiles:getMyProfileDraft |
-| saveProfileDraftRef | profiles:saveProfileDraft |
-| ensureApplicantProfileRef | applicant:ensureApplicantProfile |
+| getMyApplicantDashboardRef | applications:getMyApplicantDashboard |
+| getMyApplicationDraftRef | applications:getMyApplicationDraft |
+| saveApplicationDraftRef | applications:saveApplicationDraft |
+| ensureApplicantApplicationRef | applicant:ensureApplicantApplication |
 | getOtpSendCooldownRef | rateLimits:getOtpSendCooldown |
 | getPasswordResetSendCooldownRef | rateLimits:getPasswordResetSendCooldown |
 | invalidateSessionsAfterPasswordResetRef | passwordReset:invalidateSessionsAfterPasswordReset |
 
-[registerApi.ts](../pages/Register/registerApi.ts) defines refs for registrations:register and resumeUploads:discardUploadSession.
+Live client setup: [client.ts](client.ts) (excluded from unit coverage; exercised in e2e).
 
-## Related
-
-| Location | Role |
-| --- | --- |
-| [convex/README.md](../../convex/README.md) | Server-side modules and public API |
-| [pages/Register/registerApi.ts](../pages/Register/registerApi.ts) | Submit and resume upload client |
-| [pages/SignIn/](../pages/SignIn/) | Sign-in and forgot-password flows |
-
-Parent index: [../README.md](../README.md).
+Parent index: [src/README.md](../README.md).

@@ -59,15 +59,15 @@ Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Reused pass
 
 ## Public queries
 
-### `profiles:getMyProfileDraft`
+### `applications:getMyApplicationDraft`
 
-**Auth:** required · no args — draft profile fields for autosave hydration (null if none).
+**Auth:** required · no args — draft application fields for autosave hydration (null if none).
 
-### `profiles:saveProfileDraft`
+### `applications:saveApplicationDraft`
 
-**Auth:** required · `{ patch: ProfileDraftPatch }` — upserts draft profile; only writable while status is `draft`.
+**Auth:** required · `{ patch: ApplicationDraftPatch }` — upserts draft application; only writable while status is `draft`.
 
-### `profiles:getMyApplicantDashboard`
+### `applications:getMyApplicantDashboard`
 
 **Auth:** required · no args — profile page payload (status, answers, timeline).
 
@@ -128,9 +128,9 @@ First submit creates the applicant record; sign-in alone does not write applicat
 
 **Auth:** required · `{ uploadToken: string }` — deletes an unconsumed session owned by the caller and its storage.
 
-### `applicant:ensureApplicantProfile`
+### `applicant:ensureApplicantApplication`
 
-**Auth:** required · `{}` — ensures a draft `profiles` row exists after sign-in.
+**Auth:** required · `{}` — ensures a draft `applications` row exists after sign-in.
 
 ### `passwordReset:invalidateSessionsAfterPasswordReset`
 
@@ -296,13 +296,13 @@ User content in HTML emails is escaped via `escapeHtml()`.
 
 ## Data model
 
-Schema: `convex/schema.ts` · Field validators: `convex/profileFields.ts`.
+Schema: `convex/schema.ts` · Field validators: `convex/applicationFields.ts`.
 
 ### `users`
 
 Convex Auth identity only (email, verification timestamps). Password hashes live in auth tables managed by `@convex-dev/auth`.
 
-### `profiles`
+### `applications`
 
 One row per auth user. All application form fields are top-level columns.
 
@@ -313,7 +313,7 @@ One row per auth user. All application form fields are top-level columns.
 | `status` | `draft` \| `submitted` \| `accepted` \| `waitlisted` \| `rejected` \| `withdrawn` |
 | `eligibilityStatus` | `unreviewed` \| `eligible` \| `ineligible` |
 | `resumeStorageId` | PDF in `_storage` |
-| Applicant fields | See `shared/registration/schema.ts` and `convex/profileFields.ts` |
+| Applicant fields | See `shared/registration/schema.ts` and `convex/applicationFields.ts` |
 
 ### Other tables
 
@@ -341,10 +341,10 @@ One row per auth user. All application form fields are top-level columns.
 | Sign-in / sign-up | `auth:signIn`, `auth:signOut` |
 | Forgot password | `auth:signIn` (`flow=reset`, `flow=reset-verification`), `passwordReset:invalidateSessionsAfterPasswordReset` |
 | OTP cooldown | `rateLimits:getOtpSendCooldown`, `rateLimits:getPasswordResetSendCooldown` |
-| Ensure profile | `applicant:ensureApplicantProfile` |
+| Ensure application | `applicant:ensureApplicantApplication` |
 | Route guards | `applicant:getApplicantRoutingState` |
-| Applicant dashboard | `profiles:getMyApplicantDashboard` |
-| Draft autosave | `profiles:getMyProfileDraft`, `profiles:saveProfileDraft` |
+| Applicant dashboard | `applications:getMyApplicantDashboard` |
+| Draft autosave | `applications:getMyApplicationDraft`, `applications:saveApplicationDraft` |
 | Resume widget | `POST /resume-upload` |
 | Submit form | `registrations:register` |
 | Discard resume | `resumeUploads:discardUploadSession` |

@@ -34,8 +34,8 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 | --- | --- |
 | auth.ts | @convex-dev/auth Password + sign-up OTP + password-reset OTP |
 | passwordReset.ts | Session invalidation after password reset |
-| applicant.ts | Profile bootstrap and routing state |
-| profiles.ts | Draft save/load and applicant dashboard |
+| applicant.ts | Application bootstrap and routing state |
+| applications.ts | Draft save/load and applicant dashboard |
 | registrations.ts | Application submission |
 | resumeUploads.ts | Upload sessions, rate limits, cleanup |
 | http.ts | Resume upload + Auth OIDC routes |
@@ -43,7 +43,7 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 | resumeUploadSecurity.ts | Upload origin allowlist |
 | pdfValidation.ts | Server-side PDF parse |
 | email/ | SMTP actions + HTML templates |
-| lib/ | Auth, profiles, draft patch helpers |
+| lib/ | Auth, applications, draft patch helpers |
 
 ## Request flows
 
@@ -53,7 +53,7 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 /sign-in → Password provider (email + password)
          → email-verification OTP (6 digits via SMTP)
          → JWT session
-         → ensureApplicantProfile
+         → ensureApplicantApplication
          → route to /register or /profile
 ```
 
@@ -75,8 +75,8 @@ Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and 
 ### Application draft
 
 ```
-/register form → profiles:saveProfileDraft (debounced ~800ms)
-              → profiles:getMyProfileDraft on load (hydrate fields)
+/register form → applications:saveApplicationDraft (debounced ~800ms)
+              → applications:getMyApplicationDraft on load (hydrate fields)
 ```
 
 Draft rows use `status: "draft"`. Users can leave and resume until submit.
@@ -87,7 +87,7 @@ Draft rows use `status: "draft"`. Users can leave and resume until submit.
 /register form → client Zod validate
               → POST /resume-upload (optional PDF)
               → registrations:register { data, resumeUploadToken }
-              → profile status → submitted
+              → application status → submitted
               → confirmation email (internal action)
 ```
 
@@ -102,18 +102,18 @@ Email in `data` is ignored; server uses verified auth email.
 
 ## Data model
 
-Auth lives on `users` (Convex Auth). Application data lives in **profiles** — one row per auth user.
+Auth lives on `users` (Convex Auth). Application data lives in **applications** — one row per auth user.
 
 | Table | Purpose |
 | --- | --- |
 | users | Convex Auth identity (email, verification time) |
-| profiles | Form fields as columns + status, draft/submitted timestamps |
+| applications | Form fields as columns + status, draft/submitted timestamps |
 | rateLimits | Sliding-window counters (OTP, upload) |
 | resumeUploadSessions | Capability tokens linking upload → registration |
 | _storage | Resume PDF blobs |
 | Auth tables | Sessions, verification codes (@convex-dev/auth) |
 
-Schema: [convex/schema.ts](../convex/schema.ts). Field validators: [convex/profileFields.ts](../convex/profileFields.ts).
+Schema: [convex/schema.ts](../convex/schema.ts). Field validators: [convex/applicationFields.ts](../convex/applicationFields.ts).
 
 ## Shared validation pattern
 

@@ -19,22 +19,22 @@ export const getApplicantRoutingStateRef = makeFunctionReference<
 export const getMyApplicantDashboardRef = makeFunctionReference<
   "query",
   Record<string, never>
->("profiles:getMyApplicantDashboard");
+>("applications:getMyApplicantDashboard");
 
-export const getMyProfileDraftRef = makeFunctionReference<
+export const getMyApplicationDraftRef = makeFunctionReference<
   "query",
   Record<string, never>
->("profiles:getMyProfileDraft");
+>("applications:getMyApplicationDraft");
 
-export const saveProfileDraftRef = makeFunctionReference<
+export const saveApplicationDraftRef = makeFunctionReference<
   "mutation",
   { patch: Record<string, unknown> }
->("profiles:saveProfileDraft");
+>("applications:saveApplicationDraft");
 
-export const ensureApplicantProfileRef = makeFunctionReference<
+export const ensureApplicantApplicationRef = makeFunctionReference<
   "mutation",
   Record<string, never>
->("applicant:ensureApplicantProfile");
+>("applicant:ensureApplicantApplication");
 
 export const getOtpSendCooldownRef = makeFunctionReference<
   "mutation",

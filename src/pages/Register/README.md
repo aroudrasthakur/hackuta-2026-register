@@ -34,6 +34,6 @@ After submit, RegisterPage shows SuccessStep briefly then navigates to /profile.
 | Location | Role |
 | --- | --- |
 | [components/README.md](components/README.md) | Form-only widgets |
-| [convex/README.md](../../../convex/README.md) | profiles:* and registrations:* handlers |
+| [convex/README.md](../../../convex/README.md) | applications:* and registrations:* handlers |
 
 Parent index: [../README.md](../README.md).

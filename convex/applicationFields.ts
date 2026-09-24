@@ -9,8 +9,8 @@ import {
   TRIMMED_STRING_FIELDS,
 } from "../shared/registration/applicantFields";
 
-/** Application lifecycle status for a hackathon profile row. */
-export const profileStatus = v.union(
+/** Application lifecycle status for a hackathon application row. */
+export const applicationStatus = v.union(
   v.literal("draft"),
   v.literal("submitted"),
   v.literal("accepted"),
@@ -52,7 +52,7 @@ function fieldsFromKeys<const K extends readonly string[]>(
   };
 }
 
-/** Optional applicant answer columns persisted on profiles. */
+/** Optional applicant answer columns persisted on applications. */
 const applicantAnswerFields = {
   ...fieldsFromKeys(applicantStringFieldKeys, () => v.optional(v.string())),
   ...fieldsFromKeys(OPTIONAL_INT_FIELDS, () => v.optional(v.number())),
@@ -71,14 +71,14 @@ const applicantDraftPatchFields = {
 };
 
 /**
- * Applicant profile — one row per auth user.
+ * Applicant application — one row per auth user.
  * Passwords and auth secrets live in Convex Auth tables only.
  */
-export const profileRecord = {
+export const applicationRecord = {
   authUserId: v.id("users"),
   email: v.string(),
   emailVerificationTime: v.optional(v.number()),
-  status: profileStatus,
+  status: applicationStatus,
   eligibilityStatus,
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -96,7 +96,7 @@ export const profileRecord = {
 };
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */
-export const profileDraftPatch = v.object({
+export const applicationDraftPatch = v.object({
   ...applicantDraftPatchFields,
   resumeStorageId: v.optional(v.id("_storage")),
 });

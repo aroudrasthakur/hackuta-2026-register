@@ -220,19 +220,19 @@ describe("convex registrations", () => {
       dietaryRestrictions: ["Halal" as const, "Allergies" as const],
       otherDietary: "Peanuts",
     };
-    await t.mutation("profiles:saveProfileDraft", {
+    await t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch({ ...validRegistrationForm(), ...answers }),
     });
-    await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toMatchObject({
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
       draft: answers,
     });
     await t.mutation("registrations:submitRegistration", {
       data: { ...validRegistrationPayload(), ...answers },
     });
-    expect(await t.run((ctx) => ctx.db.query("profiles").first())).toMatchObject({
+    expect(await t.run((ctx) => ctx.db.query("applications").first())).toMatchObject({
       ...answers, status: "submitted",
     });
-    const dashboard = await t.query("profiles:getMyApplicantDashboard", {}) as {
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
       registration: { answers: Record<string, unknown> };
     };
     expect(dashboard.registration.answers.stateOfResidence).toBe(answers.stateOfResidence);
@@ -246,8 +246,8 @@ describe("convex registrations", () => {
   it("clears saved answers without clearing dietary restrictions and reloads them as unanswered", async () => {
     const t = await authTest();
     const form = { ...validRegistrationForm(), dietaryRestrictions: ["Halal" as const] };
-    await t.mutation("profiles:saveProfileDraft", { patch: formToDraftPatch(form) });
-    await t.mutation("profiles:saveProfileDraft", {
+    await t.mutation("applications:saveApplicationDraft", { patch: formToDraftPatch(form) });
+    await t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch({
         ...form,
         stateOfResidence: "",
@@ -256,11 +256,11 @@ describe("convex registrations", () => {
         eatsPork: null,
       }),
     });
-    const stored = await t.run((ctx) => ctx.db.query("profiles").first());
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
     for (const field of ["stateOfResidence", "internationalStudent", "eatsBeef", "eatsPork"]) {
       expect(stored).not.toHaveProperty(field);
     }
-    await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toMatchObject({
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
       draft: {
         stateOfResidence: "",
         internationalStudent: null,
@@ -279,7 +279,7 @@ describe("convex registrations", () => {
     });
     expect(first.ok).toBe(true);
     expect(first.isNew).toBe(true);
-    const stored = await t.run((ctx) => ctx.db.query("profiles").first());
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
     expect(stored).toMatchObject({
       stateOfResidence: "Texas",
       internationalStudent: false,
@@ -287,7 +287,7 @@ describe("convex registrations", () => {
       eatsPork: false,
       dietaryRestrictions: [],
     });
-    await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       registration: { answers: { stateOfResidence: "Texas" } },
     });
 
@@ -305,7 +305,7 @@ describe("convex registrations", () => {
       data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.token,
     });
-    const profile = await t.run((ctx) => ctx.db.query("profiles").first());
+    const profile = await t.run((ctx) => ctx.db.query("applications").first());
     expect(profile?.resumeStorageId).toBe(upload.storageId);
     const session = await t.run((ctx) => ctx.db.query("resumeUploadSessions").first());
     expect(session?.consumedAt).toEqual(expect.any(Number));
@@ -465,11 +465,11 @@ describe("convex registrations", () => {
       name: "Sam Test",
     });
 
-    expect(await t.run((ctx) => ctx.db.query("profiles").collect())).toHaveLength(0);
+    expect(await t.run((ctx) => ctx.db.query("applications").collect())).toHaveLength(0);
 
     await t.mutation("registrations:register", { data: validRegistrationPayload() });
 
-    expect(await t.run((ctx) => ctx.db.query("profiles").collect())).toHaveLength(1);
+    expect(await t.run((ctx) => ctx.db.query("applications").collect())).toHaveLength(1);
   });
 
   it("rejects registration when email is not verified", async () => {
@@ -782,7 +782,7 @@ describe("resume HTTP validation and lifecycle", () => {
       data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.token,
     });
-    const profile = await t.run((ctx) => ctx.db.query("profiles").first());
+    const profile = await t.run((ctx) => ctx.db.query("applications").first());
     expect(profile?.resumeStorageId).toBe(upload.storageId);
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).not.toBeNull();
   });
@@ -826,7 +826,7 @@ describe("convex queries", () => {
     }) as unknown as ConvexTestClient;
     await seedAuthUser(t, { email: "sam@example.com" });
 
-    await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toBeNull();
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toBeNull();
   });
 
   it("returns submitted profile draft metadata after registration", async () => {
@@ -839,7 +839,7 @@ describe("convex queries", () => {
 
     await t.mutation("registrations:register", { data: validRegistrationPayload() });
 
-    await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toMatchObject({
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
       status: "submitted",
       draft: null,
     });
@@ -856,7 +856,7 @@ describe("event config", () => {
 
   it("seeds config on first profile bootstrap and allows renaming", async () => {
     const t = await authTest();
-    await t.mutation("applicant:ensureApplicantProfile", {});
+    await t.mutation("applicant:ensureApplicantApplication", {});
     await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toEqual({
       name: "HackUTA 2026",
     });
@@ -865,7 +865,7 @@ describe("event config", () => {
     await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toEqual({
       name: "HackUTA XIV",
     });
-    await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       hackathon: { name: "HackUTA XIV" },
     });
   });
@@ -890,11 +890,11 @@ describe("convex applicant auth flows", () => {
     });
   });
 
-  it("stores the verified email on submitted profiles", async () => {
+  it("stores the verified email on submitted applications", async () => {
     const t = await authTest();
     await t.mutation("registrations:register", { data: validRegistrationPayload() });
     await drainScheduledFunctions(t);
-    const profile = await t.run((ctx) => ctx.db.query("profiles").first());
+    const profile = await t.run((ctx) => ctx.db.query("applications").first());
     expect(profile?.email).toBe("applicant@example.com");
   });
 
@@ -903,7 +903,7 @@ describe("convex applicant auth flows", () => {
     await t.mutation("registrations:register", { data: validRegistrationPayload() });
     await drainScheduledFunctions(t);
 
-    await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       profile: {
         verifiedEmail: "applicant@example.com",
       },
@@ -917,7 +917,7 @@ describe("convex applicant auth flows", () => {
   it("includes hackathon event timeline from the shared schedule", async () => {
     const t = await authTest();
 
-    const dashboard = await t.query("profiles:getMyApplicantDashboard", {}) as {
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
       timeline: Array<{ id: string; label: string }>;
       hackathon: { name: string };
     };
@@ -948,7 +948,7 @@ describe("convex applicant auth flows", () => {
     });
     await drainScheduledFunctions(t);
 
-    await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       registration: {
         resumeStatus: "attached",
       },
@@ -957,7 +957,7 @@ describe("convex applicant auth flows", () => {
 
   it("marks past hackathon milestones complete in the applicant timeline", async () => {
     const t = await authTest();
-    const dashboard = await t.query("profiles:getMyApplicantDashboard", {}) as {
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
       timeline: Array<{ id: string; complete: boolean }>;
     };
 
@@ -970,7 +970,7 @@ describe("convex applicant auth flows", () => {
 
   it("saves draft profile fields before submission", async () => {
     const t = await authTest();
-    await t.mutation("profiles:saveProfileDraft", {
+    await t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch({
         ...INITIAL_FORM,
         firstName: "Draft",
@@ -981,7 +981,7 @@ describe("convex applicant auth flows", () => {
         eatsPork: true,
       }),
     });
-    const draft = await t.query("profiles:getMyProfileDraft", {});
+    const draft = await t.query("applications:getMyApplicationDraft", {});
     expect(draft).toMatchObject({
       status: "draft",
       draft: {
@@ -993,7 +993,7 @@ describe("convex applicant auth flows", () => {
         eatsPork: true,
       },
     });
-    const stored = await t.run((ctx) => ctx.db.query("profiles").first());
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
     expect(stored).toMatchObject({
       stateOfResidence: "Outside the United States",
       internationalStudent: true,
