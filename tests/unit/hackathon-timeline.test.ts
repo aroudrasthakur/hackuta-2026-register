@@ -5,14 +5,15 @@ import { buildHackathonTimeline } from "../../shared/hackathon/timeline";
 describe("buildHackathonTimeline", () => {
   const baseHackathon = HACKATHON_SCHEDULE;
 
-  it("returns the four hackathon milestones in order", () => {
+  it("returns the hackathon milestones in order", () => {
     const timeline = buildHackathonTimeline(baseHackathon);
 
     expect(timeline.map((event) => event.label)).toEqual([
       "Applications open",
-      "Deadline to apply",
-      "Decisions are out",
-      "Hackathon begins",
+      "Applications close",
+      "Decisions go out",
+      "RSVP due",
+      "The hackathon begins",
     ]);
   });
 
@@ -26,9 +27,28 @@ describe("buildHackathonTimeline", () => {
     expect(timeline.find((event) => event.id === "application-deadline")?.complete).toBe(true);
     expect(timeline.find((event) => event.id === "decisions-out")).toMatchObject({
       complete: false,
-      dateLabel: "TBD",
+      dateLabel: "To be announced",
       timestamp: null,
     });
+    expect(timeline.find((event) => event.id === "rsvp-due")).toMatchObject({
+      complete: false,
+      dateLabel: "To be announced",
+      timestamp: null,
+    });
+  });
+
+  it("uses a confirmed decision date when organizers publish one", () => {
+    const decisionsReleasedAt = Date.parse("2026-11-10T09:00:00-06:00");
+    const timeline = buildHackathonTimeline({
+      ...baseHackathon,
+      decisionsReleasedAt,
+    });
+
+    expect(timeline.find((event) => event.id === "decisions-out")).toMatchObject({
+      timestamp: decisionsReleasedAt,
+      complete: false,
+    });
+    expect(timeline.find((event) => event.id === "decisions-out")?.dateLabel).toBeUndefined();
   });
 
   it("uses the canonical schedule constants", () => {

@@ -685,13 +685,15 @@ describe("convex applicant auth flows", () => {
       "applications-open",
       "application-deadline",
       "decisions-out",
+      "rsvp-due",
       "hackathon-begins",
     ]);
     expect(dashboard.timeline.map((event) => event.label)).toEqual([
       "Applications open",
-      "Deadline to apply",
-      "Decisions are out",
-      "Hackathon begins",
+      "Applications close",
+      "Decisions go out",
+      "RSVP due",
+      "The hackathon begins",
     ]);
   });
 

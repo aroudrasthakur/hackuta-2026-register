@@ -1,42 +1,73 @@
 import type { HackathonTimelineSource } from "./schedule";
 
+export const UNKNOWN_TIMELINE_DATE_LABEL = "To be announced";
+
 export type TimelineEvent = {
   id: string;
   label: string;
   timestamp: number | null;
   complete: boolean;
   dateLabel?: string;
+  description?: string;
 };
+
+function milestone(event: {
+  id: string;
+  label: string;
+  timestamp: number | null;
+  now: number;
+  description: string;
+}): TimelineEvent {
+  const { timestamp, now, ...rest } = event;
+  return {
+    ...rest,
+    timestamp,
+    complete: timestamp !== null && now >= timestamp,
+    ...(timestamp === null ? { dateLabel: UNKNOWN_TIMELINE_DATE_LABEL } : {}),
+  };
+}
 
 export function buildHackathonTimeline(
   hackathon: HackathonTimelineSource,
   now = Date.now(),
 ): TimelineEvent[] {
   return [
-    {
+    milestone({
       id: "applications-open",
       label: "Applications open",
       timestamp: hackathon.registrationOpensAt,
-      complete: now >= hackathon.registrationOpensAt,
-    },
-    {
+      now,
+      description:
+        "Submit your application any time before the deadline. Your progress is saved automatically.",
+    }),
+    milestone({
       id: "application-deadline",
-      label: "Deadline to apply",
+      label: "Applications close",
       timestamp: hackathon.registrationClosesAt,
-      complete: now >= hackathon.registrationClosesAt,
-    },
-    {
+      now,
+      description: "Applications are no longer accepted after this deadline.",
+    }),
+    milestone({
       id: "decisions-out",
-      label: "Decisions are out",
-      timestamp: null,
-      complete: false,
-      dateLabel: "TBD",
-    },
-    {
+      label: "Decisions go out",
+      timestamp: hackathon.decisionsReleasedAt ?? null,
+      now,
+      description: "All applicants will receive an email with their application decision.",
+    }),
+    milestone({
+      id: "rsvp-due",
+      label: "RSVP due",
+      timestamp: hackathon.rsvpDueAt ?? null,
+      now,
+      description:
+        "Confirm your participation by this date. Unconfirmed spots may be offered to applicants on the waitlist.",
+    }),
+    milestone({
       id: "hackathon-begins",
-      label: "Hackathon begins",
+      label: "The hackathon begins",
       timestamp: hackathon.startsAt,
-      complete: now >= hackathon.startsAt,
-    },
+      now,
+      description: "Check in using the code available on your account page.",
+    }),
   ];
 }

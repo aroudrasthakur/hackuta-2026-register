@@ -81,15 +81,30 @@ describe("ProfilePage", () => {
     renderProfilePage("signedInReturning");
 
     expect(screen.getByRole("heading", { name: "Your Journey" })).toBeInTheDocument();
-    expect(screen.getByText("applicant@example.com")).toBeInTheDocument();
     expect(screen.getByText("Sam Test")).toBeInTheDocument();
     expect(screen.getByText("The University of Texas at Arlington")).toBeInTheDocument();
-    expect(screen.getByText("submitted")).toBeInTheDocument();
+    expect(screen.getByText("Year of study").closest("div")).toHaveTextContent("2026");
+    expect(screen.getByText("Under review")).toBeInTheDocument();
+    expect(screen.queryByText("submitted")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("HackUTA 2026 odyssey illustrations of a ship, clouds, and an island"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("profile-decorations")).toBeInTheDocument();
+    const decorations = screen.getByTestId("profile-decorations");
+    const clouds = decorations.querySelector('img[src="/images/profile/clouds.png"]');
+    const island = decorations.querySelector('img[src="/images/profile/island.png"]');
+    const ship = decorations.querySelector('img[src="/images/profile/ship.png"]');
+    expect(clouds).toHaveClass("top-0", "left-0");
+    expect(island?.compareDocumentPosition(ship!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(ship?.parentElement).toHaveClass("bottom-0");
     expect(screen.getByText("Applications open")).toBeInTheDocument();
-    expect(screen.getByText("Deadline to apply")).toBeInTheDocument();
-    expect(screen.getByText("Decisions are out")).toBeInTheDocument();
-    expect(screen.getByText("TBD")).toBeInTheDocument();
-    expect(screen.getByText("Hackathon begins")).toBeInTheDocument();
+    expect(screen.getByText("Applications close")).toBeInTheDocument();
+    expect(screen.getByText("Decisions go out")).toBeInTheDocument();
+    expect(screen.getAllByText("To be announced")).toHaveLength(2);
+    expect(screen.getByText("RSVP due")).toBeInTheDocument();
+    expect(screen.getByText("The hackathon begins")).toBeInTheDocument();
+    expect(screen.queryByText("Country of residence")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue application" })).not.toBeInTheDocument();
   });
 
   it("shows start application when the applicant has not registered yet", () => {
@@ -162,6 +177,46 @@ describe("ProfilePage (Convex mode)", () => {
     );
 
     expect(screen.getByText("Loading your application…")).toBeInTheDocument();
+  });
+
+  it("does not label incomplete drafts as under review", () => {
+    dashboardQueryResult.current = {
+      profile: {
+        displayName: "Draft User",
+        verifiedEmail: "draft@example.com",
+      },
+      registration: {
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        submittedAt: null,
+        answers: {
+          firstName: "Draft",
+          lastName: "User",
+          school: "The University of Texas at Arlington",
+          graduationYear: 2027,
+        },
+      },
+      hackathon: null,
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/profile"]}>
+        <MockAuthProvider>
+          <SessionAuthProvider>
+            <ProfilePage />
+          </SessionAuthProvider>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Draft User")).toBeInTheDocument();
+    expect(screen.getByText("The University of Texas at Arlington")).toBeInTheDocument();
+    expect(screen.getByText("2027")).toBeInTheDocument();
+    expect(screen.queryByText("Under review")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continue application" })).toHaveAttribute(
+      "href",
+      "/register",
+    );
   });
 
   it("shows an error when the dashboard cannot be loaded", () => {

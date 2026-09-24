@@ -23,3 +23,9 @@ export function logoDefaultSrc(variant: LogoVariant, width = 400) {
   const base = LOGO_FILES[variant];
   return `/images/logos/${base}-${width}.webp`;
 }
+
+export const PROFILE_ASSETS = {
+  clouds: "/images/profile/clouds.png",
+  ship: "/images/profile/ship.png",
+  island: "/images/profile/island.png",
+} as const;
