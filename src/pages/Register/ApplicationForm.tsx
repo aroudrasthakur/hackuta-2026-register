@@ -113,6 +113,7 @@ function ApplicationFormContent({
     session: ResumeUploadSession;
   } | null>(null);
   const resumeUploadRef = useRef(resumeUpload);
+  const savedDraftStatus = savedDraft?.status;
 
   const saveDraftWithStatus = useCallback(async () => {
     if (!saveDraft || !routing.isAuthenticated) return;
@@ -136,7 +137,7 @@ function ApplicationFormContent({
     if (!hasConvexClient || !saveDraft || !routing.isAuthenticated || !draftHydrated) {
       return;
     }
-    if (savedDraft && savedDraft.status !== "draft") return;
+    if (savedDraftStatus && savedDraftStatus !== "draft") return;
 
     const timer = window.setTimeout(() => {
       void saveDraftWithStatus().catch(() => undefined);
@@ -149,7 +150,7 @@ function ApplicationFormContent({
     routing.isAuthenticated,
     saveDraft,
     saveDraftWithStatus,
-    savedDraft,
+    savedDraftStatus,
   ]);
 
   const discardPendingResume = useCallback(async () => {
@@ -368,40 +369,30 @@ function ApplicationFormContent({
             label="Country of residence"
             required
             value={form.countryOfResidence}
-            onChange={(e) =>
+            options={COUNTRIES_OF_RESIDENCE}
+            onChange={(value) =>
               updateField(
                 "countryOfResidence",
-                e.target.value as ApplicationFormData["countryOfResidence"],
+                value as ApplicationFormData["countryOfResidence"],
               )
             }
             error={errors.countryOfResidence}
-          >
-            {COUNTRIES_OF_RESIDENCE.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           <SelectField
             id="stateOfResidence"
             label="State of residence"
             required
             helperText="Select the state or territory where you currently live."
             value={form.stateOfResidence}
-            onChange={(e) =>
+            options={STATES_OF_RESIDENCE}
+            onChange={(value) =>
               updateField(
                 "stateOfResidence",
-                e.target.value as ApplicationFormData["stateOfResidence"],
+                value as ApplicationFormData["stateOfResidence"],
               )
             }
             error={errors.stateOfResidence}
-          >
-            {STATES_OF_RESIDENCE.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           <fieldset
             className={`sm:col-span-2 ${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.internationalStudent)}`}
             aria-describedby={
@@ -438,39 +429,29 @@ function ApplicationFormContent({
             label="Level of study"
             required
             value={form.levelOfStudy}
-            onChange={(e) =>
+            options={LEVELS_OF_STUDY}
+            onChange={(value) =>
               updateField(
                 "levelOfStudy",
-                e.target.value as ApplicationFormData["levelOfStudy"],
+                value as ApplicationFormData["levelOfStudy"],
               )
             }
             error={errors.levelOfStudy}
-          >
-            {LEVELS_OF_STUDY.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           <SelectField
             id="major"
             label="Major / field of study"
             required
             value={form.major}
-            onChange={(e) =>
+            options={MAJORS}
+            onChange={(value) =>
               updateField(
                 "major",
-                e.target.value as ApplicationFormData["major"],
+                value as ApplicationFormData["major"],
               )
             }
             error={errors.major}
-          >
-            {MAJORS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           {form.major === MAJOR_OTHER_OPTION ? (
             <TextField
               id="otherMajor"
@@ -513,20 +494,15 @@ function ApplicationFormContent({
           label="Gender"
           required
           value={form.gender}
-          onChange={(e) =>
+          options={GENDERS}
+          onChange={(value) =>
             updateField(
               "gender",
-              e.target.value as ApplicationFormData["gender"],
+              value as ApplicationFormData["gender"],
             )
           }
           error={errors.gender}
-        >
-          {GENDERS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </SelectField>
+        />
 
         <fieldset
           className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.otherRaceEthnicity)}`}
@@ -691,20 +667,15 @@ function ApplicationFormContent({
           label="T-shirt size"
           required
           value={form.tshirtSize}
-          onChange={(e) =>
+          options={TSHIRT_SIZES}
+          onChange={(value) =>
             updateField(
               "tshirtSize",
-              e.target.value as ApplicationFormData["tshirtSize"],
+              value as ApplicationFormData["tshirtSize"],
             )
           }
           error={errors.tshirtSize}
-        >
-          {TSHIRT_SIZES.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </SelectField>
+        />
 
         <fieldset
           className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.firstHackathon)}`}
@@ -754,20 +725,15 @@ function ApplicationFormContent({
             label="How did you hear about HackUTA?"
             required
             value={form.hearAbout}
-            onChange={(e) =>
+            options={HEAR_ABOUT_OPTIONS}
+            onChange={(value) =>
               updateField(
                 "hearAbout",
-                e.target.value as ApplicationFormData["hearAbout"],
+                value as ApplicationFormData["hearAbout"],
               )
             }
             error={errors.hearAbout}
-          >
-            {HEAR_ABOUT_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           {form.hearAbout === HEAR_ABOUT_OTHER_OPTION ? (
             <TextField
               id="otherHearAbout"
@@ -1076,15 +1042,26 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
       ? { ...INITIAL_FORM, ...savedDraft.draft }
       : INITIAL_FORM;
 
+  if (isDraftLoading) {
+    return (
+      <main
+        className="flex min-h-[12rem] items-center justify-center"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-sm text-(--ocean)">Loading your saved application…</p>
+      </main>
+    );
+  }
+
   return (
     <ApplicationFormWithUploadAuth
-      key={isDraftLoading ? "draft-loading" : "draft-ready"}
       onSubmitted={onSubmitted}
       savedDraft={savedDraft ?? null}
       saveDraft={saveDraft}
       hasConvexClient={Boolean(client)}
       initialForm={initialForm}
-      draftHydrated={!isDraftLoading}
+      draftHydrated
     />
   );
 }
