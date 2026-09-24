@@ -48,6 +48,8 @@ export const DIETARY_OPTIONS = [
   "Allergies",
   "Kosher",
   "Halal",
+  "No Beef",
+  "No Pork",
 ] as const;
 
 export const STATES_OF_RESIDENCE = [

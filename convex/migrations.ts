@@ -1,4 +1,5 @@
 import type { GenericMutationCtx } from "convex/server";
+import { mergeLegacyMeatPreferencesIntoDietaryRestrictions } from "../shared/registration/dietaryMigration";
 import { internalMutation } from "./_generated/server";
 
 /** Wide db for one-time reads of legacy tables removed from the schema. */
@@ -58,6 +59,84 @@ export const migrateProfilesToApplications = internalMutation({
     }
 
     return { ok: true as const, migrated, skipped };
+  },
+});
+
+/**
+ * One-time migration: map legacy eatsBeef/eatsPork "No" answers to dietary
+ * restrictions, then remove the legacy columns from stored applications.
+ */
+export const migrateEatsBeefAndPorkToDietaryRestrictions = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      if (!("eatsBeef" in application) && !("eatsPork" in application)) {
+        continue;
+      }
+
+      const legacy = application as typeof application & {
+        eatsBeef?: boolean;
+        eatsPork?: boolean;
+      };
+      const dietaryRestrictions = mergeLegacyMeatPreferencesIntoDietaryRestrictions(
+        legacy.dietaryRestrictions,
+        legacy.eatsBeef,
+        legacy.eatsPork,
+      );
+
+      const {
+        _id,
+        _creationTime,
+        eatsBeef: _eatsBeef,
+        eatsPork: _eatsPork,
+        ...replacement
+      } = legacy;
+      void _creationTime;
+      void _eatsBeef;
+      void _eatsPork;
+
+      await ctx.db.replace(_id, {
+        ...replacement,
+        dietaryRestrictions:
+          dietaryRestrictions.length > 0 ? dietaryRestrictions : undefined,
+      });
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
+/** One-time cleanup after removing checkedInAt and confirmedAt from the applications schema. */
+export const stripLegacyApplicationCheckInAndConfirmedAt = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      if (!("checkedInAt" in application) && !("confirmedAt" in application)) {
+        continue;
+      }
+      const {
+        _id,
+        _creationTime,
+        checkedInAt: _checkedInAt,
+        confirmedAt: _confirmedAt,
+        ...replacement
+      } = application as typeof application & {
+        checkedInAt?: number;
+        confirmedAt?: number;
+      };
+      void _creationTime;
+      void _checkedInAt;
+      void _confirmedAt;
+      await ctx.db.replace(_id, replacement);
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
   },
 });
 

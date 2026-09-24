@@ -174,12 +174,6 @@ export const registrationPayloadSchema = z
       tooLongMessage: "Race / ethnicity details are too long.",
     }),
     dietaryRestrictions: z.array(dietaryOptionSchema).default([]),
-    eatsBeef: z.boolean({
-      message: "Please let us know if you eat beef.",
-    }),
-    eatsPork: z.boolean({
-      message: "Please let us know if you eat pork.",
-    }),
     otherDietary: safeOptionalPlainText({
       max: FIELD_LIMITS.otherDietary,
       tooLongMessage: "Dietary details are too long.",

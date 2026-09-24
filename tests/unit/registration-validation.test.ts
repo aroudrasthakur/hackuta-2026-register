@@ -108,54 +108,43 @@ describe("validateApplicationForm", () => {
     }
   });
 
-  it("requires explicit Yes or No answers without changing dietary restrictions", () => {
+  it("requires an international student answer without requiring dietary restrictions", () => {
     const form = validRegistrationForm();
     form.internationalStudent = null;
-    form.eatsBeef = null;
-    form.eatsPork = null;
     const unanswered = validateApplicationForm(form);
     expect(unanswered.success).toBe(false);
     if (!unanswered.success) {
       expect(unanswered.errors.internationalStudent).toBe(
         "Please let us know if you are an international student.",
       );
-      expect(unanswered.errors.eatsBeef).toBe("Please let us know if you eat beef.");
-      expect(unanswered.errors.eatsPork).toBe("Please let us know if you eat pork.");
     }
 
     for (const answer of [true, false]) {
       form.internationalStudent = answer;
-      form.eatsBeef = answer;
-      form.eatsPork = answer;
       const result = validateApplicationForm(form);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.payload.internationalStudent).toBe(answer);
-        expect(result.payload.eatsBeef).toBe(answer);
-        expect(result.payload.eatsPork).toBe(answer);
         expect(result.payload.dietaryRestrictions).toEqual([]);
       }
     }
   });
 
   it.each([
-    [true, true],
-    [true, false],
-    [false, true],
-    [false, false],
-  ])("accepts independent beef and pork answers (beef=%s, pork=%s)", (eatsBeef, eatsPork) => {
+    [["No Beef"] as const],
+    [["No Pork"] as const],
+    [["No Beef", "No Pork"] as const],
+    [["Halal", "No Beef"] as const],
+    [["Halal", "No Pork", "No Beef"] as const],
+  ])("accepts independent dietary restriction selections %j", (dietaryRestrictions) => {
     const form = validRegistrationForm();
-    form.eatsBeef = eatsBeef;
-    form.eatsPork = eatsPork;
-    form.dietaryRestrictions = ["Halal"];
+    form.dietaryRestrictions = [...dietaryRestrictions];
 
     const result = validateApplicationForm(form);
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.payload.eatsBeef).toBe(eatsBeef);
-      expect(result.payload.eatsPork).toBe(eatsPork);
-      expect(result.payload.dietaryRestrictions).toEqual(["Halal"]);
+      expect(result.payload.dietaryRestrictions).toEqual(dietaryRestrictions);
     }
   });
 
@@ -360,7 +349,7 @@ describe("validateApplicationForm", () => {
 });
 
 describe("validateRegistrationPayload", () => {
-  it.each(["internationalStudent", "eatsBeef", "eatsPork"] as const)("rejects non-boolean %s values without coercion", (field) => {
+  it.each(["internationalStudent"] as const)("rejects non-boolean %s values without coercion", (field) => {
     for (const value of [null, "true", "false", "Yes", "No", 0, 1]) {
       expect(validateRegistrationPayload({ ...validPayloadFromForm(), [field]: value }).success).toBe(false);
     }
@@ -382,7 +371,7 @@ describe("validateRegistrationPayload", () => {
 
   it("rejects submissions missing the new required answers", () => {
     const payload = validPayloadFromForm();
-    for (const field of ["stateOfResidence", "internationalStudent", "eatsBeef", "eatsPork"] as const) {
+    for (const field of ["stateOfResidence", "internationalStudent"] as const) {
       const incomplete = { ...payload };
       delete (incomplete as Partial<typeof payload>)[field];
       expect(validateRegistrationPayload(incomplete).success).toBe(false);
@@ -405,6 +394,15 @@ describe("validateRegistrationPayload", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("rejects legacy beef and pork payload fields", () => {
+    expect(
+      validateRegistrationPayload({ ...validPayloadFromForm(), eatsBeef: false }).success,
+    ).toBe(false);
+    expect(
+      validateRegistrationPayload({ ...validPayloadFromForm(), eatsPork: false }).success,
+    ).toBe(false);
   });
 
   it("rejects bypass attempts with invalid age", () => {

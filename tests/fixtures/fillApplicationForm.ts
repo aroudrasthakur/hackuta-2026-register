@@ -40,8 +40,12 @@ export function fillValidApplicationForm() {
   setInputValue(/Expected graduation year/, String(MIN_GRADUATION_YEAR));
   selectListboxOption(/^Gender/, VALID_GENDER);
   selectListboxOption(/T-shirt size/, "M");
-  answerYesNo(/Do you eat beef/, "No");
-  answerYesNo(/Do you eat pork/, "No");
+  fireEvent.click(
+    within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Beef"),
+  );
+  fireEvent.click(
+    within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Pork"),
+  );
   answerYesNo(/Is this your first hackathon/, "Yes");
   selectListboxOption(/How did you hear about HackUTA/, "Discord");
   setInputValue(/Emergency contact name/, "Jane Test");

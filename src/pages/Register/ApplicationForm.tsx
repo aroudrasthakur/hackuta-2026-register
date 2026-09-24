@@ -606,62 +606,6 @@ function ApplicationFormContent({
           ) : null}
         </fieldset>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <fieldset
-            className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.eatsBeef)}`}
-            aria-describedby={errors.eatsBeef ? "eatsBeef-error" : undefined}
-          >
-            <legend className={fieldsetLegendClass}>
-              Do you eat beef?
-              <span aria-hidden="true"> *</span>
-            </legend>
-            <div className={inlineRadioGroupClass}>
-              <CustomRadio
-                id="eatsBeef-yes"
-                name="eatsBeef"
-                label="Yes"
-                checked={form.eatsBeef === true}
-                onChange={() => updateField("eatsBeef", true)}
-              />
-              <CustomRadio
-                id="eatsBeef-no"
-                name="eatsBeef"
-                label="No"
-                checked={form.eatsBeef === false}
-                onChange={() => updateField("eatsBeef", false)}
-              />
-            </div>
-            <FieldError id="eatsBeef-error" message={errors.eatsBeef} />
-          </fieldset>
-
-          <fieldset
-            className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.eatsPork)}`}
-            aria-describedby={errors.eatsPork ? "eatsPork-error" : undefined}
-          >
-            <legend className={fieldsetLegendClass}>
-              Do you eat pork?
-              <span aria-hidden="true"> *</span>
-            </legend>
-            <div className={inlineRadioGroupClass}>
-              <CustomRadio
-                id="eatsPork-yes"
-                name="eatsPork"
-                label="Yes"
-                checked={form.eatsPork === true}
-                onChange={() => updateField("eatsPork", true)}
-              />
-              <CustomRadio
-                id="eatsPork-no"
-                name="eatsPork"
-                label="No"
-                checked={form.eatsPork === false}
-                onChange={() => updateField("eatsPork", false)}
-              />
-            </div>
-            <FieldError id="eatsPork-error" message={errors.eatsPork} />
-          </fieldset>
-        </div>
-
         <SelectField
           id="tshirtSize"
           label="T-shirt size"

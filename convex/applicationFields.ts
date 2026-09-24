@@ -87,8 +87,6 @@ export const applicationRecord = {
   submittedAt: v.optional(v.number()),
   reviewedAt: v.optional(v.number()),
   reviewedBy: v.optional(v.string()),
-  checkedInAt: v.optional(v.number()),
-  confirmedAt: v.optional(v.number()),
   confirmationStatus: v.optional(confirmationStatus),
   internalNotes: v.optional(v.string()),
   resumeStorageId: v.optional(v.id("_storage")),

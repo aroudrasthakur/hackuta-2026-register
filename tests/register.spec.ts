@@ -50,10 +50,10 @@ async function fillApplicationForm(page: Page) {
   await page.getByLabel("Expected graduation year", { exact: false }).fill(String(MIN_GRADUATION_YEAR));
   await selectListboxOption(page, "gender", "Man");
   await selectListboxOption(page, "tshirtSize", "M");
-  await page.getByRole("group", { name: /Do you eat beef/ })
-    .getByLabel("No").check({ force: true });
-  await page.getByRole("group", { name: /Do you eat pork/ })
-    .getByLabel("No").check({ force: true });
+  await page.getByRole("group", { name: /Dietary restrictions/ })
+    .getByLabel("No Beef").check({ force: true });
+  await page.getByRole("group", { name: /Dietary restrictions/ })
+    .getByLabel("No Pork").check({ force: true });
   await page.getByRole("group", { name: /Is this your first hackathon/ })
     .getByLabel("Yes").check({ force: true });
   await selectListboxOption(page, "hearAbout", "Discord");
@@ -106,6 +106,11 @@ test.describe("registration", () => {
     await expect(page.getByRole("button", { name: "Submit application" })).toBeVisible();
     await expect(page.locator("main.sign-in-page")).toBeVisible();
     await expect(page.getByRole("group", { name: "Weather mood" })).toBeVisible();
+    const dietary = page.getByRole("group", { name: /Dietary restrictions/ });
+    await expect(dietary.getByLabel("No Beef")).toBeVisible();
+    await expect(dietary.getByLabel("No Pork")).toBeVisible();
+    await expect(page.getByRole("group", { name: /Do you eat beef/i })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: /Do you eat pork/i })).toHaveCount(0);
   });
 
   test("shows field errors on empty submit and stays on the form", async ({ page }) => {
@@ -116,10 +121,6 @@ test.describe("registration", () => {
     await expect(page.getByText("Please select your state or territory of residence."))
       .toBeVisible();
     await expect(page.getByText("Please let us know if you are an international student."))
-      .toBeVisible();
-    await expect(page.getByText("Please let us know if you eat beef."))
-      .toBeVisible();
-    await expect(page.getByText("Please let us know if you eat pork."))
       .toBeVisible();
     await expect(
       page.getByRole("alert").filter({ hasText: /One or more of your answers is invalid/ }),

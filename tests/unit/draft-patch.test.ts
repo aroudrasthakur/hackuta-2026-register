@@ -24,8 +24,7 @@ describe("formToDraftPatch", () => {
       firstHackathon: null,
       stateOfResidence: "",
       internationalStudent: null,
-      eatsBeef: false,
-      eatsPork: true,
+      dietaryRestrictions: ["No Beef", "No Pork"],
     });
 
     expect(patch.firstName).toBe("");
@@ -34,10 +33,8 @@ describe("formToDraftPatch", () => {
     expect(patch.raceEthnicity).toEqual([]);
     expect(patch.stateOfResidence).toBe("");
     expect(patch.internationalStudent).toBeNull();
-    expect(patch.eatsBeef).toBe(false);
-    expect(patch.eatsPork).toBe(true);
-    expect(isClearedDraftValue(patch.eatsBeef)).toBe(false);
-    expect(isClearedDraftValue(patch.eatsPork)).toBe(false);
+    expect(patch.dietaryRestrictions).toEqual(["No Beef", "No Pork"]);
+    expect(isClearedDraftValue(patch.dietaryRestrictions)).toBe(false);
     expect(isClearedDraftValue(patch.firstName)).toBe(true);
     expect(isClearedDraftValue(patch.raceEthnicity)).toBe(true);
   });
@@ -119,8 +116,7 @@ describe("applicationToDraftForm", () => {
     const restored = applicationToDraftForm({ firstName: "Returning" });
     expect(restored.stateOfResidence).toBe("");
     expect(restored.internationalStudent).toBeNull();
-    expect(restored.eatsBeef).toBeNull();
-    expect(restored.eatsPork).toBeNull();
+    expect(restored.dietaryRestrictions).toEqual([]);
   });
 });
 
@@ -166,13 +162,13 @@ describe("mergeDraftPatchIntoApplication", () => {
     expect(merged).not.toHaveProperty("_creationTime");
   });
 
-  it("keeps explicit false answers and stamps verification metadata", () => {
+  it("keeps dietary restriction selections and stamps verification metadata", () => {
     const merged = mergeDraftPatchIntoApplication(
-      { authUserId: "user1", eatsBeef: true } as Record<string, unknown>,
-      formToDraftPatch({ ...INITIAL_FORM, eatsBeef: false }),
+      { authUserId: "user1", dietaryRestrictions: ["Halal"] } as Record<string, unknown>,
+      formToDraftPatch({ ...INITIAL_FORM, dietaryRestrictions: ["Halal", "No Beef"] }),
       { email: "a@b.co", emailVerificationTime: 9, updatedAt: 3 },
     );
-    expect(merged.eatsBeef).toBe(false);
+    expect(merged.dietaryRestrictions).toEqual(["Halal", "No Beef"]);
     expect(merged.emailVerificationTime).toBe(9);
     expect(merged.authUserId).toBe("user1");
   });
