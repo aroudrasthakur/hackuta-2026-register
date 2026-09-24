@@ -6,14 +6,23 @@ import {
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
-import { isClearedDraftValue } from "../../shared/registration/applicantFields";
+import {
+  APPLICANT_ANSWER_FIELD_KEYS,
+  isClearedDraftValue,
+} from "../../shared/registration/applicantFields";
 import {
   applicationToDraftForm,
   formToDraftPatch,
   mergeDraftPatchIntoApplication,
 } from "../../shared/registration/draftMapping";
-
 describe("formToDraftPatch", () => {
+  it("includes every registered applicant answer field in the autosave patch", () => {
+    const patch = formToDraftPatch(validRegistrationForm());
+    for (const key of APPLICANT_ANSWER_FIELD_KEYS) {
+      expect(patch).toHaveProperty(key);
+    }
+  });
+
   it("sends empty strings and nulls so the server can clear stored values", () => {
     const patch = formToDraftPatch({
       ...INITIAL_FORM,
@@ -37,6 +46,17 @@ describe("formToDraftPatch", () => {
     expect(isClearedDraftValue(patch.dietaryRestrictions)).toBe(false);
     expect(isClearedDraftValue(patch.firstName)).toBe(true);
     expect(isClearedDraftValue(patch.raceEthnicity)).toBe(true);
+    expect(patch.otherDietaryRestrictions).toBe("");
+    expect(isClearedDraftValue(patch.otherDietaryRestrictions)).toBe(true);
+  });
+
+  it("trims other dietary restrictions in draft patches", () => {
+    const patch = formToDraftPatch({
+      ...INITIAL_FORM,
+      otherDietaryRestrictions: "  No shellfish  ",
+    });
+
+    expect(patch.otherDietaryRestrictions).toBe("No shellfish");
   });
 });
 
@@ -117,6 +137,14 @@ describe("applicationToDraftForm", () => {
     expect(restored.stateOfResidence).toBe("");
     expect(restored.internationalStudent).toBeNull();
     expect(restored.dietaryRestrictions).toEqual([]);
+    expect(restored.otherDietaryRestrictions).toBe("");
+  });
+
+  it("restores stored other dietary restrictions", () => {
+    const restored = applicationToDraftForm({
+      otherDietaryRestrictions: "No shellfish",
+    });
+    expect(restored.otherDietaryRestrictions).toBe("No shellfish");
   });
 });
 
@@ -171,5 +199,21 @@ describe("mergeDraftPatchIntoApplication", () => {
     expect(merged.dietaryRestrictions).toEqual(["Halal", "No Beef"]);
     expect(merged.emailVerificationTime).toBe(9);
     expect(merged.authUserId).toBe("user1");
+  });
+
+  it("persists other dietary restrictions and clears them when blank", () => {
+    const withValue = mergeDraftPatchIntoApplication(
+      { authUserId: "user1" } as Record<string, unknown>,
+      formToDraftPatch({ ...INITIAL_FORM, otherDietaryRestrictions: "Low sodium" }),
+      { email: "a@b.co", updatedAt: 3 },
+    );
+    expect(withValue.otherDietaryRestrictions).toBe("Low sodium");
+
+    const cleared = mergeDraftPatchIntoApplication(
+      { authUserId: "user1", otherDietaryRestrictions: "Low sodium" } as Record<string, unknown>,
+      formToDraftPatch({ ...INITIAL_FORM, otherDietaryRestrictions: "" }),
+      { email: "a@b.co", updatedAt: 4 },
+    );
+    expect(cleared.otherDietaryRestrictions).toBeUndefined();
   });
 });

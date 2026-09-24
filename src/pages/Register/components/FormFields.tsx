@@ -41,6 +41,7 @@ type TextFieldProps = {
   label: string;
   required?: boolean;
   error?: string | undefined;
+  helperText?: string;
 } & InputHTMLAttributes<HTMLInputElement>;
 
 export function TextField({
@@ -48,10 +49,15 @@ export function TextField({
   label,
   required,
   error,
+  helperText,
   className,
   ...inputProps
 }: TextFieldProps) {
   const errorId = `${id}-error`;
+  const helperId = `${id}-helper`;
+  const descriptionIds = [helperText ? helperId : null, error ? errorId : null]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <label className={labelClass} htmlFor={id}>
@@ -63,10 +69,15 @@ export function TextField({
         id={id}
         required={required}
         aria-invalid={!!error}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={descriptionIds || undefined}
         className={className ?? fieldClass(error)}
         {...inputProps}
       />
+      {helperText ? (
+        <p id={helperId} className="text-xs font-normal text-(--ocean)">
+          {helperText}
+        </p>
+      ) : null}
       <FieldError id={errorId} message={error} />
     </label>
   );

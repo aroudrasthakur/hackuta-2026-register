@@ -135,6 +135,7 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     otherRaceEthnicity: application.otherRaceEthnicity,
     dietaryRestrictions: application.dietaryRestrictions,
     otherDietary: application.otherDietary,
+    otherDietaryRestrictions: application.otherDietaryRestrictions,
     tshirtSize: application.tshirtSize,
     firstHackathon: application.firstHackathon,
     hearAbout: application.hearAbout,

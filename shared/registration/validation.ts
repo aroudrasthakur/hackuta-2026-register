@@ -70,6 +70,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     otherRaceEthnicity: form.otherRaceEthnicity,
     dietaryRestrictions: form.dietaryRestrictions,
     otherDietary: form.otherDietary,
+    otherDietaryRestrictions: form.otherDietaryRestrictions,
     tshirtSize: form.tshirtSize || undefined,
     firstHackathon: form.firstHackathon ?? undefined,
     hearAbout: resolveHearAbout(form) || undefined,

@@ -975,6 +975,7 @@ describe("convex applicant auth flows", () => {
         stateOfResidence: "Outside the United States",
         internationalStudent: true,
         dietaryRestrictions: ["No Beef", "Halal"],
+        otherDietaryRestrictions: "No shellfish",
       }),
     });
     const draft = await t.query("applications:getMyApplicationDraft", {});
@@ -986,6 +987,7 @@ describe("convex applicant auth flows", () => {
         stateOfResidence: "Outside the United States",
         internationalStudent: true,
         dietaryRestrictions: ["No Beef", "Halal"],
+        otherDietaryRestrictions: "No shellfish",
       },
     });
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
@@ -993,7 +995,50 @@ describe("convex applicant auth flows", () => {
       stateOfResidence: "Outside the United States",
       internationalStudent: true,
       dietaryRestrictions: ["No Beef", "Halal"],
+      otherDietaryRestrictions: "No shellfish",
     });
+  });
+
+  it("reloads other dietary restrictions from the saved draft query", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...INITIAL_FORM,
+        otherDietaryRestrictions: "No shellfish",
+      }),
+    });
+
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: { otherDietaryRestrictions: "No shellfish" },
+    });
+  });
+
+  it("persists other dietary restrictions through submission and dashboard answers", async () => {
+    const t = await authTest();
+    const otherDietaryRestrictions = "Low sodium meals only";
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        otherDietaryRestrictions,
+      }),
+    });
+    await t.mutation("registrations:submitRegistration", {
+      data: {
+        ...validRegistrationPayload(),
+        otherDietaryRestrictions,
+      },
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.otherDietaryRestrictions).toBe(otherDietaryRestrictions);
+
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
+      registration: { answers: Record<string, unknown> };
+    };
+    expect(dashboard.registration.answers.otherDietaryRestrictions).toBe(
+      otherDietaryRestrictions,
+    );
+    await drainScheduledFunctions(t);
   });
 
   it("migrates legacy No beef/pork answers into dietary restrictions and strips legacy fields", async () => {

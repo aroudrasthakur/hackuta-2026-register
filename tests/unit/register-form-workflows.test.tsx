@@ -136,6 +136,21 @@ describe("ApplicationForm draft loading and autosave", () => {
     expect(consoleError).toHaveBeenCalledWith("Draft save failed:", expect.any(Error));
   });
 
+  it("autosaves other dietary restrictions with the rest of the draft patch", async () => {
+    vi.useFakeTimers();
+    renderValidForm();
+    fireEvent.change(document.getElementById("otherDietaryRestrictions")!, {
+      target: { value: "No shellfish" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    expect(env.saveDraft).toHaveBeenCalledOnce();
+    expect(env.saveDraft.mock.calls[0]?.[0].patch.otherDietaryRestrictions).toBe(
+      "No shellfish",
+    );
+  });
+
   it("debounces autosave so rapid edits produce one save", async () => {
     vi.useFakeTimers();
     renderValidForm();

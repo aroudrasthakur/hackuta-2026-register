@@ -43,6 +43,7 @@ export type ApplicationFormData = {
   otherRaceEthnicity: string;
   dietaryRestrictions: DietaryOption[];
   otherDietary: string;
+  otherDietaryRestrictions: string;
   tshirtSize: TshirtSize | "";
   firstHackathon: boolean | null;
   internationalStudent: boolean | null;
@@ -82,6 +83,7 @@ export const FIELD_ORDER: FieldName[] = [
   "gender",
   "otherRaceEthnicity",
   "otherDietary",
+  "otherDietaryRestrictions",
   "dietaryRestrictions",
   "tshirtSize",
   "firstHackathon",

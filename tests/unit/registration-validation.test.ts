@@ -285,6 +285,58 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("allows blank other dietary restrictions without blocking submission", () => {
+    const form = validRegistrationForm();
+    form.otherDietaryRestrictions = "";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.otherDietaryRestrictions).toBeUndefined();
+    }
+  });
+
+  it("trims and stores other dietary restrictions", () => {
+    const form = validRegistrationForm();
+    form.otherDietaryRestrictions = "  No shellfish  ";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.otherDietaryRestrictions).toBe("No shellfish");
+    }
+  });
+
+  it("rejects other dietary restrictions that exceed the length limit", () => {
+    const form = validRegistrationForm();
+    form.otherDietaryRestrictions = "a".repeat(501);
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.otherDietaryRestrictions).toBe(
+        "Other dietary restrictions are too long.",
+      );
+    }
+  });
+
+  it("keeps allergy follow-up required even when other dietary restrictions are provided", () => {
+    const form = validRegistrationForm();
+    form.dietaryRestrictions = ["Allergies"];
+    form.otherDietaryRestrictions = "Low sodium";
+    form.otherDietary = "";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.otherDietary).toBe("Please describe your food allergies.");
+    }
+  });
+
   it("rejects invalid optional URLs", () => {
     const form = validRegistrationForm();
     form.github = "http://???";
