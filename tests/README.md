@@ -7,8 +7,9 @@ Quality gates for the registration app: Vitest unit/integration tests and Playwr
 | Path | Summary |
 | --- | --- |
 | [unit/](unit/) | Vitest — shared modules, Convex handlers, React pages and hooks |
-| [fixtures/](fixtures/) | Shared registration form payloads for tests |
+| [fixtures/](fixtures/) | Shared payloads and Playwright helpers (registration form, auth, profile layout) |
 | [register.spec.ts](register.spec.ts) | Playwright e2e — sign-up, OTP, application flow, CSP headers |
+| [profile.spec.ts](profile.spec.ts) | Playwright e2e — profile overview layout and sign-out placement (mobile + desktop) |
 | [playwright-coverage.ts](playwright-coverage.ts) | Playwright fixture wrapper for Istanbul coverage |
 | [unit/setup.ts](unit/setup.ts) | Vitest global setup (@testing-library/jest-dom) |
 
@@ -32,6 +33,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | resume-upload-policy.test.ts | Client resume policy |
 | pdf-validation.test.ts | Server PDF parse |
 | hackathon-timeline.test.ts | Timeline builder |
+| dietary-migration.test.ts | Legacy eatsBeef/eatsPork → dietaryRestrictions migration mapping |
 | mlh-texas-schools.test.ts | Texas school ordering |
 | validation-build.test.ts | Schema build smoke test |
 
@@ -44,15 +46,21 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | rate-limits.test.ts | Sign-up and password-reset OTP rate-limit mutations |
 | email-actions.test.ts | Email action wiring |
 | email-service.test.ts | SMTP helper |
+| backend-authorization.test.ts | Auth boundaries, profile lifecycle, upload sessions, upload failure recovery, maintenance and migrations |
+| hackuta-password.test.ts | Password provider flows: sign-up, sign-in, reset, reset verification, email verification |
+| convex-auth-config.test.ts | Auth provider wiring, OTP generation, rate-limited email delivery |
 
 ### Frontend
 
 | File | Covers |
 | --- | --- |
-| sign-in.test.tsx, sign-in-extended.test.tsx | Sign-in / OTP UI |
+| sign-in.test.tsx, sign-in-extended.test.tsx | Sign-in / OTP UI (including secondary action buttons) |
 | sign-in-password-input.test.tsx | Sign-in password visibility toggle |
 | forgot-password.test.tsx | Forgot-password flow (mock auth) |
+| sign-in-convex.test.tsx | Sign-in, OTP resend, and password reset against mocked Convex auth |
+| auth-components.test.tsx | OTP input, route guard, sign-out, mock auth provider |
 | register-ui.test.tsx, register-api.test.ts | Application form and API client |
+| register-form-workflows.test.tsx | Autosave retry, upload/submit failure recovery, resume reuse and cleanup |
 | resume-upload.test.tsx | Resume widget |
 | profile-page.test.tsx | Applicant dashboard |
 | home-redirect.test.tsx | / routing |
@@ -62,6 +70,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | searchable-select.test.tsx | School search control |
 | select-field.test.tsx | Custom SelectField listbox |
 | weather-mood.test.tsx | Sign-in weather toggle |
+| app-shell.test.tsx | main.tsx providers and routes, Convex client, storm backdrop, presentational components |
 
 ### Security
 
@@ -73,11 +82,16 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 
 Convex integration tests use convex-test with import.meta.glob over convex/**/*.ts. HTTP upload tests use X-Test-Origin and X-Test-Content-Length because the test harness cannot set Content-Length.
 
-## E2E (`register.spec.ts`)
+## E2E (`register.spec.ts`, `profile.spec.ts`)
 
 Runs against the dev server or a production build (PLAYWRIGHT_USE_BUILD=true). CI uses mock auth (VITE_USE_MOCK_API=true) — no live Convex or SMTP.
 
-Covers password sign-up, mock OTP verify, multi-step registration, and production security headers.
+| Spec | Covers |
+| --- | --- |
+| register.spec.ts | Password sign-up, mock OTP verify, multi-step registration, dietary options, CSP headers |
+| profile.spec.ts | Profile overview grid, sign-out below details/timeline, mobile and desktop viewports |
+
+Shared Playwright helpers: [fixtures/playwrightAuth.ts](fixtures/playwrightAuth.ts) (sign-up, client-side profile navigation, `openProfileAsReturningApplicant` via `window.__hackutaMockAuth`), [fixtures/playwrightRegistration.ts](fixtures/playwrightRegistration.ts), [fixtures/profileLayout.ts](fixtures/profileLayout.ts).
 
 Contact-form e2e lives in the separate [hackuta-2026-registration](https://github.com/aroudrasthakur/hackuta-2026-registration) repo.
 
@@ -86,8 +100,8 @@ Contact-form e2e lives in the separate [hackuta-2026-registration](https://githu
 | Command | Purpose |
 | --- | --- |
 | npm run test:unit | All Vitest tests |
-| npm run test:unit:coverage | Vitest with Istanbul output |
-| npm run test:coverage:check | Enforce 80% thresholds ([check-coverage.mjs](../scripts/check-coverage.mjs)) |
+| npm run test:unit:coverage | Vitest with Istanbul output; fails below 85% globally or per area |
+| npm run test:coverage:check | Per-area coverage table and threshold check ([check-coverage.mjs](../scripts/check-coverage.mjs)) |
 | npm run test:e2e | Playwright |
 | PLAYWRIGHT_USE_BUILD=true npm run test:e2e | Playwright against dist/ (CI path) |
 

@@ -20,6 +20,9 @@ import { RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE } from "../../shared/registration/s
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 const assertRateLimit = makeFunctionReference<"mutation">("resumeUploads:assertUploadRateLimit");
 const cleanup = makeFunctionReference<"mutation">("resumeUploads:cleanupExpiredUploadSessions");
+const migrateMeatPreferences = makeFunctionReference<"mutation">(
+  "migrations:migrateEatsBeefAndPorkToDietaryRestrictions",
+);
 
 type ConvexTestClient = {
   mutation: (name: string, args: unknown) => Promise<{
@@ -209,16 +212,15 @@ async function verifiedUpload(
 
 describe("convex registrations", () => {
   it.each([
-    [true, true], [true, false], [false, true], [false, false],
-  ])("persists independent beef and pork answers through draft and submission (%s, %s)", async (eatsBeef, eatsPork) => {
+    [["No Beef"] as const],
+    [["No Pork"] as const],
+    [["No Beef", "No Pork", "Halal"] as const],
+  ])("persists independent dietary restrictions through draft and submission (%j)", async (dietaryRestrictions) => {
     const t = await authTest();
     const answers = {
       stateOfResidence: "Outside the United States" as const,
       internationalStudent: false,
-      eatsBeef,
-      eatsPork,
-      dietaryRestrictions: ["Halal" as const, "Allergies" as const],
-      otherDietary: "Peanuts",
+      dietaryRestrictions: [...dietaryRestrictions],
     };
     await t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch({ ...validRegistrationForm(), ...answers }),
@@ -230,7 +232,8 @@ describe("convex registrations", () => {
       data: { ...validRegistrationPayload(), ...answers },
     });
     expect(await t.run((ctx) => ctx.db.query("applications").first())).toMatchObject({
-      ...answers, status: "submitted",
+      ...answers,
+      status: "submitted",
     });
     const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
       registration: { answers: Record<string, unknown> };
@@ -245,28 +248,24 @@ describe("convex registrations", () => {
 
   it("clears saved answers without clearing dietary restrictions and reloads them as unanswered", async () => {
     const t = await authTest();
-    const form = { ...validRegistrationForm(), dietaryRestrictions: ["Halal" as const] };
+    const form = { ...validRegistrationForm(), dietaryRestrictions: ["Halal" as const, "No Beef" as const] };
     await t.mutation("applications:saveApplicationDraft", { patch: formToDraftPatch(form) });
     await t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch({
         ...form,
         stateOfResidence: "",
         internationalStudent: null,
-        eatsBeef: null,
-        eatsPork: null,
       }),
     });
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
-    for (const field of ["stateOfResidence", "internationalStudent", "eatsBeef", "eatsPork"]) {
+    for (const field of ["stateOfResidence", "internationalStudent"]) {
       expect(stored).not.toHaveProperty(field);
     }
     await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
       draft: {
         stateOfResidence: "",
         internationalStudent: null,
-        eatsBeef: null,
-        eatsPork: null,
-        dietaryRestrictions: ["Halal"],
+        dietaryRestrictions: ["Halal", "No Beef"],
       },
     });
   });
@@ -283,8 +282,6 @@ describe("convex registrations", () => {
     expect(stored).toMatchObject({
       stateOfResidence: "Texas",
       internationalStudent: false,
-      eatsBeef: false,
-      eatsPork: false,
       dietaryRestrictions: [],
     });
     await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
@@ -927,14 +924,12 @@ describe("convex applicant auth flows", () => {
       "applications-open",
       "application-deadline",
       "decisions-out",
-      "rsvp-due",
       "hackathon-begins",
     ]);
     expect(dashboard.timeline.map((event) => event.label)).toEqual([
       "Applications open",
       "Applications close",
       "Decisions go out",
-      "RSVP due",
       "The hackathon begins",
     ]);
   });
@@ -964,7 +959,7 @@ describe("convex applicant auth flows", () => {
     const applicationsOpen = dashboard.timeline.find((event) => event.id === "applications-open");
     const hackathonBegins = dashboard.timeline.find((event) => event.id === "hackathon-begins");
 
-    expect(applicationsOpen?.complete).toBe(true);
+    expect(applicationsOpen?.complete).toBe(false);
     expect(hackathonBegins?.complete).toBe(false);
   });
 
@@ -977,8 +972,8 @@ describe("convex applicant auth flows", () => {
         lastName: "User",
         stateOfResidence: "Outside the United States",
         internationalStudent: true,
-        eatsBeef: false,
-        eatsPork: true,
+        dietaryRestrictions: ["No Beef", "Halal"],
+        otherDietaryRestrictions: "No shellfish",
       }),
     });
     const draft = await t.query("applications:getMyApplicationDraft", {});
@@ -989,16 +984,167 @@ describe("convex applicant auth flows", () => {
         lastName: "User",
         stateOfResidence: "Outside the United States",
         internationalStudent: true,
-        eatsBeef: false,
-        eatsPork: true,
+        dietaryRestrictions: ["No Beef", "Halal"],
+        otherDietaryRestrictions: "No shellfish",
       },
     });
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
     expect(stored).toMatchObject({
       stateOfResidence: "Outside the United States",
       internationalStudent: true,
-      eatsBeef: false,
-      eatsPork: true,
+      dietaryRestrictions: ["No Beef", "Halal"],
+      otherDietaryRestrictions: "No shellfish",
     });
+  });
+
+  it("reloads student email from the saved draft query", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...INITIAL_FORM,
+        studentEmail: "student@mail.utexas.edu",
+      }),
+    });
+
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: { studentEmail: "student@mail.utexas.edu" },
+    });
+  });
+
+  it("persists student email through submission and dashboard answers", async () => {
+    const t = await authTest();
+    const studentEmail = "student@mail.utexas.edu";
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        studentEmail,
+      }),
+    });
+    await t.mutation("registrations:submitRegistration", {
+      data: {
+        ...validRegistrationPayload(),
+        studentEmail,
+      },
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.studentEmail).toBe(studentEmail);
+
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
+      registration: { answers: Record<string, unknown> };
+    };
+    expect(dashboard.registration.answers.studentEmail).toBe(studentEmail);
+    await drainScheduledFunctions(t);
+  });
+
+  it("reloads other dietary restrictions from the saved draft query", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...INITIAL_FORM,
+        otherDietaryRestrictions: "No shellfish",
+      }),
+    });
+
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: { otherDietaryRestrictions: "No shellfish" },
+    });
+  });
+
+  it("persists other dietary restrictions through submission and dashboard answers", async () => {
+    const t = await authTest();
+    const otherDietaryRestrictions = "Low sodium meals only";
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        otherDietaryRestrictions,
+      }),
+    });
+    await t.mutation("registrations:submitRegistration", {
+      data: {
+        ...validRegistrationPayload(),
+        otherDietaryRestrictions,
+      },
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.otherDietaryRestrictions).toBe(otherDietaryRestrictions);
+
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
+      registration: { answers: Record<string, unknown> };
+    };
+    expect(dashboard.registration.answers.otherDietaryRestrictions).toBe(
+      otherDietaryRestrictions,
+    );
+    await drainScheduledFunctions(t);
+  });
+
+  it("migrates legacy No beef/pork answers into dietary restrictions and strips legacy fields", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const authUserId = await t.run((ctx) =>
+      ctx.db.insert("users", {
+        email: "legacy@example.com",
+        emailVerificationTime: 1,
+      }),
+    );
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId,
+        email: "legacy@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        confirmationStatus: "unconfirmed",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        dietaryRestrictions: ["Halal"],
+        eatsBeef: false,
+        eatsPork: true,
+      } as never);
+    });
+
+    await expect(t.mutation(migrateMeatPreferences, {})).resolves.toEqual({ ok: true, updated: 1 });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.dietaryRestrictions).toEqual(["Halal", "No Beef"]);
+    expect(stored).not.toHaveProperty("eatsBeef");
+    expect(stored).not.toHaveProperty("eatsPork");
+
+    await expect(t.mutation(migrateMeatPreferences, {})).resolves.toEqual({ ok: true, updated: 0 });
+  });
+
+  it("leaves dietary restrictions unchanged when legacy meat answers were Yes", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const authUserId = await t.run((ctx) =>
+      ctx.db.insert("users", {
+        email: "legacy-yes@example.com",
+        emailVerificationTime: 1,
+      }),
+    );
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId,
+        email: "legacy-yes@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        dietaryRestrictions: ["Halal"],
+        eatsBeef: true,
+        eatsPork: true,
+      } as never);
+    });
+
+    await expect(t.mutation(migrateMeatPreferences, {})).resolves.toEqual({ ok: true, updated: 1 });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.dietaryRestrictions).toEqual(["Halal"]);
+    expect(stored).not.toHaveProperty("eatsBeef");
+    expect(stored).not.toHaveProperty("eatsPork");
   });
 });

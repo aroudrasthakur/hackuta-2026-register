@@ -108,54 +108,43 @@ describe("validateApplicationForm", () => {
     }
   });
 
-  it("requires explicit Yes or No answers without changing dietary restrictions", () => {
+  it("requires an international student answer without requiring dietary restrictions", () => {
     const form = validRegistrationForm();
     form.internationalStudent = null;
-    form.eatsBeef = null;
-    form.eatsPork = null;
     const unanswered = validateApplicationForm(form);
     expect(unanswered.success).toBe(false);
     if (!unanswered.success) {
       expect(unanswered.errors.internationalStudent).toBe(
         "Please let us know if you are an international student.",
       );
-      expect(unanswered.errors.eatsBeef).toBe("Please let us know if you eat beef.");
-      expect(unanswered.errors.eatsPork).toBe("Please let us know if you eat pork.");
     }
 
     for (const answer of [true, false]) {
       form.internationalStudent = answer;
-      form.eatsBeef = answer;
-      form.eatsPork = answer;
       const result = validateApplicationForm(form);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.payload.internationalStudent).toBe(answer);
-        expect(result.payload.eatsBeef).toBe(answer);
-        expect(result.payload.eatsPork).toBe(answer);
         expect(result.payload.dietaryRestrictions).toEqual([]);
       }
     }
   });
 
   it.each([
-    [true, true],
-    [true, false],
-    [false, true],
-    [false, false],
-  ])("accepts independent beef and pork answers (beef=%s, pork=%s)", (eatsBeef, eatsPork) => {
+    [["No Beef"] as const],
+    [["No Pork"] as const],
+    [["No Beef", "No Pork"] as const],
+    [["Halal", "No Beef"] as const],
+    [["Halal", "No Pork", "No Beef"] as const],
+  ])("accepts independent dietary restriction selections %j", (dietaryRestrictions) => {
     const form = validRegistrationForm();
-    form.eatsBeef = eatsBeef;
-    form.eatsPork = eatsPork;
-    form.dietaryRestrictions = ["Halal"];
+    form.dietaryRestrictions = [...dietaryRestrictions];
 
     const result = validateApplicationForm(form);
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.payload.eatsBeef).toBe(eatsBeef);
-      expect(result.payload.eatsPork).toBe(eatsPork);
-      expect(result.payload.dietaryRestrictions).toEqual(["Halal"]);
+      expect(result.payload.dietaryRestrictions).toEqual(dietaryRestrictions);
     }
   });
 
@@ -296,6 +285,98 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("allows blank other dietary restrictions without blocking submission", () => {
+    const form = validRegistrationForm();
+    form.otherDietaryRestrictions = "";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.otherDietaryRestrictions).toBeUndefined();
+    }
+  });
+
+  it("trims and stores other dietary restrictions", () => {
+    const form = validRegistrationForm();
+    form.otherDietaryRestrictions = "  No shellfish  ";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.otherDietaryRestrictions).toBe("No shellfish");
+    }
+  });
+
+  it("rejects other dietary restrictions that exceed the length limit", () => {
+    const form = validRegistrationForm();
+    form.otherDietaryRestrictions = "a".repeat(501);
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.otherDietaryRestrictions).toBe(
+        "Other dietary restrictions are too long.",
+      );
+    }
+  });
+
+  it("allows blank student email without blocking submission", () => {
+    const form = validRegistrationForm();
+    form.studentEmail = "";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.studentEmail).toBeUndefined();
+    }
+  });
+
+  it.each([
+    "student@mail.utexas.edu",
+    "sam@my-university.org",
+    "  Student@School.Academy  ",
+  ])("accepts valid student email addresses (%s)", (studentEmail) => {
+    const form = validRegistrationForm();
+    form.studentEmail = studentEmail;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.studentEmail).toBe(studentEmail.trim().toLowerCase());
+    }
+  });
+
+  it("rejects malformed student email addresses", () => {
+    const form = validRegistrationForm();
+    form.studentEmail = "not-an-email";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.studentEmail).toBe("Enter a valid student email address.");
+    }
+  });
+
+  it("keeps allergy follow-up required even when other dietary restrictions are provided", () => {
+    const form = validRegistrationForm();
+    form.dietaryRestrictions = ["Allergies"];
+    form.otherDietaryRestrictions = "Low sodium";
+    form.otherDietary = "";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.otherDietary).toBe("Please describe your food allergies.");
+    }
+  });
+
   it("rejects invalid optional URLs", () => {
     const form = validRegistrationForm();
     form.github = "http://???";
@@ -360,7 +441,7 @@ describe("validateApplicationForm", () => {
 });
 
 describe("validateRegistrationPayload", () => {
-  it.each(["internationalStudent", "eatsBeef", "eatsPork"] as const)("rejects non-boolean %s values without coercion", (field) => {
+  it.each(["internationalStudent"] as const)("rejects non-boolean %s values without coercion", (field) => {
     for (const value of [null, "true", "false", "Yes", "No", 0, 1]) {
       expect(validateRegistrationPayload({ ...validPayloadFromForm(), [field]: value }).success).toBe(false);
     }
@@ -382,7 +463,7 @@ describe("validateRegistrationPayload", () => {
 
   it("rejects submissions missing the new required answers", () => {
     const payload = validPayloadFromForm();
-    for (const field of ["stateOfResidence", "internationalStudent", "eatsBeef", "eatsPork"] as const) {
+    for (const field of ["stateOfResidence", "internationalStudent"] as const) {
       const incomplete = { ...payload };
       delete (incomplete as Partial<typeof payload>)[field];
       expect(validateRegistrationPayload(incomplete).success).toBe(false);
@@ -405,6 +486,15 @@ describe("validateRegistrationPayload", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("rejects legacy beef and pork payload fields", () => {
+    expect(
+      validateRegistrationPayload({ ...validPayloadFromForm(), eatsBeef: false }).success,
+    ).toBe(false);
+    expect(
+      validateRegistrationPayload({ ...validPayloadFromForm(), eatsPork: false }).success,
+    ).toBe(false);
   });
 
   it("rejects bypass attempts with invalid age", () => {
@@ -466,6 +556,59 @@ describe("isValidPhone", () => {
   it("rejects too-short numbers", async () => {
     const { isValidPhone } = await import("../../shared/registration/schema");
     expect(isValidPhone("123")).toBe(false);
+  });
+
+  it("enforces the 7 to 15 digit boundaries after stripping formatting", async () => {
+    const { isValidPhone } = await import("../../shared/registration/schema");
+    expect(isValidPhone("123-4567")).toBe(true);
+    expect(isValidPhone("123-456")).toBe(false);
+    expect(isValidPhone("+1 (234) 567-8901-234")).toBe(true);
+    expect(isValidPhone("1234567890123456")).toBe(false);
+  });
+});
+
+describe("validateApplicationForm resume and error reporting", () => {
+  it("accepts a valid PDF resume alongside a valid form", () => {
+    const resume = new File(["%PDF-1.7"], "resume.pdf", { type: "application/pdf" });
+    expect(validateApplicationForm({ ...validRegistrationForm(), resume }).success).toBe(true);
+  });
+
+  it("reports the resume error together with schema errors", () => {
+    const resume = new File(["x"], "resume.exe", { type: "application/octet-stream" });
+    const result = validateApplicationForm({ ...validRegistrationForm(), firstName: "", resume });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.resume).toBe("Please select a PDF file.");
+      expect(result.errors.firstName).toBeTruthy();
+    }
+  });
+
+  it("keeps only the first message per field", () => {
+    const result = validateApplicationForm({ ...validRegistrationForm(), firstName: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.errors.firstName).toBe("First name is required.");
+  });
+
+  it("fails on client-only conditional errors even when the payload parses", () => {
+    const result = validateApplicationForm({
+      ...validRegistrationForm(),
+      school: "Definitely Not A Real School" as never,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.errors.school).toBe("Please select a school from the list.");
+  });
+});
+
+describe("validateRegistrationPayload", () => {
+  it("returns only a failure flag so server callers never echo field details", () => {
+    expect(validateRegistrationPayload({ firstName: "x" })).toEqual({ success: false });
+    expect(validateRegistrationPayload(null)).toEqual({ success: false });
+  });
+});
+
+describe("focusFirstInvalidField focus targets", () => {
+  it("uses the mapped focus id for composite fields and tolerates missing elements", () => {
+    expect(() => focusFirstInvalidField({ codeOfConductAgreed: "Required" })).not.toThrow();
   });
 });
 

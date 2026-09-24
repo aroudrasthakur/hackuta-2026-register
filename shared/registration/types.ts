@@ -32,6 +32,7 @@ export type ApplicationFormData = {
   age: string;
   school: MlhSchool | typeof SCHOOL_OTHER_OPTION | "";
   otherSchool: string;
+  studentEmail: string;
   countryOfResidence: CountryOfResidence | "";
   stateOfResidence: StateOfResidence | "";
   levelOfStudy: LevelOfStudy | "";
@@ -43,11 +44,10 @@ export type ApplicationFormData = {
   otherRaceEthnicity: string;
   dietaryRestrictions: DietaryOption[];
   otherDietary: string;
+  otherDietaryRestrictions: string;
   tshirtSize: TshirtSize | "";
   firstHackathon: boolean | null;
   internationalStudent: boolean | null;
-  eatsBeef: boolean | null;
-  eatsPork: boolean | null;
   hearAbout: HearAboutOption | "";
   otherHearAbout: string;
   resume: File | null;
@@ -74,6 +74,7 @@ export const FIELD_ORDER: FieldName[] = [
   "age",
   "school",
   "otherSchool",
+  "studentEmail",
   "countryOfResidence",
   "stateOfResidence",
   "internationalStudent",
@@ -84,8 +85,8 @@ export const FIELD_ORDER: FieldName[] = [
   "gender",
   "otherRaceEthnicity",
   "otherDietary",
-  "eatsBeef",
-  "eatsPork",
+  "otherDietaryRestrictions",
+  "dietaryRestrictions",
   "tshirtSize",
   "firstHackathon",
   "hearAbout",
@@ -108,9 +109,8 @@ export const INITIAL_FORM: ApplicationFormData = {
 
 /** Maps validation keys to DOM ids used for focus management. */
 export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
+  studentEmail: "studentEmail",
   internationalStudent: "internationalStudent-yes",
-  eatsBeef: "eatsBeef-yes",
-  eatsPork: "eatsPork-yes",
   firstHackathon: "firstHackathon-yes",
   resume: "resume-upload",
   codeOfConductAgreed: "codeOfConductAgreed",

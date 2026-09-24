@@ -146,6 +146,7 @@ function ApplicationFormContent({
     return () => window.clearTimeout(timer);
   }, [
     draftHydrated,
+    form,
     hasConvexClient,
     routing.isAuthenticated,
     saveDraft,
@@ -364,6 +365,20 @@ function ApplicationFormContent({
               error={errors.otherSchool}
             />
           ) : null}
+          <TextField
+            id="studentEmail"
+            label="Student email (optional)"
+            type="email"
+            inputMode="email"
+            autoComplete="section-student email"
+            spellCheck={false}
+            autoCapitalize="none"
+            value={form.studentEmail}
+            onChange={(e) => updateField("studentEmail", e.target.value)}
+            maxLength={FIELD_LIMITS.email}
+            helperText="If you signed up with a personal email, you can provide your school email here."
+            error={errors.studentEmail}
+          />
           <SelectField
             id="countryOfResidence"
             label="Country of residence"
@@ -382,7 +397,6 @@ function ApplicationFormContent({
             id="stateOfResidence"
             label="State of residence"
             required
-            helperText="Select the state or territory where you currently live."
             value={form.stateOfResidence}
             options={STATES_OF_RESIDENCE}
             onChange={(value) =>
@@ -563,7 +577,9 @@ function ApplicationFormContent({
         </h3>
 
         <fieldset
-          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.otherDietary)}`}
+          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(
+            !!errors.otherDietary || !!errors.otherDietaryRestrictions,
+          )}`}
         >
           <legend className={fieldsetLegendClass}>
             Dietary restrictions (select all that apply)
@@ -584,6 +600,15 @@ function ApplicationFormContent({
               />
             ))}
           </div>
+          <TextField
+            id="otherDietaryRestrictions"
+            label="Other dietary restrictions (optional)"
+            helperText="Please describe any dietary restrictions not listed above."
+            value={form.otherDietaryRestrictions}
+            onChange={(e) => updateField("otherDietaryRestrictions", e.target.value)}
+            maxLength={FIELD_LIMITS.otherDietaryRestrictions}
+            error={errors.otherDietaryRestrictions}
+          />
           {form.dietaryRestrictions.includes("Allergies") ? (
             <>
               <input
@@ -605,62 +630,6 @@ function ApplicationFormContent({
             </>
           ) : null}
         </fieldset>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <fieldset
-            className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.eatsBeef)}`}
-            aria-describedby={errors.eatsBeef ? "eatsBeef-error" : undefined}
-          >
-            <legend className={fieldsetLegendClass}>
-              Do you eat beef?
-              <span aria-hidden="true"> *</span>
-            </legend>
-            <div className={inlineRadioGroupClass}>
-              <CustomRadio
-                id="eatsBeef-yes"
-                name="eatsBeef"
-                label="Yes"
-                checked={form.eatsBeef === true}
-                onChange={() => updateField("eatsBeef", true)}
-              />
-              <CustomRadio
-                id="eatsBeef-no"
-                name="eatsBeef"
-                label="No"
-                checked={form.eatsBeef === false}
-                onChange={() => updateField("eatsBeef", false)}
-              />
-            </div>
-            <FieldError id="eatsBeef-error" message={errors.eatsBeef} />
-          </fieldset>
-
-          <fieldset
-            className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.eatsPork)}`}
-            aria-describedby={errors.eatsPork ? "eatsPork-error" : undefined}
-          >
-            <legend className={fieldsetLegendClass}>
-              Do you eat pork?
-              <span aria-hidden="true"> *</span>
-            </legend>
-            <div className={inlineRadioGroupClass}>
-              <CustomRadio
-                id="eatsPork-yes"
-                name="eatsPork"
-                label="Yes"
-                checked={form.eatsPork === true}
-                onChange={() => updateField("eatsPork", true)}
-              />
-              <CustomRadio
-                id="eatsPork-no"
-                name="eatsPork"
-                label="No"
-                checked={form.eatsPork === false}
-                onChange={() => updateField("eatsPork", false)}
-              />
-            </div>
-            <FieldError id="eatsPork-error" message={errors.eatsPork} />
-          </fieldset>
-        </div>
 
         <SelectField
           id="tshirtSize"

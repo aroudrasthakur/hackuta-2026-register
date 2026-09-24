@@ -1,7 +1,9 @@
 import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
+
+const SMTP_ENV_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM"] as const;
 
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 
@@ -11,6 +13,13 @@ const sendPasswordResetEmail = makeFunctionReference<"action">(
 );
 
 describe("email actions", () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+    for (const key of SMTP_ENV_KEYS) {
+      delete process.env[key];
+    }
+  });
+
   it("requires SMTP configuration for OTP email delivery", async () => {
     const test = convexTest(schema, modules);
     await expect(

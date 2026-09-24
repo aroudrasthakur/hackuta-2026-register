@@ -47,6 +47,8 @@ Convex application validators in [convex/applicationFields.ts](../convex/applica
 | [schedule.ts](hackathon/schedule.ts) | Registration window and event timestamps |
 | [timeline.ts](hackathon/timeline.ts) | Applicant-facing timeline labels from schedule |
 
+Default schedule in `HACKATHON_SCHEDULE`: applications open **2026-09-25**, applications close **TBA** (`registrationClosesAt: null`), hackathon **2026-11-14 → 2026-11-15**. Timeline shows four milestones (open, close, decisions, event start); null timestamps render as “To be announced”. No RSVP milestone.
+
 Schedule dates used by applications:getMyApplicantDashboard. Display name lives in the `eventConfig` table ([convex/eventConfig.ts](../convex/eventConfig.ts)).
 
 ## Lib (`lib/`)

@@ -8,6 +8,11 @@ import { type MockAuthScenario } from "../../src/constants/mockAuth";
 import { useMockAuth } from "../../src/hooks/useMockAuth";
 import { SessionAuthProvider } from "../../src/hooks/useSessionAuth";
 import ProfilePage from "../../src/pages/Profile/ProfilePage";
+import {
+  profileOverviewGrid,
+  profilePageBody,
+  profileSignOutWrap,
+} from "../../src/pages/Profile/profileStyles";
 
 const { dashboardQueryResult } = vi.hoisted(() => ({
   dashboardQueryResult: { current: undefined as unknown },
@@ -48,6 +53,18 @@ function MockScenario({ scenario }: { scenario: MockAuthScenario }) {
   }, [scenario, setScenario]);
 
   return null;
+}
+
+function profileLayoutNodes() {
+  const title = screen.getByRole("heading", {
+    name: /Your application( is in)?/,
+  });
+  const body = title.parentElement!.parentElement!;
+  const grid = body.children[1] as HTMLElement;
+  const signOutWrap = body.children[2] as HTMLElement;
+  const signOutButton = screen.getByRole("button", { name: "Sign out" });
+
+  return { body, grid, signOutWrap, signOutButton };
 }
 
 function renderProfilePage(scenario: MockAuthScenario = "signedInReturning") {
@@ -101,7 +118,8 @@ describe("ProfilePage", () => {
     expect(screen.getByText("Applications close")).toBeInTheDocument();
     expect(screen.getByText("Decisions go out")).toBeInTheDocument();
     expect(screen.getAllByText("To be announced")).toHaveLength(2);
-    expect(screen.getByText("RSVP due")).toBeInTheDocument();
+    expect(screen.queryByText("RSVP due")).not.toBeInTheDocument();
+    expect(screen.getByText("Friday, September 25, 2026")).toBeInTheDocument();
     expect(screen.getByText("The hackathon begins")).toBeInTheDocument();
     expect(screen.queryByText("Country of residence")).not.toBeInTheDocument();
     expect(screen.queryByText("State of residence")).not.toBeInTheDocument();
@@ -154,6 +172,28 @@ describe("ProfilePage", () => {
     await user.click(screen.getByRole("button", { name: "Sign out" }));
 
     expect(await screen.findByText("Sign In Page")).toBeInTheDocument();
+  });
+
+  it.each(["signedInReturning", "signedInNew"] as const)(
+    "renders sign-out after the overview grid for %s applicants",
+    (scenario) => {
+    renderProfilePage(scenario);
+
+    const { body, grid, signOutWrap, signOutButton } = profileLayoutNodes();
+
+    expect(body.className).toBe(profilePageBody);
+    expect(grid.className).toBe(profileOverviewGrid);
+    expect(signOutWrap.className).toBe(profileSignOutWrap);
+    expect(signOutButton.className).toContain("profile-sign-out-btn");
+    expect(signOutButton.className).toContain("!min-h-11");
+    expect(grid.compareDocumentPosition(signOutWrap)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+  );
+
+  it("uses the wide compact profile shell", () => {
+    renderProfilePage("signedInReturning");
+
+    expect(document.querySelector(".max-w-\\[min\\(96rem\\,100\\%\\)\\]")).toBeInTheDocument();
   });
 });
 
@@ -218,6 +258,70 @@ describe("ProfilePage (Convex mode)", () => {
       "href",
       "/register",
     );
+    expect(screen.getByRole("button", { name: "Sign out" }).className).toContain(
+      "profile-sign-out-btn",
+    );
+  });
+
+  function renderConvexProfile() {
+    return render(
+      <MemoryRouter initialEntries={["/profile"]}>
+        <MockAuthProvider>
+          <SessionAuthProvider>
+            <ProfilePage />
+          </SessionAuthProvider>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  function profileValue(label: string) {
+    return screen.getByText(label).nextElementSibling;
+  }
+
+  it.each([
+    [{ firstName: " Sam ", lastName: " Test " }, "Sam Test"],
+    [{ firstName: "Sam", lastName: " " }, "Sam"],
+    [{ firstName: null, lastName: "Test" }, "Test"],
+    [{}, "—"],
+  ])("falls back to form answers %j for the name when no display name exists", (answers, expected) => {
+    dashboardQueryResult.current = {
+      profile: { displayName: "  ", verifiedEmail: "a@example.com" },
+      registration: { status: "draft", eligibilityStatus: "unreviewed", submittedAt: null, answers },
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Name")).toHaveTextContent(expected);
+  });
+
+  it("uses level of study when no graduation year is saved and dashes for missing school", () => {
+    dashboardQueryResult.current = {
+      profile: { displayName: null, verifiedEmail: "a@example.com" },
+      registration: {
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        submittedAt: null,
+        answers: { levelOfStudy: " Graduate University (Masters, Professional, Doctoral, etc) ", school: " " },
+      },
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Year of study")).toHaveTextContent(
+      "Graduate University (Masters, Professional, Doctoral, etc)",
+    );
+    expect(profileValue("School")).toHaveTextContent("—");
+  });
+
+  it("shows dashes and a start button for applicants with no registration", () => {
+    dashboardQueryResult.current = {
+      profile: { displayName: null, verifiedEmail: "a@example.com" },
+      registration: null,
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Name")).toHaveTextContent("—");
+    expect(profileValue("Year of study")).toHaveTextContent("—");
+    expect(screen.getByRole("link", { name: "Start application" })).toHaveAttribute("href", "/register");
   });
 
   it("shows an error when the dashboard cannot be loaded", () => {

@@ -1,5 +1,10 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import {
+  COVERAGE_EXCLUDE,
+  COVERAGE_INCLUDE,
+  VITEST_THRESHOLDS,
+} from "./scripts/coverage-policy.mjs";
 
 export default defineConfig({
   plugins: [react()],
@@ -9,41 +14,25 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     env: {
       REGISTRATION_ALLOWED_ORIGINS: "https://hackuta.test",
+      // convex-test scheduled confirmation emails read process.env in Node actions.
+      SMTP_HOST: "mail.example.com",
+      SMTP_PORT: "587",
+      SMTP_USER: "no-reply@example.com",
+      SMTP_PASSWORD: "secret",
+      EMAIL_FROM: "no-reply@example.com",
     },
     coverage: {
       provider: "istanbul",
-      include: [
-        "src/**/*.{ts,tsx}",
-        "shared/**/*.ts",
-        "convex/**/*.ts",
-        "security/**/*.ts",
-      ],
-      exclude: [
-        "**/*.d.ts",
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "**/*.spec.ts",
-        "src/main.tsx",
-        "convex/_generated/**",
-        "convex/crons.ts",
-        "convex/auth.ts",
-        "convex/lib/hackutaPassword.ts",
-        // Thin UI shells and the Convex client wrapper; covered by Playwright e2e.
-        "src/components/**",
-        "src/constants/**",
-        "src/convex/client.ts",
-        "src/pages/Register/RegisterPage.tsx",
-        "src/pages/SignIn/SignInPage.tsx",
-        "src/pages/SignIn/ForgotPasswordFlow.tsx",
-      ],
-      thresholds: {
-        lines: 80,
-        statements: 80,
-        branches: 80,
-        functions: 80,
-      },
-      reportsDirectory: "./.nyc_output",
-      reporter: ["text", "json", "json-summary"],
+      // Vitest 5: include lists scoped source files even when no test imports
+      // them (reported as 0%). check-coverage.mjs re-applies the same rule when
+      // merging unit + Playwright output.
+      // Scope, documented exclusions, and per-area thresholds live in
+      // scripts/coverage-policy.mjs so CI and local checks stay in sync.
+      include: COVERAGE_INCLUDE,
+      exclude: COVERAGE_EXCLUDE,
+      thresholds: VITEST_THRESHOLDS,
+      reportsDirectory: "./coverage/unit",
+      reporter: ["text", "text-summary", "json", "json-summary", "lcov", "html"],
     },
   },
 });

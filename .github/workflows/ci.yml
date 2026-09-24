@@ -39,10 +39,28 @@ jobs:
       - name: Typecheck application, tests, and Convex schema
         run: npm run typecheck
 
+      # Fails the job if any metric is below 85% globally or in any functional
+      # area (thresholds live in scripts/coverage-policy.mjs). Tests use mocks
+      # and convex-test only; no live services or credentials are needed.
       - name: Run unit tests with coverage
         env:
           REGISTRATION_ALLOWED_ORIGINS: https://hackuta.test
         run: npm run test:unit:coverage
+
+      - name: Publish coverage summary by functional area
+        if: ${{ !cancelled() }}
+        run: npm run test:coverage:check
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-coverage
+          path: |
+            coverage/unit/
+            coverage/merged/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Build production application
         env:
@@ -95,6 +113,8 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium

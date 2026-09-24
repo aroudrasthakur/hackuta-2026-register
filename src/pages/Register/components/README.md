@@ -22,7 +22,7 @@ SelectField and SearchableSelect use custom listbox/combobox widgets (not native
 | --- | --- |
 | TextField, SelectField, FieldError | Name, email, selects, text areas |
 | SearchableSelect | School, major |
-| CustomCheckbox | Race/ethnicity, dietary, MLH consents |
+| CustomCheckbox | Race/ethnicity, dietary (includes No Beef / No Pork), MLH consents |
 | CustomRadio | First hackathon yes/no |
 | ResumeUpload | Resume PDF |
 | formFieldStyles | All of the above + inline fields |

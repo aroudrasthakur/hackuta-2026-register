@@ -5,6 +5,7 @@ import schema from "../../convex/schema";
 import {
   OTP_RESEND_COOLDOWN_MS,
   OTP_SEND_MAX_PER_HOUR,
+  OTP_SEND_WINDOW_MS,
   OTP_STATUS_LOOKUP_MAX_PER_HOUR,
 } from "../../convex/rateLimits";
 import {
@@ -26,6 +27,9 @@ const assertPasswordResetSendAllowed = makeFunctionReference<"mutation">(
 const recordOtpSend = makeFunctionReference<"mutation">("rateLimits:recordOtpSend");
 const recordPasswordResetSend = makeFunctionReference<"mutation">(
   "rateLimits:recordPasswordResetSend",
+);
+const clearOtpSendLimitsForEmail = makeFunctionReference<"mutation">(
+  "rateLimits:clearOtpSendLimitsForEmail",
 );
 
 describe("rateLimits", () => {
@@ -211,6 +215,154 @@ describe("rateLimits", () => {
       const status = await ctx.runMutation(getPasswordResetSendCooldown, { email });
       expect(status.hourlyLimitReached).toBe(false);
       expect(status.waitSeconds).toBeGreaterThan(0);
+    });
+  });
+
+  it("blocks password reset sends once the hourly limit is reached", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const email = "reset-limited@example.com";
+      const now = Date.now();
+      for (let i = 0; i < OTP_SEND_MAX_PER_HOUR; i++) {
+        await ctx.db.insert("rateLimits", {
+          bucket: PASSWORD_RESET_SEND_BUCKET,
+          key: email,
+          createdAt: now - OTP_RESEND_COOLDOWN_MS - i * 60_000,
+        });
+      }
+
+      await expect(ctx.runMutation(assertPasswordResetSendAllowed, { email })).rejects.toThrow(
+        "Too many reset requests. Please try again later.",
+      );
+      const status = await ctx.runMutation(getPasswordResetSendCooldown, { email });
+      expect(status.hourlyLimitReached).toBe(true);
+    });
+  });
+
+  it("returns neutral password reset status after the lookup limit is exceeded", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const email = "reset-probe@example.com";
+      const now = Date.now();
+      await ctx.db.insert("rateLimits", {
+        bucket: PASSWORD_RESET_SEND_BUCKET,
+        key: email,
+        createdAt: now - 5_000,
+      });
+      for (let i = 0; i < OTP_STATUS_LOOKUP_MAX_PER_HOUR; i++) {
+        await ctx.db.insert("rateLimits", {
+          bucket: OTP_STATUS_LOOKUP_BUCKET,
+          key: email,
+          createdAt: now - i * 1000,
+        });
+      }
+
+      await expect(ctx.runMutation(getPasswordResetSendCooldown, { email })).resolves.toEqual({
+        waitSeconds: 0,
+        hourlyLimitReached: false,
+      });
+    });
+  });
+
+  it("ignores lookup probes older than the lookup window", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const email = "old-probes@example.com";
+      const now = Date.now();
+      await ctx.db.insert("rateLimits", { bucket: OTP_SEND_BUCKET, key: email, createdAt: now - 5_000 });
+      for (let i = 0; i < OTP_STATUS_LOOKUP_MAX_PER_HOUR; i++) {
+        await ctx.db.insert("rateLimits", {
+          bucket: OTP_STATUS_LOOKUP_BUCKET,
+          key: email,
+          createdAt: now - 2 * 60 * 60 * 1000,
+        });
+      }
+      const status = await ctx.runMutation(getOtpSendCooldown, { email });
+      expect(status.waitSeconds).toBeGreaterThan(0);
+    });
+  });
+
+  it.each([
+    ["getOtpSendCooldown", getOtpSendCooldown],
+    ["getPasswordResetSendCooldown", getPasswordResetSendCooldown],
+  ])("%s returns a neutral status for blank emails without recording a lookup", async (_name, ref) => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      await expect(ctx.runMutation(ref, { email: "   " })).resolves.toEqual({
+        waitSeconds: 0,
+        hourlyLimitReached: false,
+      });
+      expect(await ctx.db.query("rateLimits").collect()).toHaveLength(0);
+    });
+  });
+
+  it.each([
+    ["assertOtpSendAllowed", assertOtpSendAllowed],
+    ["assertPasswordResetSendAllowed", assertPasswordResetSendAllowed],
+  ])("%s rejects blank emails", async (_name, ref) => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      await expect(ctx.runMutation(ref, { email: "" })).rejects.toThrow("Invalid email.");
+    });
+  });
+
+  it.each([
+    ["recordOtpSend", recordOtpSend],
+    ["recordPasswordResetSend", recordPasswordResetSend],
+  ])("%s ignores blank emails", async (_name, ref) => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      await ctx.runMutation(ref, { email: " " });
+      expect(await ctx.db.query("rateLimits").collect()).toHaveLength(0);
+    });
+  });
+
+  it.each([
+    ["recordOtpSend", recordOtpSend, OTP_SEND_BUCKET],
+    ["recordPasswordResetSend", recordPasswordResetSend, PASSWORD_RESET_SEND_BUCKET],
+  ])("%s prunes entries older than the send window", async (_name, ref, bucket) => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const email = "prune@example.com";
+      const now = Date.now();
+      await ctx.db.insert("rateLimits", { bucket, key: email, createdAt: now - OTP_SEND_WINDOW_MS - 1 });
+      await ctx.db.insert("rateLimits", { bucket, key: email, createdAt: now - 60_000 });
+      await ctx.db.insert("rateLimits", { bucket, key: "other@example.com", createdAt: now - OTP_SEND_WINDOW_MS - 1 });
+
+      await ctx.runMutation(ref, { email });
+
+      const rows = await ctx.db.query("rateLimits").collect();
+      const mine = rows.filter((row) => row.key === email);
+      expect(mine).toHaveLength(2);
+      expect(mine.every((row) => row.createdAt >= now - OTP_SEND_WINDOW_MS)).toBe(true);
+      expect(rows.some((row) => row.key === "other@example.com")).toBe(true);
+    });
+  });
+
+  it("clears OTP send limits for one email only", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.insert("rateLimits", { bucket: OTP_SEND_BUCKET, key: "clear@example.com", createdAt: now });
+      await ctx.db.insert("rateLimits", { bucket: OTP_SEND_BUCKET, key: "clear@example.com", createdAt: now - 1 });
+      await ctx.db.insert("rateLimits", { bucket: OTP_SEND_BUCKET, key: "keep@example.com", createdAt: now });
+      await ctx.db.insert("rateLimits", {
+        bucket: PASSWORD_RESET_SEND_BUCKET,
+        key: "clear@example.com",
+        createdAt: now,
+      });
+
+      await expect(
+        ctx.runMutation(clearOtpSendLimitsForEmail, { email: " Clear@Example.com " }),
+      ).resolves.toEqual({ deleted: 2 });
+      await expect(ctx.runMutation(clearOtpSendLimitsForEmail, { email: "" })).resolves.toEqual({
+        deleted: 0,
+      });
+
+      const remaining = await ctx.db.query("rateLimits").collect();
+      expect(remaining.map((row) => `${row.bucket}:${row.key}`).sort()).toEqual(
+        [`${OTP_SEND_BUCKET}:keep@example.com`, `${PASSWORD_RESET_SEND_BUCKET}:clear@example.com`].sort(),
+      );
     });
   });
 });

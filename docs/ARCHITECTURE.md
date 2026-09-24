@@ -133,7 +133,7 @@ Client validation gives immediate field feedback; server validation is authorita
 | / | routing query | Redirect to sign-in, register, or profile |
 | /sign-in | public | Password sign-up / sign-in, OTP verify, forgot-password reset |
 | /register | auth, not submitted | Application form with autosave |
-| /profile | auth | Applicant dashboard (read-only) |
+| /profile | auth | Applicant dashboard — overview fields, hackathon timeline, sign-out |
 
 Route guards use `applicant:getApplicantRoutingState`.
 

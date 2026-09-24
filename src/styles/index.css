@@ -514,9 +514,17 @@
     gap: 0.75rem;
   }
 
-  .sign-in-form > .sign-in-btn,
+  .sign-in-form > .sign-in-btn:not(.sign-in-btn--secondary),
   .sign-in-form > .sign-in-actions {
     margin-top: 1rem;
+  }
+
+  .sign-in-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    /* Half the 1rem gap above this group (primary → first secondary). */
+    gap: 0.5rem;
   }
 
   .sign-in-btn {
@@ -557,15 +565,29 @@
     transform: none;
   }
 
+  .sign-in-btn--secondary,
   .sign-in-btn--ghost {
+    min-height: 2.75rem;
+    padding: 0.65rem 1.15rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
     background: rgb(48 88 115 / 0.08);
     color: var(--ocean);
     border: 1.5px solid rgb(48 88 115 / 0.28);
   }
 
+  .sign-in-btn--secondary:hover:not(:disabled),
   .sign-in-btn--ghost:hover:not(:disabled) {
     background: rgb(48 88 115 / 0.14);
+    border-color: rgb(48 88 115 / 0.4);
+    color: var(--ink);
     transform: none;
+  }
+
+  .sign-in-btn--secondary:focus-visible,
+  .sign-in-btn--ghost:focus-visible {
+    outline: 2px solid var(--ocean);
+    outline-offset: 3px;
   }
 
   .sign-in-message {
@@ -655,9 +677,10 @@
   .sign-in-otp__footer {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 0.65rem;
     margin-top: 0.35rem;
+    width: 100%;
   }
 
   .sign-in-resend {
@@ -878,6 +901,29 @@
     @media (prefers-reduced-motion: reduce) {
       transition: none;
     }
+  }
+
+  .odyssey-btn.profile-sign-out-btn {
+    color: var(--light);
+    background: var(--ocean);
+    border: 1px solid transparent;
+    box-shadow: 0 6px 18px rgb(26 58 82 / 0.28);
+  }
+
+  .odyssey-btn.profile-sign-out-btn::before,
+  .odyssey-btn.profile-sign-out-btn::after {
+    display: none;
+  }
+
+  .odyssey-btn.profile-sign-out-btn:hover {
+    color: var(--light);
+    background: var(--ink);
+    box-shadow: 0 10px 24px rgb(26 58 82 / 0.34);
+  }
+
+  .odyssey-btn.profile-sign-out-btn:focus-visible {
+    outline: 2px solid var(--ocean);
+    outline-offset: 3px;
   }
 }
 

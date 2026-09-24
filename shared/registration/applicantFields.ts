@@ -8,8 +8,10 @@ export const TRIMMED_STRING_FIELDS = [
   "firstName",
   "lastName",
   "phone",
+  "studentEmail",
   "otherRaceEthnicity",
   "otherDietary",
+  "otherDietaryRestrictions",
   "linkedin",
   "github",
   "portfolio",
@@ -45,8 +47,6 @@ export const STRING_ARRAY_FIELDS = ["raceEthnicity", "dietaryRestrictions"] as c
 export const NULLABLE_BOOLEAN_FIELDS = [
   "firstHackathon",
   "internationalStudent",
-  "eatsBeef",
-  "eatsPork",
 ] as const;
 
 export const REQUIRED_BOOLEAN_FIELDS = [

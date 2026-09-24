@@ -48,6 +48,8 @@ export const DIETARY_OPTIONS = [
   "Allergies",
   "Kosher",
   "Halal",
+  "No Beef",
+  "No Pork",
 ] as const;
 
 export const STATES_OF_RESIDENCE = [
@@ -148,12 +150,14 @@ export const HEAR_ABOUT_OTHER_OPTION = "Other" as const;
 export const FIELD_LIMITS = {
   name: 100,
   phone: 30,
+  email: 254,
   school: 200,
   major: 200,
   hearAbout: 200,
   url: 2048,
   accessibilityNeeds: 2000,
   otherDietary: 500,
+  otherDietaryRestrictions: 500,
   otherMajor: 200,
   otherSchool: 200,
   otherHearAbout: 200,
