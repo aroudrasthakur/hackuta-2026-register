@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { buildApplicationConfirmationEmailContent } from "./templates";
-import { sendMailMessage } from "./emailService";
+import { sendTrackedEmail } from "./emailService";
 
 export const sendApplicationConfirmationEmail = internalAction({
   args: {
@@ -20,7 +20,7 @@ export const sendApplicationConfirmationEmail = internalAction({
       hackathonName,
     });
 
-    await sendMailMessage({
+    await sendTrackedEmail(ctx, "application_confirmation", {
       to: email,
       subject: content.subject,
       text: content.text,

@@ -1,5 +1,9 @@
 "use node";
 
+import type { GenericActionCtx, GenericDataModel } from "convex/server";
+import { makeFunctionReference } from "convex/server";
+import type { EmailDeliveryKind } from "../lib/emailDeliveries";
+
 export type EmailServiceConfig = {
   url: string;
   apiKey: string;
@@ -18,7 +22,16 @@ export type SendMailResult = {
   id: string;
 };
 
+export type EmailStatusResult = {
+  id: string;
+  status: string;
+};
+
 const REQUEST_TIMEOUT_MS = 10_000;
+
+const recordEmailDeliveryRef = makeFunctionReference<"mutation">(
+  "emailDeliveries:recordEmailDelivery",
+);
 
 function parseServiceUrl(raw: string | undefined): string | null {
   if (!raw) return null;
@@ -32,7 +45,7 @@ function parseServiceUrl(raw: string | undefined): string | null {
   }
 }
 
-function readString(payload: unknown, key: "id" | "error"): string | undefined {
+function readString(payload: unknown, key: "id" | "status" | "error"): string | undefined {
   if (!payload || typeof payload !== "object") return undefined;
   const value = (payload as Record<string, unknown>)[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -96,4 +109,39 @@ export async function sendMailMessage(input: SendMailInput): Promise<SendMailRes
     throw new Error("Email service response did not include an email ID.");
   }
   return { id };
+}
+
+/** Asks the email service whether a queued email has been sent. */
+export async function getEmailStatus(id: string): Promise<EmailStatusResult> {
+  const { url } = getEmailServiceConfig();
+  const payload = await callEmailService(url, `/email-status?id=${encodeURIComponent(id)}`);
+
+  const status = readString(payload, "status");
+  if (!status) {
+    throw new Error("Email service response did not include a status.");
+  }
+  return { id, status };
+}
+
+/**
+ * Queues an email and records its queue ID in emailDeliveries. A tracking
+ * failure is logged but not thrown: the email is already queued, and failing
+ * here would prompt the applicant to request a duplicate.
+ */
+export async function sendTrackedEmail(
+  ctx: Pick<GenericActionCtx<GenericDataModel>, "runMutation">,
+  kind: EmailDeliveryKind,
+  input: Omit<SendMailInput, "note">,
+): Promise<SendMailResult> {
+  const result = await sendMailMessage({ ...input, note: kind });
+  try {
+    await ctx.runMutation(recordEmailDeliveryRef, {
+      serviceId: result.id,
+      kind,
+      recipient: input.to,
+    });
+  } catch {
+    console.error(`Failed to record email delivery ${result.id} (${kind}).`);
+  }
+  return result;
 }

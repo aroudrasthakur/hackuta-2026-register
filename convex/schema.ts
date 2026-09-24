@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 import { applicationRecord } from "./applicationFields";
+import { emailDeliveryKind } from "./lib/emailDeliveries";
 
 export default defineSchema({
   ...authTables,
@@ -42,4 +43,11 @@ export default defineSchema({
     .index("by_storage", ["storageId"])
     .index("by_auth_user", ["authUserId"])
     .index("by_createdAt", ["createdAt"]),
+
+  emailDeliveries: defineTable({
+    serviceId: v.string(),
+    kind: emailDeliveryKind,
+    recipient: v.string(),
+    createdAt: v.number(),
+  }).index("by_recipient", ["recipient"]),
 });

@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getEmailServiceConfig,
+  getEmailStatus,
   sendMailMessage,
+  sendTrackedEmail,
 } from "../../convex/email/emailService";
 import {
   buildApplicationConfirmationEmailContent,
@@ -235,5 +237,102 @@ describe("sendMailMessage", () => {
 
     await expect(sendMailMessage(message)).rejects.toThrow("Email is not configured.");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("getEmailStatus", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    stubServiceEnv();
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns the service's status for a queue ID", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: "queued-1", status: "success" }, 200));
+
+    await expect(getEmailStatus("queued-1")).resolves.toEqual({ id: "queued-1", status: "success" });
+    expect(fetchMock.mock.calls[0]![0]).toBe(`${SERVICE_URL}/email-status?id=queued-1`);
+  });
+
+  it("surfaces unknown IDs and malformed responses as errors", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ error: "email not found" }, 404));
+    await expect(getEmailStatus("missing")).rejects.toThrow(
+      "Email service error (HTTP 404): email not found",
+    );
+
+    fetchMock.mockResolvedValue(jsonResponse({ id: "queued-1" }, 200));
+    await expect(getEmailStatus("queued-1")).rejects.toThrow(
+      "Email service response did not include a status.",
+    );
+  });
+});
+
+describe("sendTrackedEmail", () => {
+  const message = {
+    to: "applicant@example.com",
+    subject: "Your HackUTA verification code",
+    text: "Your code is 042681",
+  };
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  const fakeCtx = (runMutation: ReturnType<typeof vi.fn>) =>
+    ({ runMutation }) as unknown as Parameters<typeof sendTrackedEmail>[0];
+
+  beforeEach(() => {
+    stubServiceEnv();
+    fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "queued-1" }, 201));
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("tags the email with its kind and records the queue ID", async () => {
+    const runMutation = vi.fn().mockResolvedValue(null);
+
+    await expect(sendTrackedEmail(fakeCtx(runMutation), "otp", message)).resolves.toEqual({
+      id: "queued-1",
+    });
+
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toMatchObject({ note: "otp" });
+    expect(runMutation).toHaveBeenCalledWith(expect.anything(), {
+      serviceId: "queued-1",
+      kind: "otp",
+      recipient: "applicant@example.com",
+    });
+  });
+
+  it("does not fail an already-queued email when tracking fails", async () => {
+    const runMutation = vi.fn().mockRejectedValue(new Error("database unavailable"));
+    const logError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(sendTrackedEmail(fakeCtx(runMutation), "otp", message)).resolves.toEqual({
+      id: "queued-1",
+    });
+
+    expect(logError).toHaveBeenCalledWith("Failed to record email delivery queued-1 (otp).");
+    const logged = logError.mock.calls.flat().join(" ");
+    expect(logged).not.toContain(API_KEY);
+    expect(logged).not.toContain("042681");
+  });
+
+  it("does not record anything when the send fails", async () => {
+    const runMutation = vi.fn();
+    fetchMock.mockResolvedValue(jsonResponse({ error: "unauthorized" }, 401));
+
+    await expect(sendTrackedEmail(fakeCtx(runMutation), "otp", message)).rejects.toThrow(
+      "Email service rejected the API key.",
+    );
+    expect(runMutation).not.toHaveBeenCalled();
   });
 });
