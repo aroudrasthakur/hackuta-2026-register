@@ -4,6 +4,14 @@ import { afterEach, vi } from "vitest";
 
 process.env.REGISTRATION_ALLOWED_ORIGINS ??= "https://hackuta.test";
 
+vi.mock("nodemailer", () => ({
+  default: {
+    createTransport: vi.fn(() => ({
+      sendMail: vi.fn().mockResolvedValue({ messageId: "test-message-id" }),
+    })),
+  },
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();

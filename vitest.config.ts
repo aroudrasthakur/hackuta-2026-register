@@ -14,9 +14,17 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.{ts,tsx}"],
     env: {
       REGISTRATION_ALLOWED_ORIGINS: "https://hackuta.test",
+      // convex-test scheduled confirmation emails read process.env in Node actions.
+      SMTP_HOST: "mail.example.com",
+      SMTP_PORT: "587",
+      SMTP_USER: "no-reply@example.com",
+      SMTP_PASSWORD: "secret",
+      EMAIL_FROM: "no-reply@example.com",
     },
     coverage: {
       provider: "istanbul",
+      // Instrument every file in include, even when no test imports it (0%).
+      all: true,
       // Scope, documented exclusions, and per-area thresholds live in
       // scripts/coverage-policy.mjs so CI and local checks stay in sync.
       include: COVERAGE_INCLUDE,

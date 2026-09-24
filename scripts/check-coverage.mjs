@@ -9,6 +9,8 @@
 import istanbulCoverage from "istanbul-lib-coverage";
 import istanbulReport from "istanbul-lib-report";
 import istanbulReports from "istanbul-reports";
+import { createInstrumenter } from "istanbul-lib-instrument";
+import { globSync } from "glob";
 import picomatch from "picomatch";
 import fs from "node:fs";
 import path from "node:path";
@@ -22,6 +24,26 @@ import {
 
 const { createCoverageMap } = istanbulCoverage;
 const { createContext } = istanbulReport;
+
+const instrumenter = createInstrumenter({
+  parserPlugins: ["typescript", "jsx"],
+});
+
+function zeroCoverageForFile(filePath) {
+  const source = fs.readFileSync(filePath, "utf8");
+  instrumenter.instrumentSync(source, filePath);
+  const coverage = instrumenter.lastFileCoverage();
+  for (const key of Object.keys(coverage.s)) {
+    coverage.s[key] = 0;
+  }
+  for (const key of Object.keys(coverage.f)) {
+    coverage.f[key] = 0;
+  }
+  for (const key of Object.keys(coverage.b)) {
+    coverage.b[key] = coverage.b[key].map(() => 0);
+  }
+  return coverage;
+}
 
 const root = process.cwd();
 const unitCoverageFile = path.resolve("coverage/unit/coverage-final.json");
@@ -38,6 +60,18 @@ function relative(filePath) {
 function inScope(filePath) {
   const rel = relative(filePath);
   return isIncluded(rel) && !isExcluded(rel);
+}
+
+function scopedSourceFiles() {
+  const files = new Set();
+  for (const pattern of COVERAGE_INCLUDE) {
+    for (const file of globSync(pattern, { cwd: root, nodir: true, absolute: true })) {
+      if (inScope(file)) {
+        files.add(path.resolve(file));
+      }
+    }
+  }
+  return [...files];
 }
 
 function coverageInputs() {
@@ -71,6 +105,19 @@ for (const file of inputs) {
     ),
   );
 }
+
+/** Match Vitest `coverage.all` — untested files count as 0%, not as absent. */
+function addMissingScopedFiles() {
+  const covered = new Set(map.files().map((file) => path.resolve(file)));
+  for (const file of scopedSourceFiles()) {
+    if (covered.has(file)) {
+      continue;
+    }
+    map.addFileCoverage(zeroCoverageForFile(file));
+  }
+}
+
+addMissingScopedFiles();
 
 fs.mkdirSync(reportDir, { recursive: true });
 const context = createContext({ dir: reportDir, coverageMap: map });

@@ -61,6 +61,10 @@ describe("smtp config", () => {
   });
 
   it("requires SMTP environment variables", async () => {
+    vi.unstubAllEnvs();
+    for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM"]) {
+      delete process.env[key];
+    }
     vi.resetModules();
     const { getSmtpConfig } = await import("../../convex/email/smtp");
     expect(() => getSmtpConfig()).toThrow("Email is not configured.");

@@ -26,7 +26,7 @@ const state = vi.hoisted(() => ({
   signIn: undefined as unknown as ReturnType<typeof vi.fn>,
   signOut: undefined as unknown as ReturnType<typeof vi.fn>,
   fetchAccessToken: undefined as unknown as ReturnType<typeof vi.fn>,
-  ensureProfile: undefined as unknown as ReturnType<typeof vi.fn>,
+  ensureApplication: undefined as unknown as ReturnType<typeof vi.fn>,
   invalidateSessions: undefined as unknown as ReturnType<typeof vi.fn>,
   clientMutation: undefined as unknown as ReturnType<typeof vi.fn>,
   hasClient: true,
@@ -49,8 +49,8 @@ vi.mock("@convex-dev/auth/react", () => ({
 vi.mock("convex/react", () => ({
   useQuery: (_ref: unknown, args: unknown) => (args === "skip" ? undefined : state.routing),
   useMutation: (ref: unknown) =>
-    getFunctionName(ref as never) === "applicant:ensureApplicantProfile"
-      ? state.ensureProfile
+    getFunctionName(ref as never) === "applicant:ensureApplicantApplication"
+      ? state.ensureApplication
       : state.invalidateSessions,
 }));
 
@@ -115,7 +115,7 @@ beforeEach(() => {
   state.signIn = vi.fn(async (): Promise<SignInResult> => ({ signingIn: false }));
   state.signOut = vi.fn(async () => undefined);
   state.fetchAccessToken = vi.fn(async () => "token");
-  state.ensureProfile = vi.fn(async () => ({ profileId: "p1" }));
+  state.ensureApplication = vi.fn(async () => ({ applicationId: "p1", status: "draft" }));
   state.invalidateSessions = vi.fn(async () => undefined);
   state.clientMutation = vi.fn(async () => ({ waitSeconds: 0, hourlyLimitReached: false }));
   state.hasClient = true;
@@ -142,7 +142,7 @@ describe("SignInPage with Convex auth: sign up and verification", () => {
     expect(screen.getByRole("button", { name: /Resend code in \d+s/ })).toBeDisabled();
   });
 
-  it("verifies the code, provisions the profile, and routes to registration", async () => {
+  it("verifies the code, provisions the application, and routes to registration", async () => {
     const user = userEvent.setup();
     renderSignIn();
     await fillSignUp(user);
@@ -159,7 +159,7 @@ describe("SignInPage with Convex auth: sign up and verification", () => {
       flow: "email-verification",
     });
     expect(state.fetchAccessToken).toHaveBeenCalledWith({ forceRefreshToken: true });
-    expect(state.ensureProfile).toHaveBeenCalledWith({});
+    expect(state.ensureApplication).toHaveBeenCalledWith({});
   });
 
   it.each([
@@ -177,7 +177,7 @@ describe("SignInPage with Convex auth: sign up and verification", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(OTP_INVALID_MESSAGE);
     expect(screen.getByRole("heading", { name: "Verify your email" })).toBeInTheDocument();
-    expect(state.ensureProfile).not.toHaveBeenCalled();
+    expect(state.ensureApplication).not.toHaveBeenCalled();
   });
 
   it("shows a loading label and disables the button while verifying", async () => {
@@ -309,7 +309,7 @@ describe("SignInPage with Convex auth: sign in", () => {
 
   it("still routes when profile provisioning fails", async () => {
     state.signIn.mockResolvedValueOnce({ signingIn: true });
-    state.ensureProfile.mockRejectedValueOnce(new Error("transient"));
+    state.ensureApplication.mockRejectedValueOnce(new Error("transient"));
     const user = userEvent.setup();
     renderSignIn();
     await switchToSignIn(user);
@@ -331,7 +331,7 @@ describe("SignInPage with Convex auth: sign in", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByText("Register Page")).toBeInTheDocument();
-    expect(state.ensureProfile).not.toHaveBeenCalled();
+    expect(state.ensureApplication).not.toHaveBeenCalled();
   });
 
   it("shows a pending label, then a generic error for bad credentials", async () => {
