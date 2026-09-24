@@ -83,7 +83,7 @@ async function upsertRegistration(
       metadata.size > MAX_RESUME_BYTES ||
       (!retainingOwnResume && !validSession)
     ) {
-      throw new Error("Please upload a valid PDF resume of 5 MB or smaller.");
+      throw new Error("Please upload a valid PDF resume of 2 MB or smaller.");
     }
 
     if (validSession && session) {

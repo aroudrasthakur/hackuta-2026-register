@@ -131,7 +131,7 @@ Upload a PDF resume before form submission.
 | Header | Required | Value |
 | --- | --- | --- |
 | `Content-Type` | Yes | `application/pdf` |
-| `Content-Length` | Yes | 1 – 5,242,880 (5 MB). Rejected **before** body read if missing or too large |
+| `Content-Length` | Yes | 1 – 2,097,152 (2 MB). Rejected **before** body read if missing or too large |
 | `Origin` | Yes | Must match allowlist |
 | `X-Resume-Filename` | Yes | Must end in `.pdf`; no `/` or `\` |
 

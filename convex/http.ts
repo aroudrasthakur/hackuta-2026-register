@@ -127,7 +127,7 @@ const uploadResume = httpAction(async (ctx, request) => {
 
   const bytes = new Uint8Array(await request.arrayBuffer());
   if (bytes.length !== contentLength.length || bytes.length > MAX_RESUME_BYTES) {
-    return response(request, { error: "The PDF must be between 1 byte and 5 MB." }, 413, origin);
+    return response(request, { error: "The PDF must be between 1 byte and 2 MB." }, 413, origin);
   }
 
   try {
