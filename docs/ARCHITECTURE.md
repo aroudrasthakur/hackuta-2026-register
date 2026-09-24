@@ -137,7 +137,7 @@ Dev deployment: `standing-manatee-425`. Production: `brilliant-ostrich-892`.
 
 1. **Profiles table** — separates auth from application data; enables draft rows without nested objects.
 2. **Password + OTP verify** — passwords for return visits; email verification via 6-digit OTP on sign-up.
-3. **Capability-token resume upload** — HTTP upload is unauthenticated; security is origin allowlist + token redemption at mutation time.
+3. **Capability-token resume upload** — HTTP upload requires an authenticated JWT; uploads are bound to `authUserId`, rate-limited per user/IP, and redeemed with a single-use capability token at registration time.
 4. **Duplicate mutation aliases** — `register` and `submitRegistration` share one handler (public API stability).
 5. **Mock mode** — `VITE_USE_MOCK_API` for CI/UI dev only; never on production Vercel.
 

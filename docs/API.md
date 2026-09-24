@@ -109,7 +109,7 @@ First submit creates the applicant record; sign-in alone does not write applicat
 
 ### `resumeUploads:discardUploadSession`
 
-**Auth:** none (capability token) · `{ uploadToken: string }` — deletes unconsumed session + storage.
+**Auth:** required · `{ uploadToken: string }` — deletes an unconsumed session owned by the caller and its storage.
 
 ### `applicant:ensureApplicantProfile`
 
@@ -125,12 +125,13 @@ Base URL: `VITE_CONVEX_SITE_URL`
 
 Upload a PDF resume before form submission.
 
-**Auth:** browser origin allowlist (`REGISTRATION_ALLOWED_ORIGINS` + `SITE_URL`). No JWT.
+**Auth:** JWT session (`Authorization: Bearer <token>`) **and** browser origin allowlist (`REGISTRATION_ALLOWED_ORIGINS` + `SITE_URL`).
 
 **Request headers:**
 
 | Header | Required | Value |
 | --- | --- | --- |
+| `Authorization` | Yes | `Bearer <convex-auth-jwt>` |
 | `Content-Type` | Yes | `application/pdf` |
 | `Content-Length` | Yes | 1 – 2,097,152 (2 MB). Rejected **before** body read if missing or too large |
 | `Origin` | Yes | Must match allowlist |
@@ -162,6 +163,7 @@ Upload a PDF resume before form submission.
 | Status | Condition |
 | --- | --- |
 | `400` | Invalid Content-Length format |
+| `401` | Missing or invalid auth session |
 | `403` | Origin not allowed |
 | `411` | Missing Content-Length |
 | `413` | Empty, oversize, or length mismatch |
@@ -172,11 +174,11 @@ Upload a PDF resume before form submission.
 
 Client maps these to friendly copy via `shared/registration/submitErrors.ts`.
 
-**Rate limits:** 5 uploads / IP / 10 min · 100 global / 10 min.
+**Rate limits:** 5 uploads / IP / 10 min · 5 uploads / authenticated user / 10 min · 100 global / 10 min.
 
 ### `OPTIONS /resume-upload`
 
-CORS preflight. Allowed headers: `Content-Type`, `X-Resume-Filename`.
+CORS preflight. Allowed headers: `Content-Type`, `Authorization`, `X-Resume-Filename`.
 
 ---
 

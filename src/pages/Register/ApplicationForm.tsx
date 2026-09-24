@@ -1,3 +1,4 @@
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import {
   useCallback,
@@ -105,6 +106,7 @@ function ApplicationFormContent({
   const [submitting, setSubmitting] = useState(false);
   const { isAuthenticated } = useSessionAuth();
   const routing = useApplicantRouting();
+  const { fetchAccessToken } = useConvexAuth();
   const [resumeUpload, setResumeUpload] = useState<{
     fileKey: string;
     session: ResumeUploadSession;
@@ -222,7 +224,10 @@ function ApplicationFormContent({
         } else {
           await discardPendingResume();
           try {
-            session = await uploadResume(form.resume);
+            const authToken = isMockApiEnabled()
+              ? "mock-auth-token"
+              : await fetchAccessToken({ forceRefreshToken: false });
+            session = await uploadResume(form.resume, authToken);
             setResumeUpload({ fileKey, session });
           } catch (err) {
             const message = mapUploadError(err);

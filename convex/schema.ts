@@ -46,6 +46,7 @@ export default defineSchema({
 
   resumeUploadSessions: defineTable({
     token: v.string(),
+    authUserId: v.id("users"),
     createdAt: v.number(),
     storageId: v.optional(v.id("_storage")),
     verifiedAt: v.optional(v.number()),
@@ -53,5 +54,6 @@ export default defineSchema({
   })
     .index("by_token", ["token"])
     .index("by_storage", ["storageId"])
+    .index("by_auth_user", ["authUserId"])
     .index("by_createdAt", ["createdAt"]),
 });

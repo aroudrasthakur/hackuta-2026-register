@@ -15,6 +15,8 @@ describe("resume upload policy", () => {
     expect(isAllowedResumeFilename("shell.php")).toBe(false);
     expect(isAllowedResumeFilename("resume.sh")).toBe(false);
     expect(isAllowedResumeFilename("../resume.pdf")).toBe(false);
+    expect(isAllowedResumeFilename(".pdf")).toBe(false);
+    expect(isAllowedResumeFilename("resume.pdf.exe")).toBe(false);
   });
 
   it("requires a valid Content-Length before accepting upload bytes", () => {
