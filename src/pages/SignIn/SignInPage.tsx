@@ -1,4 +1,4 @@
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -39,13 +39,16 @@ type ConvexPasswordSignIn = (
 ) => Promise<{ signingIn: boolean }>;
 
 type EnsureProfileMutation = (args: Record<string, never>) => Promise<unknown>;
+type FetchAccessToken = (args: { forceRefreshToken?: boolean }) => Promise<string | null>;
 
 function SignInPageContent({
   convexSignIn,
   ensureProfile,
+  fetchAccessToken,
 }: {
   convexSignIn: ConvexPasswordSignIn | null;
   ensureProfile: EnsureProfileMutation | null;
+  fetchAccessToken?: FetchAccessToken | null;
 }) {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useSessionAuth();
@@ -79,12 +82,15 @@ function SignInPageContent({
       return;
     }
 
-    if (client && ensureProfile) {
-      await ensureProfile({}).catch(() => undefined);
+    if (client && ensureProfile && fetchAccessToken) {
+      const token = await fetchAccessToken({ forceRefreshToken: true });
+      if (token) {
+        await ensureProfile({}).catch(() => undefined);
+      }
     }
 
     navigate(routing.hasSubmittedRegistration ? "/profile" : "/register", { replace: true });
-  }, [client, ensureProfile, mockAuth, navigate, routing.hasSubmittedRegistration]);
+  }, [client, ensureProfile, fetchAccessToken, mockAuth, navigate, routing.hasSubmittedRegistration]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && !routing.isLoading && routing.isAuthenticated) {
@@ -429,11 +435,13 @@ function SignInPageContent({
 
 function SignInPageWithConvex() {
   const { signIn } = useAuthActions();
+  const { fetchAccessToken } = useConvexAuth();
   const ensureProfile = useMutation(ensureApplicantProfileRef);
   return (
     <SignInPageContent
       convexSignIn={signIn}
       ensureProfile={ensureProfile}
+      fetchAccessToken={fetchAccessToken}
     />
   );
 }

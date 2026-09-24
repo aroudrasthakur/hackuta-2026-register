@@ -25,6 +25,11 @@ async function signUpAsNewApplicant(page: Page) {
   await page.waitForURL("**/register");
 }
 
+async function selectListboxOption(page: Page, triggerId: string, optionName: string) {
+  await page.locator(`#${triggerId}`).click();
+  await page.getByRole("button", { name: optionName, exact: true }).click();
+}
+
 async function fillApplicationForm(page: Page) {
   await page.getByLabel("First name", { exact: false }).fill("Sam");
   await page.getByLabel("Last name", { exact: false }).fill("Test");
@@ -32,24 +37,26 @@ async function fillApplicationForm(page: Page) {
   await page.locator("#age").fill("20");
   await page.locator("#school").fill("Texas at Arlington");
   await page.getByRole("button", { name: "The University of Texas at Arlington" }).click();
-  await page.locator("#countryOfResidence").selectOption("United States of America");
-  await page.locator("#stateOfResidence").selectOption("Texas");
+  await selectListboxOption(page, "countryOfResidence", "United States of America");
+  await selectListboxOption(page, "stateOfResidence", "Texas");
   await page.getByRole("group", { name: /Are you an international student/ })
     .getByLabel("No").check({ force: true });
-  await page.locator("#levelOfStudy").selectOption("Undergraduate University (3+ year)");
-  await page.locator("#major").selectOption(
+  await selectListboxOption(page, "levelOfStudy", "Undergraduate University (3+ year)");
+  await selectListboxOption(
+    page,
+    "major",
     "Computer science, computer engineering, or software engineering",
   );
   await page.getByLabel("Expected graduation year", { exact: false }).fill(String(MIN_GRADUATION_YEAR));
-  await page.locator("#gender").selectOption("Man");
-  await page.getByLabel("T-shirt size", { exact: false }).selectOption("M");
+  await selectListboxOption(page, "gender", "Man");
+  await selectListboxOption(page, "tshirtSize", "M");
   await page.getByRole("group", { name: /Do you eat beef/ })
     .getByLabel("No").check({ force: true });
   await page.getByRole("group", { name: /Do you eat pork/ })
     .getByLabel("No").check({ force: true });
   await page.getByRole("group", { name: /Is this your first hackathon/ })
     .getByLabel("Yes").check({ force: true });
-  await page.getByLabel("How did you hear about HackUTA?", { exact: false }).selectOption("Discord");
+  await selectListboxOption(page, "hearAbout", "Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");
   await page.getByRole("checkbox", { name: /MLH Code of Conduct/i }).check({ force: true });

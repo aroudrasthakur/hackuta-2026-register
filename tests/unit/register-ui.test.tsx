@@ -87,6 +87,18 @@ function setInputValueById(id: string, value: string) {
   fireEvent.change(input, { target: { value } });
 }
 
+function selectListboxOption(label: RegExp | string, optionName: string) {
+  fireEvent.click(screen.getByLabelText(label));
+  fireEvent.click(screen.getByRole("button", { name: optionName }));
+}
+
+function selectSearchableOption(label: RegExp | string, optionName: string) {
+  const input = screen.getByLabelText(label);
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: optionName } });
+  fireEvent.click(screen.getByRole("button", { name: optionName }));
+}
+
 function fillValidApplicationForm() {
   setInputValue(/First name/, "Sam");
   setInputValue(/Last name/, "Test");
@@ -94,29 +106,17 @@ function fillValidApplicationForm() {
   setInputValue(/Age/i, "20");
   setInputValue(/School \/ university/, "Texas at Arlington");
   fireEvent.click(screen.getByRole("button", { name: VALID_SCHOOL }));
-  fireEvent.change(screen.getByLabelText(/Country of residence/), {
-    target: { value: VALID_COUNTRY },
-  });
-  fireEvent.change(screen.getByLabelText(/State of residence/), {
-    target: { value: "Texas" },
-  });
+  selectListboxOption(/Country of residence/, VALID_COUNTRY);
+  selectListboxOption(/State of residence/, "Texas");
   fireEvent.click(
     within(screen.getByRole("group", { name: /Are you an international student/ }))
       .getByLabelText("No"),
   );
-  fireEvent.change(screen.getByLabelText(/Level of study/), {
-    target: { value: VALID_LEVEL_OF_STUDY },
-  });
-  fireEvent.change(screen.getByLabelText(/Major \/ field of study/), {
-    target: { value: VALID_MAJOR },
-  });
+  selectListboxOption(/Level of study/, VALID_LEVEL_OF_STUDY);
+  selectListboxOption(/Major \/ field of study/, VALID_MAJOR);
   setInputValue(/Expected graduation year/, String(MIN_GRADUATION_YEAR));
-  fireEvent.change(screen.getByLabelText(/^Gender/), {
-    target: { value: VALID_GENDER },
-  });
-  fireEvent.change(screen.getByLabelText(/T-shirt size/), {
-    target: { value: "M" },
-  });
+  selectListboxOption(/^Gender/, VALID_GENDER);
+  selectListboxOption(/T-shirt size/, "M");
   fireEvent.click(
     within(screen.getByRole("group", { name: /Do you eat beef/ }))
       .getByLabelText("No"),
@@ -129,9 +129,7 @@ function fillValidApplicationForm() {
     within(screen.getByRole("group", { name: /Is this your first hackathon/ }))
       .getByLabelText("Yes"),
   );
-  fireEvent.change(screen.getByLabelText(/How did you hear about HackUTA/), {
-    target: { value: "Discord" },
-  });
+  selectListboxOption(/How did you hear about HackUTA/, "Discord");
   setInputValue(/Emergency contact name/, "Jane Test");
   setInputValue(/Emergency contact phone/, "5559876543");
   fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
@@ -187,9 +185,7 @@ describe("ApplicationForm", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     vi.useFakeTimers();
     const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/State of residence/), {
-      target: { value: "Outside the United States" },
-    });
+    selectListboxOption(/State of residence/, "Outside the United States");
     for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
       fireEvent.click(within(screen.getByRole("group", { name })).getByLabelText(answer ? "Yes" : "No"));
     }
@@ -215,7 +211,9 @@ describe("ApplicationForm", () => {
     expect(draftApi.save).toHaveBeenCalledOnce();
     draftApi.result = { status: "draft", draft: patch };
     refreshed.rerender(<ApplicationForm onSubmitted={vi.fn()} />);
-    expect(screen.getByLabelText(/State of residence/)).toHaveValue("Outside the United States");
+    expect(screen.getByLabelText(/State of residence/)).toHaveTextContent(
+      "Outside the United States",
+    );
     for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
       const group = within(screen.getByRole("group", { name }));
       expect(group.getByLabelText(answer ? "Yes" : "No")).toBeChecked();
@@ -230,7 +228,7 @@ describe("ApplicationForm", () => {
     draftApi.result = { status: "draft", draft: { firstName: "Returning" } };
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(screen.getByLabelText(/First name/)).toHaveValue("Returning");
-    expect(screen.getByLabelText(/State of residence/)).toHaveValue("");
+    expect(screen.getByLabelText(/State of residence/)).toHaveTextContent("Select one");
     for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
       const group = within(screen.getByRole("group", { name }));
       expect(group.getByLabelText("Yes")).not.toBeChecked();
@@ -262,7 +260,7 @@ describe("ApplicationForm", () => {
   it("starts new answers empty and associates residence help and errors", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     const state = screen.getByLabelText(/State of residence/);
-    expect(state).toHaveValue("");
+    expect(state).toHaveTextContent("Select one");
     expect(state).toHaveAttribute("aria-describedby", "stateOfResidence-helper");
     expect(screen.getByText("Select the state or territory where you currently live."))
       .toBeInTheDocument();
@@ -409,24 +407,17 @@ describe("ApplicationForm", () => {
   it("shows follow-up fields when Other options are selected", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText(/Major \/ field of study/), {
-      target: { value: "Other (please specify)" },
-    });
+    selectListboxOption(/Major \/ field of study/, "Other (please specify)");
     expect(
       screen.getByLabelText(/Describe your major \/ field of study/),
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/How did you hear about HackUTA/), {
-      target: { value: "Other" },
-    });
+    selectListboxOption(/How did you hear about HackUTA/, "Other");
     expect(
       screen.getByLabelText(/Tell us how you heard about HackUTA/),
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/School \/ university/), {
-      target: { value: "Other:" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Other:" }));
+    selectSearchableOption(/School \/ university/, "Other:");
     expect(
       screen.getByLabelText(/Enter your school \/ university/),
     ).toBeInTheDocument();
@@ -440,15 +431,12 @@ describe("ApplicationForm", () => {
   });
 
   it("requires follow-up answers for Other selections before submit", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "true");
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     fillValidApplicationForm();
 
-    fireEvent.change(screen.getByLabelText(/Major \/ field of study/), {
-      target: { value: "Other (please specify)" },
-    });
-    fireEvent.change(screen.getByLabelText(/How did you hear about HackUTA/), {
-      target: { value: "Other" },
-    });
+    selectListboxOption(/Major \/ field of study/, "Other (please specify)");
+    selectListboxOption(/How did you hear about HackUTA/, "Other");
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
 
     expect(
