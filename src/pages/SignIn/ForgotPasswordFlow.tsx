@@ -379,8 +379,10 @@ export function ForgotPasswordFlow({
 
       {step === "password" ? (
         <form onSubmit={handlePasswordSubmit} noValidate className="sign-in-form">
-          <label className="sign-in-field" htmlFor="forgot-new-password">
-            <span className="sign-in-field__label">New password</span>
+          <div className="sign-in-field">
+            <label className="sign-in-field__label" htmlFor="forgot-new-password">
+              New password
+            </label>
             <SignInPasswordInput
               id="forgot-new-password"
               autoComplete="new-password"
@@ -394,10 +396,12 @@ export function ForgotPasswordFlow({
               className="sign-in-field__input"
               aria-invalid={!!error}
             />
-          </label>
+          </div>
 
-          <label className="sign-in-field" htmlFor="forgot-confirm-password">
-            <span className="sign-in-field__label">Confirm new password</span>
+          <div className="sign-in-field">
+            <label className="sign-in-field__label" htmlFor="forgot-confirm-password">
+              Confirm new password
+            </label>
             <SignInPasswordInput
               id="forgot-confirm-password"
               autoComplete="new-password"
@@ -411,7 +415,7 @@ export function ForgotPasswordFlow({
               className="sign-in-field__input"
               aria-invalid={!!error}
             />
-          </label>
+          </div>
 
           <p className="sign-in-message">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
 

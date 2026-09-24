@@ -357,8 +357,10 @@ function SignInPageContent({
             />
           </label>
 
-          <label className="sign-in-field" htmlFor="sign-in-password">
-            <span className="sign-in-field__label">Password</span>
+          <div className="sign-in-field">
+            <label className="sign-in-field__label" htmlFor="sign-in-password">
+              Password
+            </label>
             <SignInPasswordInput
               id="sign-in-password"
               autoComplete={mode === "signUp" ? "new-password" : "current-password"}
@@ -372,11 +374,13 @@ function SignInPageContent({
               className="sign-in-field__input"
               aria-invalid={!!error}
             />
-          </label>
+          </div>
 
           {mode === "signUp" ? (
-            <label className="sign-in-field" htmlFor="sign-in-confirm-password">
-              <span className="sign-in-field__label">Confirm password</span>
+            <div className="sign-in-field">
+              <label className="sign-in-field__label" htmlFor="sign-in-confirm-password">
+                Confirm password
+              </label>
               <SignInPasswordInput
                 id="sign-in-confirm-password"
                 autoComplete="new-password"
@@ -390,7 +394,7 @@ function SignInPageContent({
                 className="sign-in-field__input"
                 aria-invalid={!!error}
               />
-            </label>
+            </div>
           ) : null}
 
           {mode === "signUp" ? (
