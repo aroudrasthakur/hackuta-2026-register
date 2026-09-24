@@ -16,6 +16,11 @@ import {
   OTP_RESEND_COOLDOWN_SECONDS,
   startCooldownExpiry,
 } from "../../../shared/auth/otpRateLimit";
+import {
+  AUTH_FAILED_MESSAGE,
+  mapAuthError,
+  OTP_INVALID_MESSAGE,
+} from "../../../shared/auth/errorMessages";
 import { isValidEmailSyntax, normalizeEmail } from "../../../shared/lib/normalizeEmail";
 import { OtpCodeInput } from "../../components/OtpCodeInput";
 import { SignInShell } from "../../components/SignInShell";
@@ -25,24 +30,8 @@ import { getConvexClient } from "../../convex/client";
 import { useApplicantRouting } from "../../hooks/useApplicantRouting";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
 
-const OTP_INVALID_MESSAGE = "The verification code is invalid or expired.";
-const AUTH_FAILED_MESSAGE = "We couldn't sign you in. Check your email and password.";
-
 type AuthMode = "signUp" | "signIn";
 type SignInStep = "credentials" | "verify";
-
-function mapAuthError(error: unknown) {
-  if (error instanceof Error) {
-    if (error.message.includes("Invalid password")) {
-      return PASSWORD_REQUIREMENTS_MESSAGE;
-    }
-    if (error.message.includes("Passwords do not match")) {
-      return "Passwords do not match.";
-    }
-    return error.message;
-  }
-  return AUTH_FAILED_MESSAGE;
-}
 
 type ConvexPasswordSignIn = (
   provider: string,
@@ -138,7 +127,7 @@ function SignInPageContent({
         validatePasswordRequirements(password);
         validatePasswordConfirmation(password, confirmPassword);
       } catch (err) {
-        setError(mapAuthError(err));
+        setError(mapAuthError(err, mode));
         return;
       }
     }
@@ -185,7 +174,7 @@ function SignInPageContent({
       setCode("");
       setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
     } catch (err) {
-      setError(mapAuthError(err));
+        setError(mapAuthError(err, mode));
     } finally {
       setPending(false);
     }
@@ -266,7 +255,7 @@ function SignInPageContent({
         setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
       }
     } catch (err) {
-      setError(mapAuthError(err));
+      setError(mapAuthError(err, mode));
     } finally {
       setPending(false);
     }

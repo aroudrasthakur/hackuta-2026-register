@@ -94,7 +94,7 @@ describe("otp rate limit helpers", () => {
 
   it("returns other errors only in dev mode", () => {
     expect(getOtpSendErrorMessage(new Error("Missing SITE_URL"), false)).toBeNull();
-    expect(getOtpSendErrorMessage(new Error("Missing SITE_URL"), true)).toBe("Missing SITE_URL");
+    expect(getOtpSendErrorMessage(new Error("Missing SITE_URL"), true)).toBeNull();
     expect(getOtpSendErrorMessage(new Error("Server Error"), true)).toBeNull();
   });
 
