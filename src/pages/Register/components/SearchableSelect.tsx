@@ -1,5 +1,6 @@
 import {
-  useEffect,
+  memo,
+  useCallback,
   useId,
   useMemo,
   useRef,
@@ -8,9 +9,23 @@ import {
   type KeyboardEvent,
 } from "react";
 import { FieldError, RequiredMark } from "./FormFields";
+import { dropdownOptionClass, dropdownPanelClass } from "./dropdownStyles";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
+import { useDropdownDismiss } from "./useDropdownDismiss";
 
 const MAX_RESULTS = 50;
+
+function dedupeOptions(items: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of items) {
+    if (!seen.has(item)) {
+      seen.add(item);
+      result.push(item);
+    }
+  }
+  return result;
+}
 
 type SearchableSelectProps = {
   id: string;
@@ -27,7 +42,7 @@ type SearchableSelectProps = {
   onChange: (value: string) => void;
 };
 
-export function SearchableSelect({
+export const SearchableSelect = memo(function SearchableSelect({
   id,
   label,
   required,
@@ -46,6 +61,13 @@ export function SearchableSelect({
   const [activeIndex, setActiveIndex] = useState(0);
   const deferredQuery = useDeferredValue(query);
 
+  const closeList = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+  }, []);
+
+  useDropdownDismiss(containerRef, open, closeList);
+
   const inputValue = open ? query : value;
 
   const searchableOptions = useMemo(
@@ -61,9 +83,9 @@ export function SearchableSelect({
 
     if (!normalized) {
       if (featuredOptions?.length) {
-        return [...featuredOptions, ...matchingExtras];
+        return dedupeOptions([...featuredOptions, ...matchingExtras]);
       }
-      return [...options.slice(0, MAX_RESULTS), ...matchingExtras];
+      return dedupeOptions([...options.slice(0, MAX_RESULTS), ...matchingExtras]);
     }
 
     return [
@@ -100,13 +122,17 @@ export function SearchableSelect({
 
   const errorId = `${id}-error`;
 
-  const selectOption = (option: string) => {
-    onChange(option);
-    setOpen(false);
-  };
+  const selectOption = useCallback(
+    (option: string) => {
+      onChange(option);
+      closeList();
+    },
+    [closeList, onChange],
+  );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (!open && (event.key === "ArrowDown" || event.key === "Enter")) {
+      event.preventDefault();
       openList();
       return;
     }
@@ -129,8 +155,9 @@ export function SearchableSelect({
       return;
     }
 
-    if (event.key === "Escape") {
-      setOpen(false);
+    if (event.key === "Escape" && open) {
+      event.preventDefault();
+      closeList();
     }
   };
 
@@ -153,10 +180,11 @@ export function SearchableSelect({
           placeholder={placeholder}
           value={inputValue}
           onChange={(event) => {
-            setQuery(event.target.value);
+            const nextQuery = event.target.value;
+            setQuery(nextQuery);
             setActiveIndex(0);
             setOpen(true);
-            if (!event.target.value.trim()) {
+            if (!nextQuery.trim()) {
               onChange("");
             }
           }}
@@ -167,7 +195,7 @@ export function SearchableSelect({
         <FieldError id={errorId} message={error} />
       </label>
 
-      {open && filteredOptions.length > 0 ? (
+      {open ? (
         <ul
           id={listboxId}
           role="listbox"
@@ -188,9 +216,24 @@ export function SearchableSelect({
                 {option}
               </button>
             </li>
-          ))}
+          ) : (
+            filteredOptions.map((option, index) => (
+              <li key={option} role="option" aria-selected={option === value}>
+                <button
+                  type="button"
+                  className={dropdownOptionClass(
+                    index === activeOptionIndex || option === value,
+                  )}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => selectOption(option)}
+                >
+                  {option}
+                </button>
+              </li>
+            ))
+          )}
         </ul>
       ) : null}
     </div>
   );
-}
+});

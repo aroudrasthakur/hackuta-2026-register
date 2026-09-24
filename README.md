@@ -25,9 +25,9 @@ Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
 - **Frontend:** Vite, React 19, TypeScript, Tailwind CSS v4, React Router 7
 - **Backend:** [Convex](https://convex.dev) — database, file storage, HTTP actions, scheduled jobs
-- **Auth:** [@convex-dev/auth](https://labs.convex.dev/auth) password sign-up/sign-in + 6-digit email OTP verification (cPanel SMTP)
+- **Auth:** [@convex-dev/auth](https://labs.convex.dev/auth) password sign-up/sign-in + 6-digit email OTP verification + forgot-password reset (cPanel SMTP)
 - **Validation:** Zod schemas shared between client and Convex (`shared/`)
-- **Testing:** Vitest (unit), Playwright (e2e + accessibility), 80% Istanbul coverage thresholds
+- **Testing:** Vitest (unit), Playwright (e2e + accessibility), 85% Istanbul coverage thresholds, enforced globally and per functional area
 
 ## Documentation
 
@@ -108,24 +108,28 @@ npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
 
 ```
 /sign-in  →  password + email OTP (sign-up)  →  /register (new) or /profile (returning)
+         →  forgot password? → reset OTP → new password → back to sign-in
                 ↓
-         draft autosave on /register (profiles table)
+         draft autosave on /register (applications table)
 ```
 
 1. Visitor opens `/sign-in` and creates an account (email, password, confirm) or signs in with existing credentials.
 2. New accounts receive a 6-digit verification code (10-minute expiry) via SMTP.
-3. After verification, Convex Auth establishes a JWT session and ensures a draft `profiles` row exists.
+3. After verification, Convex Auth establishes a JWT session and ensures a draft `applications` row exists.
 4. The app routes to `/register` (not yet submitted) or `/profile` (already submitted).
-5. On `/register`, form fields autosave every ~800ms; applicants can leave and resume later.
-6. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:register`. Unneeded uploads can be discarded via `resumeUploads:discardUploadSession`.
-7. Sign-out returns the visitor to `/sign-in`.
+5. Forgot password: request a separate reset OTP, verify the code, set a new password (must differ from the current one), then sign in again.
+6. On `/register`, form fields autosave every ~800ms; applicants can leave and resume later.
+7. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:register`. Unneeded uploads can be discarded via `resumeUploads:discardUploadSession`.
+8. Sign-out returns the visitor to `/sign-in`.
 
 ### OTP rate limits
 
+Sign-up and password-reset OTPs use separate rate-limit buckets (`otp_send`, `password_reset_send`) with the same limits:
+
 | Limit                  | Value                                              |
 | ---------------------- | -------------------------------------------------- |
-| Resend cooldown        | 30 seconds (shared across email step and OTP step) |
-| Sends per hour         | 5 per email address                                |
+| Resend cooldown        | 30 seconds (per flow step)                         |
+| Sends per hour         | 5 per email address (per bucket)                   |
 | Code expiry            | 10 minutes                                         |
 | Failed verify attempts | 5 per hour (Convex Auth)                           |
 
@@ -136,7 +140,7 @@ See [docs/API.md](docs/API.md#rate-limits) for server-side enforcement details.
 | Path        | Access                           | Purpose                                                                          |
 | ----------- | -------------------------------- | -------------------------------------------------------------------------------- |
 | `/`         | Public                           | Redirects authenticated users to `/register` or `/profile`; others to `/sign-in` |
-| `/sign-in`  | Public                           | Password sign-up / sign-in + OTP verify                                          |
+| `/sign-in`  | Public                           | Password sign-up / sign-in, OTP verify, forgot-password reset                    |
 | `/register` | Authenticated, not yet submitted | Multi-step application form with draft autosave                                  |
 | `/profile`  | Authenticated                    | Applicant dashboard (status, timeline, sign-out)                                 |
 
@@ -212,7 +216,7 @@ CI builds with mock mode enabled for Playwright CSP tests. Live Vercel productio
 | `npm run lint`               | ESLint over app, Convex, shared, security, scripts |
 | `npm run typecheck`          | App/test types plus Convex schema                  |
 | `npm run test:unit`          | Vitest                                             |
-| `npm run test:unit:coverage` | Vitest with 80% Istanbul thresholds                |
+| `npm run test:unit:coverage` | Vitest with 85% global + per-area thresholds       |
 | `npm run test:e2e`           | Playwright against dev server or production build  |
 | `npm run convex:dev`         | Convex dev deployment watcher                      |
 | `npm run convex:deploy`      | Push functions and schema to Convex                |
@@ -230,7 +234,7 @@ GitHub Actions on pushes/PRs to `main` and `dev`:
 
 | Job                  | Steps                                                          |
 | -------------------- | -------------------------------------------------------------- |
-| **quality**          | lint → typecheck → unit tests with coverage → production build |
+| **quality**          | lint → typecheck → unit tests + coverage gate → production build |
 | **e2e**              | Playwright against uploaded production build artifact          |
 | **dependency-audit** | `npm audit --omit=dev --audit-level=high`                      |
 | **secrets**          | Gitleaks full-history scan                                     |
@@ -250,7 +254,6 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security model. Summary:
 
 | Task                          | Command                                                                                                        |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Seed hackathon record         | `npx convex run seed:seedHackathon`                                                                            |
 | Reset all data                | Convex dashboard → internal `maintenance:resetAllData` (or `npx convex run maintenance:resetAllData --prod`)   |
 | Clear OTP limits for an email | Run internal mutation `rateLimits:clearOtpSendLimitsForEmail` from the Convex dashboard (Functions → internal) |
 

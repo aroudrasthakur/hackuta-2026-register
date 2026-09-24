@@ -5,9 +5,13 @@ import { OdysseyButton } from "./OdysseyButton";
 
 type SignOutButtonProps = {
   className?: string;
+  buttonClassName?: string;
 };
 
-export function SignOutButton({ className = "flex justify-center" }: SignOutButtonProps) {
+export function SignOutButton({
+  className = "flex justify-center",
+  buttonClassName,
+}: SignOutButtonProps) {
   const navigate = useNavigate();
   const { signOut } = useSessionAuth();
   const mockAuth = useMockAuth();
@@ -24,7 +28,11 @@ export function SignOutButton({ className = "flex justify-center" }: SignOutButt
 
   return (
     <div className={className}>
-      <OdysseyButton type="button" onClick={() => void handleSignOut()}>
+      <OdysseyButton
+        type="button"
+        {...(buttonClassName ? { className: buttonClassName } : {})}
+        onClick={() => void handleSignOut()}
+      >
         Sign out
       </OdysseyButton>
     </div>

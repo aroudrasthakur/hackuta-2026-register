@@ -1,6 +1,7 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MockAuthProvider } from "../../src/components/MockAuthProvider";
+import { useMockAuth } from "../../src/hooks/useMockAuth";
 import {
   SessionAuthProvider,
   useSessionAuth,
@@ -66,6 +67,22 @@ describe("useSessionAuth", () => {
     });
 
     expect(result.current.signOut).toBeInstanceOf(Function);
+  });
+
+  it("signs the mock session out through the mock provider", async () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "true");
+    const { result } = renderHook(
+      () => ({ session: useSessionAuth(), mock: useMockAuth() }),
+      { wrapper: createWrapper(true) },
+    );
+
+    act(() => result.current.mock.setScenario("signedInNew"));
+    expect(result.current.session.isAuthenticated).toBe(true);
+
+    await act(async () => {
+      await result.current.session.signOut();
+    });
+    expect(result.current.session.isAuthenticated).toBe(false);
   });
 
   it("uses ConvexSessionBridge when mock is disabled", () => {

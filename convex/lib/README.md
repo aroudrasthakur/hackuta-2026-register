@@ -1,23 +1,19 @@
-# Convex lib (`convex/lib/`)
+# Convex server helpers (`convex/lib/`)
 
-Shared helpers imported by Convex modules (not deployed as standalone functions).
+Shared logic imported by top-level Convex modules. Not exported to the client directly.
 
-## Overview
-
-| File | Summary |
+| File | Role |
 | --- | --- |
-| [auth.ts](auth.ts) | Auth user lookup, verified-user and identity requirements |
-| [profiles.ts](profiles.ts) | Profile CRUD helpers, answer projection, draft ensure |
-| [resumeUpload.ts](resumeUpload.ts) | Upload session TTL and validation helpers |
-| [draftPatch.ts](draftPatch.ts) | Merge/replace profile fields from client draft snapshots |
-| [normalizeEmail.ts](normalizeEmail.ts) | Email normalization for storage and rate limits |
-| [otpSendStatus.ts](otpSendStatus.ts) | OTP cooldown lookup shared by rateLimits.ts and auth |
-| [rateLimitBuckets.ts](rateLimitBuckets.ts) | Rate-limit bucket name constants |
+| [auth.ts](auth.ts) | requireAuthUserId, getAuthUser, verified-user guards |
+| [applications.ts](applications.ts) | Application CRUD helpers, answer projection, draft ensure |
+| [draftPatch.ts](draftPatch.ts) | Applies autosave patches to application rows |
+| [eventConfig.ts](eventConfig.ts) | Hackathon name seed/read |
+| [hackutaPassword.ts](hackutaPassword.ts) | Custom Password provider with reset reuse check |
+| [assertPasswordNotReused.ts](assertPasswordNotReused.ts) | Blocks password reset when new password matches current hash |
+| [invalidateAuthSessions.ts](invalidateAuthSessions.ts) | Deletes all authSessions and authRefreshTokens for a user |
+| [normalizeEmail.ts](normalizeEmail.ts) | Email normalization for auth and applications |
+| [otpSendStatus.ts](otpSendStatus.ts) | OTP cooldown/hourly-limit lookup helpers |
+| [rateLimitBuckets.ts](rateLimitBuckets.ts) | Bucket name constants |
+| [resumeUpload.ts](resumeUpload.ts) | Upload session lookup and ownership checks |
 
-## Related
-
-| Location | Role |
-| --- | --- |
-| [../README.md](../README.md) | Convex backend index |
-
-Parent index: [../README.md](../README.md).
+Parent index: [convex/README.md](../README.md).

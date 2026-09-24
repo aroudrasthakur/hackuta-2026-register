@@ -29,7 +29,7 @@ Isomorphic TypeScript imported by the React client and Convex backend. Keeps val
 | [mlhTexasSchools.ts](registration/mlhTexasSchools.ts) | Texas schools surfaced first in the school picker |
 | [data/schools.csv](registration/data/schools.csv) | Source CSV for generate-mlh-schools.mjs |
 
-Convex profile validators in [convex/profileFields.ts](../convex/profileFields.ts) derive from [applicantFields.ts](registration/applicantFields.ts).
+Convex application validators in [convex/applicationFields.ts](../convex/applicationFields.ts) derive from [applicantFields.ts](registration/applicantFields.ts).
 
 ## Auth (`auth/`)
 
@@ -37,6 +37,8 @@ Convex profile validators in [convex/profileFields.ts](../convex/profileFields.t
 | --- | --- |
 | [password.ts](auth/password.ts) | Password strength rules (client + server) |
 | [otpRateLimit.ts](auth/otpRateLimit.ts) | OTP send cooldown math shared with Convex |
+| [passwordResetMessages.ts](auth/passwordResetMessages.ts) | Forgot-password user-facing copy (neutral request, success, reuse, rate limits) |
+| [errorMessages.ts](auth/errorMessages.ts) | mapAuthError and mapPasswordResetError — safe sign-in and reset error copy |
 
 ## Hackathon (`hackathon/`)
 
@@ -45,7 +47,9 @@ Convex profile validators in [convex/profileFields.ts](../convex/profileFields.t
 | [schedule.ts](hackathon/schedule.ts) | Registration window and event timestamps |
 | [timeline.ts](hackathon/timeline.ts) | Applicant-facing timeline labels from schedule |
 
-Used by [convex/hackathons.ts](../convex/hackathons.ts) and profiles:getMyApplicantDashboard in [convex/profiles.ts](../convex/profiles.ts).
+Default schedule in `HACKATHON_SCHEDULE`: applications open **2026-09-25**, applications close **TBA** (`registrationClosesAt: null`), hackathon **2026-11-14 → 2026-11-15**. Timeline shows four milestones (open, close, decisions, event start); null timestamps render as “To be announced”. No RSVP milestone.
+
+Schedule dates used by applications:getMyApplicantDashboard. Display name lives in the `eventConfig` table ([convex/eventConfig.ts](../convex/eventConfig.ts)).
 
 ## Lib (`lib/`)
 

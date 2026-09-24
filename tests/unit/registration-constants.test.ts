@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   DIETARY_OPTIONS,
   GENDERS,
-  HACKATHON_ID,
   HEAR_ABOUT_OPTIONS,
   LEVELS_OF_STUDY,
   MAX_AGE,
@@ -15,14 +14,6 @@ import {
 import { MAX_RESUME_BYTES } from "../../shared/registration/resume";
 
 describe("registration constants", () => {
-  describe("hackathon identifiers", () => {
-    it("has valid hackathon ID", () => {
-      expect(HACKATHON_ID).toBe("hackuta-2026");
-      expect(typeof HACKATHON_ID).toBe("string");
-      expect(HACKATHON_ID.length).toBeGreaterThan(0);
-    });
-  });
-
   describe("graduation year constraints", () => {
     it("has reasonable min graduation year", () => {
       expect(MIN_GRADUATION_YEAR).toBeGreaterThanOrEqual(2024);
@@ -86,6 +77,30 @@ describe("registration constants", () => {
     it("has dietary restriction options", () => {
       expect(Array.isArray(DIETARY_OPTIONS)).toBe(true);
       expect(DIETARY_OPTIONS.length).toBeGreaterThan(0);
+      expect(DIETARY_OPTIONS).toContain("No Beef");
+      expect(DIETARY_OPTIONS).toContain("No Pork");
+    });
+
+    it("does not register legacy beef or pork answer fields", async () => {
+      const { APPLICANT_ANSWER_FIELD_KEYS } = await import(
+        "../../shared/registration/applicantFields"
+      );
+      expect(APPLICANT_ANSWER_FIELD_KEYS).not.toContain("eatsBeef");
+      expect(APPLICANT_ANSWER_FIELD_KEYS).not.toContain("eatsPork");
+    });
+
+    it("registers every application form field except resume for draft autosave", async () => {
+      const { APPLICANT_ANSWER_FIELD_KEYS } = await import(
+        "../../shared/registration/applicantFields"
+      );
+      const { INITIAL_FORM } = await import("../../shared/registration/types");
+      const persisted = new Set<string>(APPLICANT_ANSWER_FIELD_KEYS);
+      const formKeys = Object.keys(INITIAL_FORM).filter((key) => key !== "resume");
+
+      expect(formKeys).toHaveLength(persisted.size);
+      for (const key of formKeys) {
+        expect(persisted.has(key)).toBe(true);
+      }
     });
 
     it("has race/ethnicity options", () => {

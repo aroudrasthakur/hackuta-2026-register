@@ -27,7 +27,10 @@ export function isAllowedResumeFilename(filename: string | null | undefined): bo
     return false;
   }
 
-  return ALLOWED_RESUME_EXTENSIONS.some((extension) => normalized.endsWith(extension));
+  return ALLOWED_RESUME_EXTENSIONS.some(
+    (extension) =>
+      normalized.endsWith(extension) && normalized.length > extension.length,
+  );
 }
 
 export function hasPdfMagicBytes(bytes: Uint8Array): boolean {

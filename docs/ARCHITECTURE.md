@@ -32,18 +32,18 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 
 | Module | Role |
 | --- | --- |
-| auth.ts | @convex-dev/auth Password + email OTP verification |
-| applicant.ts | Profile bootstrap and routing state |
-| profiles.ts | Draft save/load and applicant dashboard |
+| auth.ts | @convex-dev/auth Password + sign-up OTP + password-reset OTP |
+| passwordReset.ts | Session invalidation after password reset |
+| applicant.ts | Application bootstrap and routing state |
+| applications.ts | Draft save/load and applicant dashboard |
 | registrations.ts | Application submission |
 | resumeUploads.ts | Upload sessions, rate limits, cleanup |
-| hackathons.ts | Seed/sync helpers and public hackathon query |
 | http.ts | Resume upload + Auth OIDC routes |
-| rateLimits.ts | OTP throttling |
+| rateLimits.ts | Sign-up and password-reset OTP throttling |
 | resumeUploadSecurity.ts | Upload origin allowlist |
 | pdfValidation.ts | Server-side PDF parse |
 | email/ | SMTP actions + HTML templates |
-| lib/ | Auth, profiles, draft patch helpers |
+| lib/ | Auth, applications, draft patch helpers |
 
 ## Request flows
 
@@ -53,17 +53,30 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 /sign-in → Password provider (email + password)
          → email-verification OTP (6 digits via SMTP)
          → JWT session
-         → ensureApplicantProfile
+         → ensureApplicantApplication
          → route to /register or /profile
 ```
 
 Sign-in mode skips OTP when the account is already verified.
 
+### Forgot password
+
+```
+/sign-in → Forgot password?
+         → auth:signIn flow=reset (6-digit email via password-reset provider)
+         → enter OTP + new password
+         → auth:signIn flow=reset-verification
+         → passwordReset:invalidateSessionsAfterPasswordReset + auth:signOut
+         → return to sign-in with success message
+```
+
+Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and reset OTPs use separate providers and rate-limit buckets. New passwords must differ from the current password ([assertPasswordNotReused](../convex/lib/assertPasswordNotReused.ts)).
+
 ### Application draft
 
 ```
-/register form → profiles:saveProfileDraft (debounced ~800ms)
-              → profiles:getMyProfileDraft on load (hydrate fields)
+/register form → applications:saveApplicationDraft (debounced ~800ms)
+              → applications:getMyApplicationDraft on load (hydrate fields)
 ```
 
 Draft rows use `status: "draft"`. Users can leave and resume until submit.
@@ -74,7 +87,7 @@ Draft rows use `status: "draft"`. Users can leave and resume until submit.
 /register form → client Zod validate
               → POST /resume-upload (optional PDF)
               → registrations:register { data, resumeUploadToken }
-              → profile status → submitted
+              → application status → submitted
               → confirmation email (internal action)
 ```
 
@@ -89,19 +102,18 @@ Email in `data` is ignored; server uses verified auth email.
 
 ## Data model
 
-Auth lives on `users` (Convex Auth). Application data lives in **profiles** — one row per auth user per hackathon.
+Auth lives on `users` (Convex Auth). Application data lives in **applications** — one row per auth user.
 
 | Table | Purpose |
 | --- | --- |
 | users | Convex Auth identity (email, verification time) |
-| profiles | Form fields as columns + status, draft/submitted timestamps |
-| hackathons | Event metadata and registration window |
+| applications | Form fields as columns + status, draft/submitted timestamps |
 | rateLimits | Sliding-window counters (OTP, upload) |
 | resumeUploadSessions | Capability tokens linking upload → registration |
 | _storage | Resume PDF blobs |
 | Auth tables | Sessions, verification codes (@convex-dev/auth) |
 
-Schema: [convex/schema.ts](../convex/schema.ts). Field validators: [convex/profileFields.ts](../convex/profileFields.ts).
+Schema: [convex/schema.ts](../convex/schema.ts). Field validators: [convex/applicationFields.ts](../convex/applicationFields.ts).
 
 ## Shared validation pattern
 
@@ -109,6 +121,7 @@ Client and server import the same modules under [shared/](../shared/README.md):
 
 - **Registration:** `registrationPayloadSchema` in `schema.ts`; server entry `validateRegistrationPayload()` in `validation.ts`
 - **Password:** `validatePasswordRequirements()` in `shared/auth/password.ts`
+- **Auth errors:** `mapAuthError()` / `mapPasswordResetError()` in `shared/auth/errorMessages.ts`
 - **Sanitization:** `shared/lib/sanitizeInput.ts` inside Zod transforms
 
 Client validation gives immediate field feedback; server validation is authoritative.
@@ -118,9 +131,9 @@ Client validation gives immediate field feedback; server validation is authorita
 | Path | Guard | Purpose |
 | --- | --- | --- |
 | / | routing query | Redirect to sign-in, register, or profile |
-| /sign-in | public | Password sign-up / sign-in + OTP verify |
+| /sign-in | public | Password sign-up / sign-in, OTP verify, forgot-password reset |
 | /register | auth, not submitted | Application form with autosave |
-| /profile | auth | Applicant dashboard (read-only) |
+| /profile | auth | Applicant dashboard — overview fields, hackathon timeline, sign-out |
 
 Route guards use `applicant:getApplicantRoutingState`.
 
@@ -138,8 +151,8 @@ Dev deployment: `standing-manatee-425`. Production: `brilliant-ostrich-892`.
 ## Key design decisions
 
 1. **Profiles table** — separates auth from application data; enables draft rows without nested objects.
-2. **Password + OTP verify** — passwords for return visits; email verification via 6-digit OTP on sign-up.
-3. **Capability-token resume upload** — HTTP upload is unauthenticated; security is origin allowlist + token redemption at mutation time.
+2. **Password + OTP verify** — passwords for return visits; email verification via 6-digit OTP on sign-up; separate OTP flow for password reset.
+3. **Capability-token resume upload** — HTTP upload requires an authenticated JWT; uploads are bound to `authUserId`, rate-limited per user/IP, and redeemed with a single-use capability token at registration time.
 4. **Duplicate mutation aliases** — `register` and `submitRegistration` share one handler (public API stability).
 5. **Mock mode** — `VITE_USE_MOCK_API` for CI/UI dev only; never on production Vercel.
 

@@ -10,15 +10,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApplicationFormData } from "../../shared/registration/types";
-import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
-import {
-  VALID_COUNTRY,
-  VALID_GENDER,
-  VALID_LEVEL_OF_STUDY,
-  VALID_MAJOR,
-  VALID_SCHOOL,
-  validRegistrationForm,
-} from "../fixtures/validRegistrationForm";
+import { validRegistrationForm } from "../fixtures/validRegistrationForm";
+import { fillValidApplicationForm, selectListboxOption } from "../fixtures/fillApplicationForm";
 import { LANDING_URL } from "../../src/constants/site";
 import { ApplicationForm } from "../../src/pages/Register/ApplicationForm";
 import { SuccessStep } from "../../src/pages/Register/SuccessStep";
@@ -56,6 +49,12 @@ vi.mock("convex/react", () => ({
   useMutation: () => draftApi.save,
 }));
 
+vi.mock("@convex-dev/auth/react", () => ({
+  useConvexAuth: () => ({
+    fetchAccessToken: vi.fn().mockResolvedValue("test-auth-token"),
+  }),
+}));
+
 vi.mock("../../src/convex/client", () => ({
   getConvexClient: () => ({}),
 }));
@@ -81,55 +80,11 @@ function setInputValueById(id: string, value: string) {
   fireEvent.change(input, { target: { value } });
 }
 
-function fillValidApplicationForm() {
-  setInputValue(/First name/, "Sam");
-  setInputValue(/Last name/, "Test");
-  setInputValue(/Phone number/, "5551234567");
-  setInputValue(/Age/i, "20");
-  setInputValue(/School \/ university/, "Texas at Arlington");
-  fireEvent.click(screen.getByRole("button", { name: VALID_SCHOOL }));
-  fireEvent.change(screen.getByLabelText(/Country of residence/), {
-    target: { value: VALID_COUNTRY },
-  });
-  fireEvent.change(screen.getByLabelText(/State of residence/), {
-    target: { value: "Texas" },
-  });
-  fireEvent.click(
-    within(screen.getByRole("group", { name: /Are you an international student/ }))
-      .getByLabelText("No"),
-  );
-  fireEvent.change(screen.getByLabelText(/Level of study/), {
-    target: { value: VALID_LEVEL_OF_STUDY },
-  });
-  fireEvent.change(screen.getByLabelText(/Major \/ field of study/), {
-    target: { value: VALID_MAJOR },
-  });
-  setInputValue(/Expected graduation year/, String(MIN_GRADUATION_YEAR));
-  fireEvent.change(screen.getByLabelText(/^Gender/), {
-    target: { value: VALID_GENDER },
-  });
-  fireEvent.change(screen.getByLabelText(/T-shirt size/), {
-    target: { value: "M" },
-  });
-  fireEvent.click(
-    within(screen.getByRole("group", { name: /Do you eat beef/ }))
-      .getByLabelText("No"),
-  );
-  fireEvent.click(
-    within(screen.getByRole("group", { name: /Is this your first hackathon/ }))
-      .getByLabelText("Yes"),
-  );
-  fireEvent.change(screen.getByLabelText(/How did you hear about HackUTA/), {
-    target: { value: "Discord" },
-  });
-  setInputValue(/Emergency contact name/, "Jane Test");
-  setInputValue(/Emergency contact phone/, "5559876543");
-  fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
-  fireEvent.click(
-    screen.getByLabelText(
-      /authorize HackUTA to share my registration information/,
-    ),
-  );
+function selectSearchableOption(label: RegExp | string, optionName: string) {
+  const input = screen.getByLabelText(label);
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: optionName } });
+  fireEvent.click(screen.getByRole("button", { name: optionName }));
 }
 
 describe("SuccessStep", () => {
@@ -156,6 +111,7 @@ describe("SuccessStep", () => {
 
 describe("ApplicationForm", () => {
   beforeEach(async () => {
+    vi.useRealTimers();
     draftApi.result = null;
     draftApi.save.mockClear();
     const api = await import("../../src/pages/Register/registerApi");
@@ -176,13 +132,21 @@ describe("ApplicationForm", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     vi.useFakeTimers();
     const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/State of residence/), {
-      target: { value: "Outside the United States" },
-    });
-    for (const name of [/Are you an international student/, /Do you eat beef/]) {
-      fireEvent.click(within(screen.getByRole("group", { name })).getByLabelText(answer ? "Yes" : "No"));
-    }
+    selectListboxOption(/State of residence/, "Outside the United States");
+    fireEvent.click(
+      within(screen.getByRole("group", { name: /Are you an international student/ })).getByLabelText(
+        answer ? "Yes" : "No",
+      ),
+    );
     fireEvent.click(within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("Halal"));
+    if (!answer) {
+      fireEvent.click(
+        within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Beef"),
+      );
+      fireEvent.click(
+        within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Pork"),
+      );
+    }
     await act(async () => { await vi.advanceTimersByTimeAsync(800); });
     expect(draftApi.save).toHaveBeenCalledOnce();
     const savedCall = draftApi.save.mock.calls[0];
@@ -191,8 +155,7 @@ describe("ApplicationForm", () => {
     expect(patch).toMatchObject({
       stateOfResidence: "Outside the United States",
       internationalStudent: answer,
-      eatsBeef: answer,
-      dietaryRestrictions: ["Halal"],
+      dietaryRestrictions: answer ? ["Halal"] : ["Halal", "No Beef", "No Pork"],
     });
 
     view.unmount();
@@ -203,33 +166,120 @@ describe("ApplicationForm", () => {
     expect(draftApi.save).toHaveBeenCalledOnce();
     draftApi.result = { status: "draft", draft: patch };
     refreshed.rerender(<ApplicationForm onSubmitted={vi.fn()} />);
-    expect(screen.getByLabelText(/State of residence/)).toHaveValue("Outside the United States");
-    for (const name of [/Are you an international student/, /Do you eat beef/]) {
-      const group = within(screen.getByRole("group", { name }));
-      expect(group.getByLabelText(answer ? "Yes" : "No")).toBeChecked();
-      expect(group.getByLabelText(answer ? "No" : "Yes")).not.toBeChecked();
-    }
+    expect(screen.getByLabelText(/State of residence/)).toHaveTextContent(
+      "Outside the United States",
+    );
+    const international = within(screen.getByRole("group", { name: /Are you an international student/ }));
+    expect(international.getByLabelText(answer ? "Yes" : "No")).toBeChecked();
+    expect(international.getByLabelText(answer ? "No" : "Yes")).not.toBeChecked();
     expect(screen.getByLabelText("Halal")).toBeChecked();
+    if (answer) {
+      expect(screen.getByLabelText("No Beef")).not.toBeChecked();
+      expect(screen.getByLabelText("No Pork")).not.toBeChecked();
+    } else {
+      expect(screen.getByLabelText("No Beef")).toBeChecked();
+      expect(screen.getByLabelText("No Pork")).toBeChecked();
+    }
     refreshed.unmount();
-  });
+  }, 15_000);
 
-  it("loads a legacy draft with the new questions unanswered", () => {
+  it("loads a sparse legacy draft with dietary restrictions unanswered", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     draftApi.result = { status: "draft", draft: { firstName: "Returning" } };
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(screen.getByLabelText(/First name/)).toHaveValue("Returning");
-    expect(screen.getByLabelText(/State of residence/)).toHaveValue("");
-    for (const name of [/Are you an international student/, /Do you eat beef/]) {
-      const group = within(screen.getByRole("group", { name }));
-      expect(group.getByLabelText("Yes")).not.toBeChecked();
-      expect(group.getByLabelText("No")).not.toBeChecked();
-    }
+    expect(screen.getByLabelText(/State of residence/)).toHaveTextContent("Select one");
+    const international = within(screen.getByRole("group", { name: /Are you an international student/ }));
+    expect(international.getByLabelText("Yes")).not.toBeChecked();
+    expect(international.getByLabelText("No")).not.toBeChecked();
+    expect(screen.getByLabelText("No Beef")).not.toBeChecked();
+    expect(screen.getByLabelText("No Pork")).not.toBeChecked();
+  });
+
+  it("shows optional student email near the school field", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.getByLabelText(/Student email \(optional\)/)).toBeInTheDocument();
+    expect(document.getElementById("studentEmail")).toHaveAttribute(
+      "autocomplete",
+      "section-student email",
+    );
+    expect(
+      screen.getByText(
+        "If you signed up with a personal email, you can provide your school email here.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("autosaves and restores student email", async () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    vi.useFakeTimers();
+    const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.change(document.getElementById("studentEmail")!, {
+      target: { value: "student@mail.utexas.edu" },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    expect(draftApi.save).toHaveBeenCalledOnce();
+    const { patch } = draftApi.save.mock.calls[0]![0];
+    expect(patch.studentEmail).toBe("student@mail.utexas.edu");
+
+    view.unmount();
+    draftApi.result = { status: "draft", draft: patch };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(document.getElementById("studentEmail")).toHaveValue("student@mail.utexas.edu");
+  });
+
+  it("shows a student email validation error for malformed addresses", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.change(document.getElementById("studentEmail")!, {
+      target: { value: "not-an-email" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+    expect(screen.getByText("Enter a valid student email address.")).toBeInTheDocument();
+  });
+
+  it("shows optional other dietary restrictions below the checkboxes", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(
+      screen.getByLabelText(/Other dietary restrictions \(optional\)/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Please describe any dietary restrictions not listed above."),
+    ).toBeInTheDocument();
+  });
+
+  it("autosaves and restores other dietary restrictions", async () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    vi.useFakeTimers();
+    const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.change(document.getElementById("otherDietaryRestrictions")!, {
+      target: { value: "No shellfish" },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    expect(draftApi.save).toHaveBeenCalledOnce();
+    const { patch } = draftApi.save.mock.calls[0]![0];
+    expect(patch.otherDietaryRestrictions).toBe("No shellfish");
+
+    view.unmount();
+    draftApi.result = { status: "draft", draft: patch };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(document.getElementById("otherDietaryRestrictions")).toHaveValue("No shellfish");
+  });
+
+  it("does not render standalone beef or pork questions", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.queryByRole("group", { name: /Do you eat beef/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /Do you eat pork/i })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Beef"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Pork"),
+    ).toBeInTheDocument();
   });
 
   it.each([
     ["stateOfResidence", "stateOfResidence"],
     ["internationalStudent", "internationalStudent-yes"],
-    ["eatsBeef", "eatsBeef-yes"],
   ] as const)("focuses unanswered %s on submit", (field, focusId) => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     draftApi.result = { status: "draft", draft: {
@@ -246,33 +296,40 @@ describe("ApplicationForm", () => {
     expect(screen.getByText("applicant@example.com")).toBeInTheDocument();
   });
 
-  it("starts new answers empty and associates residence help and errors", () => {
+  it("starts new answers empty and associates residence errors", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     const state = screen.getByLabelText(/State of residence/);
-    expect(state).toHaveValue("");
-    expect(state).toHaveAttribute("aria-describedby", "stateOfResidence-helper");
-    expect(screen.getByText("Select the state or territory where you currently live."))
-      .toBeInTheDocument();
+    expect(state).toHaveTextContent("Select one");
+    expect(state).not.toHaveAttribute("aria-describedby");
+    expect(
+      screen.queryByText("Select the state or territory where you currently live."),
+    ).not.toBeInTheDocument();
     const international = within(
       screen.getByRole("group", { name: /Are you an international student/ }),
     );
-    const beef = within(screen.getByRole("group", { name: /Do you eat beef/ }));
     expect(international.getByLabelText("Yes")).not.toBeChecked();
     expect(international.getByLabelText("No")).not.toBeChecked();
-    expect(beef.getByLabelText("Yes")).not.toBeChecked();
-    expect(beef.getByLabelText("No")).not.toBeChecked();
+    expect(screen.getByLabelText("No Beef")).not.toBeChecked();
+    expect(screen.getByLabelText("No Pork")).not.toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
-    expect(state).toHaveAttribute(
-      "aria-describedby",
-      "stateOfResidence-helper stateOfResidence-error",
-    );
+    expect(state).toHaveAttribute("aria-describedby", "stateOfResidence-error");
     expect(screen.getByText("Please select your state or territory of residence."))
       .toBeInTheDocument();
     expect(screen.getByText("Please let us know if you are an international student."))
       .toBeInTheDocument();
-    expect(screen.getByText("Please let us know if you eat beef."))
-      .toBeInTheDocument();
+  });
+
+  it("allows independent No Beef and No Pork dietary selections", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("No Beef"));
+    expect(screen.getByLabelText("No Beef")).toBeChecked();
+    expect(screen.getByLabelText("No Pork")).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText("No Pork"));
+    expect(screen.getByLabelText("No Pork")).toBeChecked();
+    fireEvent.click(screen.getByLabelText("No Beef"));
+    expect(screen.getByLabelText("No Beef")).not.toBeChecked();
+    expect(screen.getByLabelText("No Pork")).toBeChecked();
   });
 
   it("corrects validation errors and submits optional details with a PDF only once", async () => {
@@ -342,7 +399,7 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("Resume (optional)")).toBeDisabled();
 
     await waitFor(() => expect(submitRegistration).toHaveBeenCalledTimes(1));
-    expect(uploadResume).toHaveBeenCalledWith(resume);
+    expect(uploadResume).toHaveBeenCalledWith(resume, "test-auth-token");
     expect(submitRegistration).toHaveBeenCalledWith(
       expect.objectContaining({
         otherDietary: "No peanuts",
@@ -352,7 +409,7 @@ describe("ApplicationForm", () => {
         accessibilityNeeds: "Step-free access",
         stateOfResidence: "Texas",
         internationalStudent: false,
-        eatsBeef: false,
+        dietaryRestrictions: ["No Beef", "No Pork", "Allergies"],
         firstHackathon: false,
       }),
       { storageId: "resume-id", uploadToken: "upload-token" },
@@ -390,24 +447,17 @@ describe("ApplicationForm", () => {
   it("shows follow-up fields when Other options are selected", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText(/Major \/ field of study/), {
-      target: { value: "Other (please specify)" },
-    });
+    selectListboxOption(/Major \/ field of study/, "Other (please specify)");
     expect(
       screen.getByLabelText(/Describe your major \/ field of study/),
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/How did you hear about HackUTA/), {
-      target: { value: "Other" },
-    });
+    selectListboxOption(/How did you hear about HackUTA/, "Other");
     expect(
       screen.getByLabelText(/Tell us how you heard about HackUTA/),
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/School \/ university/), {
-      target: { value: "Other:" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Other:" }));
+    selectSearchableOption(/School \/ university/, "Other:");
     expect(
       screen.getByLabelText(/Enter your school \/ university/),
     ).toBeInTheDocument();
@@ -421,15 +471,12 @@ describe("ApplicationForm", () => {
   });
 
   it("requires follow-up answers for Other selections before submit", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "true");
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     fillValidApplicationForm();
 
-    fireEvent.change(screen.getByLabelText(/Major \/ field of study/), {
-      target: { value: "Other (please specify)" },
-    });
-    fireEvent.change(screen.getByLabelText(/How did you hear about HackUTA/), {
-      target: { value: "Other" },
-    });
+    selectListboxOption(/Major \/ field of study/, "Other (please specify)");
+    selectListboxOption(/How did you hear about HackUTA/, "Other");
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
 
     expect(

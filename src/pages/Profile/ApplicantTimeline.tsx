@@ -1,39 +1,51 @@
-import { profileSection, profileSectionTitle } from "./profileStyles";
+import type { TimelineEvent } from "../../../shared/hackathon/timeline";
+import {
+  profileTimelineDate,
+  profileTimelineDescription,
+  profileTimelineLabel,
+  profileTimelineNextUp,
+} from "./profileStyles";
+import { formatTimelineDate } from "./timelineDate";
 
-type TimelineEvent = {
-  id: string;
-  label: string;
-  timestamp: number | null;
-  complete: boolean;
-  dateLabel?: string;
-};
+function eventDateLabel(event: TimelineEvent) {
+  if (event.dateLabel) return event.dateLabel;
+  if (event.timestamp) return formatTimelineDate(event.timestamp);
+  return "To be announced";
+}
 
 export function ApplicantTimeline({ events }: { events: TimelineEvent[] }) {
   if (events.length === 0) return null;
 
+  const nextUpId = events.find((event) => !event.complete)?.id;
+
   return (
-    <section className={profileSection} aria-label="Application timeline">
-      <h3 className={profileSectionTitle}>Timeline</h3>
-      <ol className="space-y-5 border-l-2 border-(--sand) pl-5">
-        {events.map((event) => (
-          <li key={event.id} className="relative">
-            <span
-              className={`absolute -left-[1.625rem] top-1.5 h-3 w-3 rounded-full border-2 ${
-                event.complete
-                  ? "border-(--ocean) bg-(--ocean)"
-                  : "border-(--sand) bg-white"
+    <section aria-label="Application timeline">
+      <h3 className="sr-only">Timeline</h3>
+      <ol className="divide-y divide-(--sand)">
+        {events.map((event) => {
+          const isNextUp = event.id === nextUpId;
+
+          return (
+            <li
+              key={event.id}
+              data-complete={event.complete ? "true" : "false"}
+              className={`grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[10.5rem_minmax(0,1fr)] sm:gap-6 ${
+                event.complete ? "opacity-70" : ""
               }`}
-              aria-hidden="true"
-            />
-            <p className="text-base font-semibold text-(--ink)">{event.label}</p>
-            <p className="mt-1 text-xs uppercase tracking-wide text-(--mist)">
-              {event.dateLabel ??
-                (event.timestamp
-                  ? new Date(event.timestamp).toLocaleString()
-                  : "Pending")}
-            </p>
-          </li>
-        ))}
+            >
+              <p className={profileTimelineDate}>{eventDateLabel(event)}</p>
+              <div>
+                {isNextUp ? (
+                  <p className={profileTimelineNextUp}>Next up</p>
+                ) : null}
+                <p className={profileTimelineLabel}>{event.label}</p>
+                {event.description ? (
+                  <p className={profileTimelineDescription}>{event.description}</p>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
       </ol>
     </section>
   );

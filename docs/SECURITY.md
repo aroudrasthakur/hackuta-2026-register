@@ -7,7 +7,7 @@ How HackUTA registration protects applicant data, blocks abuse, and limits attac
 | Asset | Primary risks | Mitigations |
 | --- | --- | --- |
 | Applicant PII | XSS, stored injection | Server validation, React text rendering, email HTML escaping |
-| Auth sessions | OTP brute force, enumeration | Rate limits, hashed codes, generic errors |
+| Auth sessions | OTP brute force, enumeration, session fixation after reset | Rate limits, hashed codes, generic errors, session wipe after reset |
 | Resume uploads | Malware, DoS, storage abuse | Allowlist, size caps, isolated Convex storage, rate limits |
 | Frontend | Script injection, clickjacking | Strict CSP, Trusted Types, HSTS |
 
@@ -25,7 +25,7 @@ Browser CSP ──► Client Zod (UX) ──► Convex handler ──► Shared 
 | --- | --- | --- |
 | Registration | shared/registration/schema.ts | Zod `.strict()`; rejects HTML/script patterns via shared/lib/sanitizeInput.ts |
 | Resume upload | convex/http.ts, convex/pdfValidation.ts | See [Upload security](#resume-upload-security) |
-| OTP email lookup | rateLimits:getOtpSendCooldown | Neutral response when rate-limited |
+| OTP email lookup | rateLimits:getOtpSendCooldown, getPasswordResetSendCooldown | Neutral response when rate-limited |
 
 Free-text fields allow plain text only — no HTML tags, `javascript:` URLs, or event handlers.
 
@@ -36,7 +36,12 @@ All user-derived values in HTML emails pass through `escapeHtml()` in convex/ema
 ### Authentication
 
 - Email OTP via `@convex-dev/auth` — codes hashed, 10-minute expiry, never logged or returned in API responses
+- Sign-up verification (`email-verification`) and password reset (`password-reset`) use **separate** email providers, templates, and `rateLimits` buckets — a sign-up OTP cannot authorize a reset
+- Password reset requests return **neutral** client copy regardless of whether the email is registered
+- Reset codes are single-use; expired or incorrect codes cannot complete reset; new password must differ from the current password (checked before OTP consumption)
+- After reset, all auth sessions are invalidated and the user must sign in with the new password
 - Registration email is **always** taken from the verified JWT, not from the form payload
+- Passwords, OTPs, and reset tokens are never placed in URLs or logs; user-facing errors are mapped via `shared/auth/errorMessages.ts`
 ### Content Security Policy
 
 Defined in `security/csp.ts`; deployed via `vercel.json`. Tests in `tests/unit/security.test.ts` keep them in sync.
@@ -55,24 +60,26 @@ Uploads never touch the Vercel filesystem. Files go to **Convex `_storage`** (ob
 
 ### Pipeline (`POST /resume-upload`)
 
-1. Origin allowlist
-2. `Content-Type: application/pdf`
-3. **`Content-Length` required** — reject oversize **before** reading body (DoS / bill protection)
-4. **`X-Resume-Filename`** — must end in `.pdf`; no path segments
-5. Rate limit (IP + global)
-6. Read body; verify length matches header; max **2 MB**
-7. PDF magic bytes (`%PDF-`)
-8. Structural parse via `pdf-lib`; max **25 pages**
-9. Store with `contentType: application/pdf`
-10. Issue single-use capability token (30 min TTL)
+1. **Authenticated session** — JWT required; `authUserId` derived server-side (never from the client)
+2. Origin allowlist
+3. `Content-Type: application/pdf` (hint only; not trusted for validation)
+4. **`Content-Length` required** — reject oversize **before** reading body (DoS / bill protection)
+5. **`X-Resume-Filename`** — must end in `.pdf`; no path segments (UX hint; magic bytes + parser are authoritative)
+6. Rate limit (IP + authenticated user + global)
+7. Read body; verify length matches header; max **2 MB**
+8. PDF magic bytes (`%PDF-`)
+9. Structural parse via `pdf-lib`; max **25 pages**
+10. Store in private Convex `_storage` with server-generated storage ID (not the user's filename)
+11. Issue single-use capability token bound to the authenticated user (30 min TTL)
 
-Registration mutation verifies token, storage metadata, and PDF content type before attaching.
+Registration mutation verifies token ownership, storage metadata, and PDF content type before attaching. `discardUploadSession` requires the same authenticated user who created the session.
 
 ### Rate limits
 
 | Scope | Limit | Window |
 | --- | --- | --- |
 | Per client IP | 5 uploads | 10 minutes |
+| Per authenticated user | 5 uploads | 10 minutes |
 | Global | 100 uploads | 10 minutes |
 
 ## Error handling (security UX)
@@ -92,7 +99,7 @@ Rotate SMTP and JWT independently per environment. Dev keys must not be copied t
 
 | Task | Command / location |
 | --- | --- |
-| Clear OTP limits (support) | Internal `rateLimits:clearOtpSendLimitsForEmail` |
+| Clear OTP limits (support) | Internal `rateLimits:clearOtpSendLimitsForEmail` (sign-up bucket only) |
 | Dependency audit | CI `npm audit --audit-level=high` |
 | Secret scan | CI Gitleaks |
 

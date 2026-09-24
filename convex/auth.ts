@@ -1,6 +1,6 @@
 import { Email } from "@convex-dev/auth/providers/Email";
-import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
+import { HackutaPassword } from "./lib/hackutaPassword";
 import type { GenericActionCtx } from "convex/server";
 import { makeFunctionReference } from "convex/server";
 import { ConvexError } from "convex/values";
@@ -8,8 +8,17 @@ import { validatePasswordRequirements } from "../shared/auth/password";
 import { isValidEmailSyntax, normalizeEmail } from "../shared/lib/normalizeEmail";
 
 const sendOtpEmailRef = makeFunctionReference<"action">("email/sendOtpEmail:sendOtpEmail");
+const sendPasswordResetEmailRef = makeFunctionReference<"action">(
+  "email/sendPasswordResetEmail:sendPasswordResetEmail",
+);
 const assertOtpSendAllowedRef = makeFunctionReference<"mutation">("rateLimits:assertOtpSendAllowed");
+const assertPasswordResetSendAllowedRef = makeFunctionReference<"mutation">(
+  "rateLimits:assertPasswordResetSendAllowed",
+);
 const recordOtpSendRef = makeFunctionReference<"mutation">("rateLimits:recordOtpSend");
+const recordPasswordResetSendRef = makeFunctionReference<"mutation">(
+  "rateLimits:recordPasswordResetSend",
+);
 
 const OTP_MAX_AGE_SECONDS = 10 * 60;
 
@@ -39,11 +48,31 @@ const EmailVerification = Email({
   }) as any,
 });
 
+const PasswordResetEmail = Email({
+  id: "password-reset",
+  maxAge: OTP_MAX_AGE_SECONDS,
+  generateVerificationToken: async () => generateSixDigitOtp(),
+  sendVerificationRequest: (async (
+    params: { identifier: string; token: string; expires: Date },
+    ctx: GenericActionCtx<Record<string, never>>,
+  ) => {
+    const { identifier, token, expires } = params;
+    await ctx.runMutation(assertPasswordResetSendAllowedRef, { email: identifier });
+    await ctx.runAction(sendPasswordResetEmailRef, {
+      email: identifier,
+      code: token,
+      expiresAt: expires.getTime(),
+    });
+    await ctx.runMutation(recordPasswordResetSendRef, { email: identifier });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }) as any,
+});
+
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
-    Password({
+    HackutaPassword({
       id: "password",
-      profile(params) {
+      profile(params: Record<string, unknown>) {
         const email = normalizeEmail(String(params.email ?? ""));
         if (!email || !isValidEmailSyntax(email)) {
           throw new ConvexError("Enter a valid email address.");
@@ -52,6 +81,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       },
       validatePasswordRequirements,
       verify: EmailVerification,
+      reset: PasswordResetEmail,
     }),
   ],
   signIn: {

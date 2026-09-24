@@ -6,6 +6,7 @@ export const OTP_HOURLY_LIMIT_MESSAGE =
 
 const RATE_LIMIT_PATTERNS = [
   /too many verification requests/i,
+  /too many reset requests/i,
   /please wait before requesting another code/i,
 ];
 
@@ -109,17 +110,14 @@ export function shouldTreatAsOtpRateLimit(
   return isOtpRateLimitError(error.message.trim());
 }
 
-export function getOtpSendErrorMessage(error: unknown, devMode: boolean): string | null {
+export function getOtpSendErrorMessage(error: unknown, _devMode: boolean): string | null {
+  void _devMode;
   if (!(error instanceof Error) || !error.message.trim()) {
     return null;
   }
 
   const message = error.message.trim();
   if (isOtpRateLimitError(message)) {
-    return message;
-  }
-
-  if (devMode && !isMaskedConvexAuthError(error)) {
     return message;
   }
 

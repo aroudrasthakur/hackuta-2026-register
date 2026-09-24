@@ -3,13 +3,15 @@
  * Convex validators, draft autosave, and form defaults derive from these lists.
  */
 
-/** Trimmed on draft save; stored as optional string on profiles. */
+/** Trimmed on draft save; stored as optional string on applications. */
 export const TRIMMED_STRING_FIELDS = [
   "firstName",
   "lastName",
   "phone",
+  "studentEmail",
   "otherRaceEthnicity",
   "otherDietary",
+  "otherDietaryRestrictions",
   "linkedin",
   "github",
   "portfolio",
@@ -45,7 +47,6 @@ export const STRING_ARRAY_FIELDS = ["raceEthnicity", "dietaryRestrictions"] as c
 export const NULLABLE_BOOLEAN_FIELDS = [
   "firstHackathon",
   "internationalStudent",
-  "eatsBeef",
 ] as const;
 
 export const REQUIRED_BOOLEAN_FIELDS = [
@@ -54,7 +55,7 @@ export const REQUIRED_BOOLEAN_FIELDS = [
   "mlhCommunicationsConsent",
 ] as const;
 
-/** Applicant answer columns on `profiles` and autosave draft patch keys. */
+/** Applicant answer columns on `applications` and autosave draft patch keys. */
 export const APPLICANT_ANSWER_FIELD_KEYS = [
   ...TRIMMED_STRING_FIELDS,
   ...PLAIN_STRING_FIELDS,

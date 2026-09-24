@@ -23,6 +23,7 @@ export async function lookupOtpSendStatus(
   ctx: OtpSendLookupCtx,
   email: string,
   now = Date.now(),
+  bucket: string = OTP_SEND_BUCKET,
 ): Promise<OtpSendStatus> {
   const normalized = normalizeEmail(email);
   if (!normalized) {
@@ -32,7 +33,7 @@ export async function lookupOtpSendStatus(
   const windowStart = now - OTP_SEND_WINDOW_MS;
   const recent = await ctx.db
     .query("rateLimits")
-    .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
+    .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", bucket))
     .filter((q) =>
       q.and(
         q.eq(q.field("key"), normalized),

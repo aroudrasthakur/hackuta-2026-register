@@ -9,7 +9,7 @@ Last updated: September 2026
 | Item | Detail |
 | --- | --- |
 | Repository | hackuta-2026-register |
-| Scope | Sign-in (password + OTP), application form with draft autosave, applicant profile dashboard |
+| Scope | Sign-in (password + OTP), forgot-password reset, application form with draft autosave, applicant profile dashboard |
 | Implemented routes | /sign-in, /register, /profile |
 | Theme tokens | [src/styles/index.css](../src/styles/index.css) (`--color-*` / `--ink`, `--clay`, etc.) |
 
@@ -55,9 +55,9 @@ Register and profile use a clay/light theme (parchment-like). Sign-in uses night
 
 | Route | Layout |
 | --- | --- |
-| /sign-in | SignInShell — storm backdrop, centered card, logo links to landing |
+| /sign-in | SignInShell — storm backdrop, centered card, logo links to landing; primary submit (`.sign-in-btn`) plus compact secondary actions (`.sign-in-btn--secondary`) for forgot password and mode switch |
 | /register | StormPageFrame + PageShell — single-column form (~640–720px), clay background |
-| /profile | Same shell — read-only dashboard and timeline |
+| /profile | Same shell — wide compact card; overview grid (applicant details + timeline); sign-out below the grid |
 
 Form styling: required marks, inline Zod errors, grouped MLH fields, generous spacing. Success step uses Ship + OliveBranch before redirect to profile.
 
@@ -73,7 +73,7 @@ Component details: [src/components/art/README.md](../src/components/art/README.m
 
 ## Motion
 
-- Smooth focus/hover transitions on fields and OdysseyButton
+- Smooth focus/hover transitions on fields, sign-in buttons, and OdysseyButton
 - Storm animation on sign-in (respects prefers-reduced-motion)
 - Weather mood toggle (calm / enrage) on register and profile
 - Success step entrance fade/slide
@@ -86,7 +86,7 @@ Authoritative field list and Zod rules: [shared/registration/schema.ts](../share
 
 | Behavior | Detail |
 | --- | --- |
-| Draft autosave | profiles:saveProfileDraft debounced ~800ms while status is draft |
+| Draft autosave | applications:saveApplicationDraft debounced ~800ms while status is draft |
 | Resume upload | POST /resume-upload before submit; capability token redeemed at registrations:register |
 | Validation | Client Zod on submit + blur; server validateRegistrationPayload() is authoritative |
 | Errors | Inline per field; Convex/HTTP errors mapped via shared/registration/submitErrors.ts |

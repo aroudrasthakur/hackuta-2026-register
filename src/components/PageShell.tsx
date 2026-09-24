@@ -9,6 +9,8 @@ type PageShellProps = {
   subtitle?: string;
   showHeader?: boolean;
   frameless?: boolean;
+  wide?: boolean;
+  compact?: boolean;
   footer?: ReactNode;
 };
 
@@ -18,12 +20,20 @@ export function PageShell({
   subtitle,
   showHeader = true,
   frameless = false,
+  wide = false,
+  compact = false,
   footer,
 }: PageShellProps) {
   const content = (
-    <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-3xl flex-col items-center px-6 py-12 sm:py-16">
+    <div
+      className={`relative z-10 mx-auto flex min-h-screen w-full flex-col items-center ${
+        wide ? "max-w-[min(96rem,100%)] px-4 sm:px-6 lg:px-10" : "max-w-3xl px-6"
+      } ${compact ? "py-4 sm:py-6" : "py-12 sm:py-16"}`}
+    >
       {showHeader ? (
-        <div className="mb-10 flex flex-col items-center gap-4">
+        <div
+          className={`flex flex-col items-center gap-4 ${compact ? "mb-5" : "mb-10"}`}
+        >
           <a
             href={LANDING_URL}
             aria-label="HackUTA home"
@@ -51,28 +61,38 @@ export function PageShell({
 
       <div className="relative w-full">
         <div
-          className="absolute -left-2 -top-2 h-8 w-8 border-l-2 border-t-2 border-(--ink)/20"
+          className="absolute -left-2 -top-2 z-20 h-8 w-8 border-l-2 border-t-2 border-(--ink)/20"
           aria-hidden="true"
         />
         <div
-          className="absolute -right-2 -top-2 h-8 w-8 border-r-2 border-t-2 border-(--ink)/20"
+          className="absolute -right-2 -top-2 z-20 h-8 w-8 border-r-2 border-t-2 border-(--ink)/20"
           aria-hidden="true"
         />
         <div
-          className="absolute -bottom-2 -left-2 h-8 w-8 border-b-2 border-l-2 border-(--ink)/20"
+          className="absolute -bottom-2 -left-2 z-20 h-8 w-8 border-b-2 border-l-2 border-(--ink)/20"
           aria-hidden="true"
         />
         <div
-          className="absolute -bottom-2 -right-2 h-8 w-8 border-b-2 border-r-2 border-(--ink)/20"
+          className="absolute -bottom-2 -right-2 z-20 h-8 w-8 border-b-2 border-r-2 border-(--ink)/20"
           aria-hidden="true"
         />
 
-        <div className="relative overflow-hidden rounded-2xl border-2 border-(--sand) bg-(--light) p-8 shadow-[0_10px_40px_rgba(26,58,82,0.12)] sm:p-12">
+        <div
+          className={`relative z-10 overflow-hidden rounded-2xl border-2 border-(--sand) bg-(--light) shadow-[0_10px_40px_rgba(26,58,82,0.12)] ${
+            compact
+              ? "flex min-h-[min(78vh,50rem)] flex-col p-6 sm:p-10 lg:p-12"
+              : "p-8 sm:p-12"
+          }`}
+        >
           <div
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(26,58,82,0.02),transparent_60%)]"
             aria-hidden="true"
           />
-          <div className="relative z-10">{children}</div>
+          <div
+            className={`relative z-10 ${compact ? "flex min-h-0 flex-1 flex-col" : ""}`}
+          >
+            {children}
+          </div>
         </div>
       </div>
 

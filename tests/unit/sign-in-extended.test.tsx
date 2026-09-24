@@ -1,7 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { useMockAuth } from "../../src/hooks/useMockAuth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { OTP_INVALID_MESSAGE } from "../../shared/auth/errorMessages";
 import { MockAuthProvider } from "../../src/components/MockAuthProvider";
 import { MOCK_OTP } from "../../src/constants/mockAuth";
 import { SessionAuthProvider } from "../../src/hooks/useSessionAuth";
@@ -162,9 +165,7 @@ describe("SignInPage extended", () => {
     await user.paste("111111");
     await user.click(screen.getByRole("button", { name: "Verify email" }));
 
-    expect(
-      await screen.findByText("The verification code is invalid or expired."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(OTP_INVALID_MESSAGE)).toBeInTheDocument();
   });
 
   it("keeps verify disabled until six digits are entered", async () => {
@@ -197,6 +198,67 @@ describe("SignInPage extended", () => {
 
     const verifyButton = screen.getByRole("button", { name: "Verify email" });
     expect(verifyButton).not.toBeDisabled();
+  });
+
+  it("shows the forgot password entry point in sign-in mode", async () => {
+    const user = userEvent.setup();
+    renderSignIn();
+
+    await user.click(screen.getByRole("button", { name: /Already have an account/i }));
+    expect(screen.getByRole("button", { name: "Forgot password?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Forgot password?" })).toHaveClass(
+      "sign-in-btn--secondary",
+    );
+  });
+
+  it("rejects a short code submitted with the Enter key", async () => {
+    const user = userEvent.setup();
+    renderSignIn();
+    await startSignUp(user);
+
+    const cells = screen.getAllByRole("textbox");
+    await user.click(cells[0]!);
+    await user.paste("123");
+    fireEvent.submit(cells[0]!.closest("form")!);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(OTP_INVALID_MESSAGE);
+  });
+
+  it("routes returning mock applicants to their profile after signing in", async () => {
+    const user = userEvent.setup();
+    vi.stubEnv("VITE_USE_MOCK_API", "true");
+
+    function ReturningApplicant() {
+      const mock = useMockAuth();
+      useEffect(() => {
+        mock.setScenario("signedInReturning");
+        // Run once: flip the mock session to a returning applicant.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      return null;
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/sign-in"]}>
+        <MockAuthProvider>
+          <ReturningApplicant />
+          <SessionAuthProvider>
+            <Routes>
+              <Route path="/sign-in" element={<SignInPage />} />
+              <Route path="/profile" element={<div>Profile Page</div>} />
+              <Route path="/register" element={<div>Register Page</div>} />
+            </Routes>
+          </SessionAuthProvider>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Already have an account/i }));
+    await user.type(screen.getByLabelText(/^Email$/i), "back@example.com");
+    await user.type(screen.getByLabelText(/^Password$/i), TEST_PASSWORD);
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(await screen.findByText("Profile Page")).toBeInTheDocument();
   });
 
   it("switches between sign up and sign in modes", async () => {

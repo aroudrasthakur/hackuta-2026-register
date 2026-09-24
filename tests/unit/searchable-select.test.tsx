@@ -140,6 +140,45 @@ describe("SearchableSelect", () => {
     expect(screen.getByText("Pick a school")).toBeInTheDocument();
   });
 
+  it("keeps the listbox open with an empty-state message when search has no matches", async () => {
+    renderSelect();
+    const input = screen.getByRole("combobox");
+    await userEvent.click(input);
+    await userEvent.type(input, "zzzz-no-match");
+
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(screen.getByText("No matches found")).toBeInTheDocument();
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("does not reset the search query when the input is already focused", async () => {
+    renderSelect();
+    const input = screen.getByRole("combobox");
+    await userEvent.click(input);
+    await userEvent.type(input, "gam");
+
+    expect(input).toHaveValue("gam");
+    fireEvent.focus(input);
+    expect(input).toHaveValue("gam");
+    expect(screen.getByRole("option", { name: "Gamma Institute" })).toBeInTheDocument();
+  });
+
+  it("dedupes featured and search results with the same label", async () => {
+    render(
+      <SearchableSelect
+        id="school"
+        label="School / university"
+        value=""
+        options={["Texas State University", "Other School"]}
+        featuredOptions={["Texas State University"]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    expect(screen.getAllByRole("option", { name: "Texas State University" })).toHaveLength(1);
+  });
+
   it("falls back to the first options slice without featured options", async () => {
     render(
       <SearchableSelect

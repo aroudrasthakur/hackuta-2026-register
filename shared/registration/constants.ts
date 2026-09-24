@@ -48,6 +48,8 @@ export const DIETARY_OPTIONS = [
   "Allergies",
   "Kosher",
   "Halal",
+  "No Beef",
+  "No Pork",
 ] as const;
 
 export const STATES_OF_RESIDENCE = [
@@ -148,12 +150,14 @@ export const HEAR_ABOUT_OTHER_OPTION = "Other" as const;
 export const FIELD_LIMITS = {
   name: 100,
   phone: 30,
+  email: 254,
   school: 200,
   major: 200,
   hearAbout: 200,
   url: 2048,
   accessibilityNeeds: 2000,
   otherDietary: 500,
+  otherDietaryRestrictions: 500,
   otherMajor: 200,
   otherSchool: 200,
   otherHearAbout: 200,
@@ -166,8 +170,6 @@ export const MIN_AGE = 18;
 export const MAX_AGE = 120;
 export const MIN_GRADUATION_YEAR = CURRENT_YEAR;
 export const MAX_GRADUATION_YEAR = CURRENT_YEAR + 10;
-
-export const HACKATHON_ID = "hackuta-2026";
 
 export const MLH_PRIVACY_POLICY_URL = "https://github.com/MLH/mlh-policies/blob/main/privacy-policy.md";
 export const MLH_CODE_OF_CONDUCT_URL = "https://static.mlh.io/docs/mlh-code-of-conduct.pdf";

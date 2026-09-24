@@ -1,8 +1,14 @@
 import { makeFunctionReference } from "convex/server";
 
+export const getPublicEventConfigRef = makeFunctionReference<
+  "query",
+  Record<string, never>,
+  { name: string }
+>("eventConfig:getPublicEventConfig");
+
 export const getApplicantRoutingStateRef = makeFunctionReference<
   "query",
-  { hackathonId?: string },
+  Record<string, never>,
   {
     authenticated: boolean;
     verifiedEmail: string | null;
@@ -12,26 +18,37 @@ export const getApplicantRoutingStateRef = makeFunctionReference<
 
 export const getMyApplicantDashboardRef = makeFunctionReference<
   "query",
-  { hackathonId?: string }
->("profiles:getMyApplicantDashboard");
+  Record<string, never>
+>("applications:getMyApplicantDashboard");
 
-export const getMyProfileDraftRef = makeFunctionReference<
+export const getMyApplicationDraftRef = makeFunctionReference<
   "query",
-  { hackathonId?: string }
->("profiles:getMyProfileDraft");
+  Record<string, never>
+>("applications:getMyApplicationDraft");
 
-export const saveProfileDraftRef = makeFunctionReference<
+export const saveApplicationDraftRef = makeFunctionReference<
   "mutation",
-  { hackathonId?: string; patch: Record<string, unknown> }
->("profiles:saveProfileDraft");
+  { patch: Record<string, unknown> }
+>("applications:saveApplicationDraft");
 
-export const ensureApplicantProfileRef = makeFunctionReference<
+export const ensureApplicantApplicationRef = makeFunctionReference<
   "mutation",
-  { hackathonId?: string }
->("applicant:ensureApplicantProfile");
+  Record<string, never>
+>("applicant:ensureApplicantApplication");
 
 export const getOtpSendCooldownRef = makeFunctionReference<
   "mutation",
   { email: string },
   { waitSeconds: number; hourlyLimitReached: boolean }
 >("rateLimits:getOtpSendCooldown");
+
+export const getPasswordResetSendCooldownRef = makeFunctionReference<
+  "mutation",
+  { email: string },
+  { waitSeconds: number; hourlyLimitReached: boolean }
+>("rateLimits:getPasswordResetSendCooldown");
+
+export const invalidateSessionsAfterPasswordResetRef = makeFunctionReference<
+  "mutation",
+  Record<string, never>
+>("passwordReset:invalidateSessionsAfterPasswordReset");

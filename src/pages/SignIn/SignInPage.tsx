@@ -1,4 +1,4 @@
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -16,47 +16,52 @@ import {
   OTP_RESEND_COOLDOWN_SECONDS,
   startCooldownExpiry,
 } from "../../../shared/auth/otpRateLimit";
+import {
+  AUTH_FAILED_MESSAGE,
+  mapAuthError,
+  OTP_INVALID_MESSAGE,
+} from "../../../shared/auth/errorMessages";
 import { isValidEmailSyntax, normalizeEmail } from "../../../shared/lib/normalizeEmail";
 import { OtpCodeInput } from "../../components/OtpCodeInput";
+import { SignInPasswordInput } from "../../components/SignInPasswordInput";
 import { SignInShell } from "../../components/SignInShell";
 import { useMockAuth } from "../../hooks/useMockAuth";
-import { ensureApplicantProfileRef, getOtpSendCooldownRef } from "../../convex/api";
+import {
+  ensureApplicantApplicationRef,
+  getOtpSendCooldownRef,
+  invalidateSessionsAfterPasswordResetRef,
+} from "../../convex/api";
+import { ForgotPasswordFlow } from "./ForgotPasswordFlow";
 import { getConvexClient } from "../../convex/client";
 import { useApplicantRouting } from "../../hooks/useApplicantRouting";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
 
-const OTP_INVALID_MESSAGE = "The verification code is invalid or expired.";
-const AUTH_FAILED_MESSAGE = "We couldn't sign you in. Check your email and password.";
-
 type AuthMode = "signUp" | "signIn";
 type SignInStep = "credentials" | "verify";
-
-function mapAuthError(error: unknown) {
-  if (error instanceof Error) {
-    if (error.message.includes("Invalid password")) {
-      return PASSWORD_REQUIREMENTS_MESSAGE;
-    }
-    if (error.message.includes("Passwords do not match")) {
-      return "Passwords do not match.";
-    }
-    return error.message;
-  }
-  return AUTH_FAILED_MESSAGE;
-}
+type SignInView = "auth" | "forgotPassword";
 
 type ConvexPasswordSignIn = (
   provider: string,
   formData: FormData,
 ) => Promise<{ signingIn: boolean }>;
 
-type EnsureProfileMutation = (args: Record<string, never>) => Promise<unknown>;
+type EnsureApplicationMutation = (args: Record<string, never>) => Promise<unknown>;
+type FetchAccessToken = (args: { forceRefreshToken: boolean }) => Promise<string | null>;
+
+type ConvexSignOut = () => Promise<void>;
 
 function SignInPageContent({
   convexSignIn,
-  ensureProfile,
+  convexSignOut,
+  ensureApplication,
+  fetchAccessToken,
+  invalidateSessionsAfterReset,
 }: {
   convexSignIn: ConvexPasswordSignIn | null;
-  ensureProfile: EnsureProfileMutation | null;
+  convexSignOut?: ConvexSignOut | null;
+  ensureApplication: EnsureApplicationMutation | null;
+  fetchAccessToken?: FetchAccessToken | null;
+  invalidateSessionsAfterReset?: (() => Promise<void>) | null;
 }) {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useSessionAuth();
@@ -64,8 +69,10 @@ function SignInPageContent({
   const routing = useApplicantRouting();
   const client = getConvexClient();
 
+  const [view, setView] = useState<SignInView>("auth");
   const [mode, setMode] = useState<AuthMode>("signUp");
   const [step, setStep] = useState<SignInStep>("credentials");
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -90,12 +97,15 @@ function SignInPageContent({
       return;
     }
 
-    if (client && ensureProfile) {
-      await ensureProfile({}).catch(() => undefined);
+    if (client && ensureApplication && fetchAccessToken) {
+      const token = await fetchAccessToken({ forceRefreshToken: true });
+      if (token) {
+        await ensureApplication({}).catch(() => undefined);
+      }
     }
 
     navigate(routing.hasSubmittedRegistration ? "/profile" : "/register", { replace: true });
-  }, [client, ensureProfile, mockAuth, navigate, routing.hasSubmittedRegistration]);
+  }, [client, ensureApplication, fetchAccessToken, mockAuth, navigate, routing.hasSubmittedRegistration]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && !routing.isLoading && routing.isAuthenticated) {
@@ -103,11 +113,38 @@ function SignInPageContent({
     }
   }, [isAuthenticated, isLoading, routeAfterSignIn, routing.isAuthenticated, routing.isLoading]);
 
-  if (!isLoading && isAuthenticated && routing.isAuthenticated) {
+  if (
+    view === "auth" &&
+    !isLoading &&
+    isAuthenticated &&
+    routing.isAuthenticated
+  ) {
     return (
       <Navigate
         to={routing.hasSubmittedRegistration ? "/profile" : "/register"}
         replace
+      />
+    );
+  }
+
+  if (view === "forgotPassword") {
+    return (
+      <ForgotPasswordFlow
+        convexSignIn={convexSignIn}
+        convexSignOut={convexSignOut ?? null}
+        invalidateSessions={invalidateSessionsAfterReset ?? null}
+        onComplete={(message) => {
+          setResetSuccessMessage(message);
+          setView("auth");
+          setMode("signIn");
+          setStep("credentials");
+          setError(null);
+        }}
+        onCancel={() => {
+          setView("auth");
+          setMode("signIn");
+          setError(null);
+        }}
       />
     );
   }
@@ -138,7 +175,7 @@ function SignInPageContent({
         validatePasswordRequirements(password);
         validatePasswordConfirmation(password, confirmPassword);
       } catch (err) {
-        setError(mapAuthError(err));
+        setError(mapAuthError(err, mode));
         return;
       }
     }
@@ -185,7 +222,7 @@ function SignInPageContent({
       setCode("");
       setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
     } catch (err) {
-      setError(mapAuthError(err));
+        setError(mapAuthError(err, mode));
     } finally {
       setPending(false);
     }
@@ -266,7 +303,7 @@ function SignInPageContent({
         setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
       }
     } catch (err) {
-      setError(mapAuthError(err));
+      setError(mapAuthError(err, mode));
     } finally {
       setPending(false);
     }
@@ -320,11 +357,12 @@ function SignInPageContent({
             />
           </label>
 
-          <label className="sign-in-field" htmlFor="sign-in-password">
-            <span className="sign-in-field__label">Password</span>
-            <input
+          <div className="sign-in-field">
+            <label className="sign-in-field__label" htmlFor="sign-in-password">
+              Password
+            </label>
+            <SignInPasswordInput
               id="sign-in-password"
-              type="password"
               autoComplete={mode === "signUp" ? "new-password" : "current-password"}
               placeholder="••••••••"
               required
@@ -336,14 +374,15 @@ function SignInPageContent({
               className="sign-in-field__input"
               aria-invalid={!!error}
             />
-          </label>
+          </div>
 
           {mode === "signUp" ? (
-            <label className="sign-in-field" htmlFor="sign-in-confirm-password">
-              <span className="sign-in-field__label">Confirm password</span>
-              <input
+            <div className="sign-in-field">
+              <label className="sign-in-field__label" htmlFor="sign-in-confirm-password">
+                Confirm password
+              </label>
+              <SignInPasswordInput
                 id="sign-in-confirm-password"
-                type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
                 required
@@ -355,11 +394,17 @@ function SignInPageContent({
                 className="sign-in-field__input"
                 aria-invalid={!!error}
               />
-            </label>
+            </div>
           ) : null}
 
           {mode === "signUp" ? (
             <p className="sign-in-message">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
+          ) : null}
+
+          {resetSuccessMessage ? (
+            <p className="sign-in-message sign-in-message--info" role="status" aria-live="polite">
+              {resetSuccessMessage}
+            </p>
           ) : null}
 
           {error ? (
@@ -378,19 +423,35 @@ function SignInPageContent({
                 : "Sign in"}
           </button>
 
-          <button
-            type="button"
-            className="sign-in-link"
-            onClick={() => {
-              setMode(mode === "signUp" ? "signIn" : "signUp");
-              setError(null);
-              setConfirmPassword("");
-            }}
-          >
-            {mode === "signUp"
-              ? "Already have an account? Sign in"
-              : "Need an account? Create one"}
-          </button>
+          <div className="sign-in-actions">
+            {mode === "signIn" ? (
+              <button
+                type="button"
+                className="sign-in-btn sign-in-btn--secondary"
+                onClick={() => {
+                  setView("forgotPassword");
+                  setError(null);
+                  setResetSuccessMessage(null);
+                }}
+              >
+                Forgot password?
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="sign-in-btn sign-in-btn--secondary"
+              onClick={() => {
+                setMode(mode === "signUp" ? "signIn" : "signUp");
+                setError(null);
+                setConfirmPassword("");
+                setResetSuccessMessage(null);
+              }}
+            >
+              {mode === "signUp"
+                ? "Already have an account? Sign in"
+                : "Need an account? Create one"}
+            </button>
+          </div>
         </form>
       ) : (
         <form onSubmit={handleVerifySubmit} noValidate className="sign-in-form">
@@ -422,7 +483,7 @@ function SignInPageContent({
             </button>
             <button
               type="button"
-              className="sign-in-link"
+              className="sign-in-btn sign-in-btn--secondary"
               onClick={() => {
                 setStep("credentials");
                 setCode("");
@@ -439,12 +500,19 @@ function SignInPageContent({
 }
 
 function SignInPageWithConvex() {
-  const { signIn } = useAuthActions();
-  const ensureProfile = useMutation(ensureApplicantProfileRef);
+  const { signIn, signOut } = useAuthActions();
+  const { fetchAccessToken } = useConvexAuth();
+  const ensureApplication = useMutation(ensureApplicantApplicationRef);
+  const invalidateSessionsAfterReset = useMutation(
+    invalidateSessionsAfterPasswordResetRef,
+  );
   return (
     <SignInPageContent
       convexSignIn={signIn}
-      ensureProfile={ensureProfile}
+      convexSignOut={signOut}
+      ensureApplication={ensureApplication}
+      fetchAccessToken={fetchAccessToken}
+      invalidateSessionsAfterReset={() => invalidateSessionsAfterReset({})}
     />
   );
 }
@@ -452,7 +520,7 @@ function SignInPageWithConvex() {
 export default function SignInPage() {
   const mockAuth = useMockAuth();
   if (mockAuth.enabled) {
-    return <SignInPageContent convexSignIn={null} ensureProfile={null} />;
+    return <SignInPageContent convexSignIn={null} ensureApplication={null} />;
   }
   return <SignInPageWithConvex />;
 }

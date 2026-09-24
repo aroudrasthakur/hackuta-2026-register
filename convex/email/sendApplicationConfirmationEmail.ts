@@ -11,11 +11,13 @@ export const sendApplicationConfirmationEmail = internalAction({
     firstName: v.string(),
     lastName: v.string(),
     submittedAt: v.number(),
+    hackathonName: v.string(),
   },
-  handler: async (_ctx, { email, firstName, lastName, submittedAt }) => {
+  handler: async (ctx, { email, firstName, lastName, submittedAt, hackathonName }) => {
     const content = buildApplicationConfirmationEmailContent({
       applicantName: `${firstName} ${lastName}`.trim(),
       submittedAt,
+      hackathonName,
     });
 
     await sendMailMessage({

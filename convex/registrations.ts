@@ -5,23 +5,24 @@ import { mutation } from "./_generated/server";
 import type schema from "./schema";
 import { validateRegistrationPayload } from "../shared/registration/validation";
 import type { RegistrationPayload } from "../shared/registration/types";
-import { 
+import {
   MAX_RESUME_BYTES,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../shared/registration/resume";
-import { ensureHackathon } from "./hackathons";
+import { getHackathonName } from "./lib/eventConfig";
 import { requireVerifiedAuthUser } from "./lib/auth";
 import {
-  ensureDraftProfile,
-  findProfileByResume,
-  getProfileByUserAndHackathon,
-  profileFormWasSubmitted,
-  syncAuthUserNameFromProfile,
-} from "./lib/profiles";
+  applicationFormWasSubmitted,
+  ensureDraftApplication,
+  findApplicationByResume,
+  getApplicationByUser,
+  syncAuthUserNameFromApplication,
+} from "./lib/applications";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import {
   findUploadSessionByToken,
   isVerifiedUploadSessionValid,
+  uploadSessionOwnedByUser,
 } from "./lib/resumeUpload";
 
 type MutationCtx = GenericMutationCtx<DataModelFromSchemaDefinition<typeof schema>>;
@@ -42,13 +43,12 @@ async function upsertRegistration(
     throw new Error("Authentication required.");
   }
 
-  const { hackathonId, resumeStorageId: rawStorageId, ...fields } = data;
-  await ensureHackathon(ctx, hackathonId);
+  const { resumeStorageId: rawStorageId, ...fields } = data;
 
-  const existing = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
-  const draftProfile = existing ?? (await ensureDraftProfile(ctx, hackathonId));
+  const existing = await getApplicationByUser(ctx, authUser._id);
+  const draftApplication = existing ?? (await ensureDraftApplication(ctx));
 
-  if (profileFormWasSubmitted(draftProfile)) {
+  if (applicationFormWasSubmitted(draftApplication)) {
     throw new Error("You have already submitted an application.");
   }
 
@@ -62,32 +62,32 @@ async function upsertRegistration(
       ? await ctx.db.system.get("_storage", resumeStorageId)
       : null;
     const attachment = resumeStorageId
-      ? await findProfileByResume(ctx, resumeStorageId)
+      ? await findApplicationByResume(ctx, resumeStorageId)
       : null;
 
-    if (attachment && attachment._id !== draftProfile._id) {
+    if (attachment && attachment._id !== draftApplication._id) {
       throw new Error("This resume is already attached to another application.");
     }
 
-    const retainingOwnResume = attachment?._id === draftProfile._id;
+    const retainingOwnResume = attachment?._id === draftApplication._id;
     const session = resumeUploadToken
       ? await findUploadSessionByToken(ctx, resumeUploadToken)
       : null;
-    const validSession = isVerifiedUploadSessionValid(
-      session,
-      resumeStorageId!,
-      now,
-    );
+    const validSession =
+      isVerifiedUploadSessionValid(session, resumeStorageId!, now) &&
+      uploadSessionOwnedByUser(session, authUser._id);
 
-    if (metadata?.size && metadata.size > MAX_RESUME_BYTES) {
-      throw new Error(RESUME_SIZE_ERROR_MESSAGE)
+    if (metadata?.size != null && metadata.size > MAX_RESUME_BYTES) {
+      throw new Error(RESUME_SIZE_ERROR_MESSAGE);
     }
-    if (
+
+    const resumeInvalid =
       !metadata ||
       metadata.contentType !== "application/pdf" ||
       metadata.size === 0 ||
-      (!retainingOwnResume && !validSession)
-    ) {
+      (!retainingOwnResume && !validSession);
+
+    if (resumeInvalid) {
       throw new Error("Please upload a valid PDF resume of 2 MB or smaller.");
     }
 
@@ -97,16 +97,15 @@ async function upsertRegistration(
   }
 
   const submittedAt = Date.now();
-  const previousResume = draftProfile.resumeStorageId;
+  const previousResume = draftApplication.resumeStorageId;
 
-  await ctx.db.patch(draftProfile._id, {
+  await ctx.db.patch(draftApplication._id, {
     ...fields,
-    otherSchool: draftProfile.otherSchool,
-    otherMajor: draftProfile.otherMajor,
-    otherHearAbout: draftProfile.otherHearAbout,
+    otherSchool: draftApplication.otherSchool,
+    otherMajor: draftApplication.otherMajor,
+    otherHearAbout: draftApplication.otherHearAbout,
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
-    hackathonId,
     status: "submitted",
     formSubmitted: true,
     confirmationStatus: "unconfirmed",
@@ -115,7 +114,7 @@ async function upsertRegistration(
     resumeStorageId: resumeStorageId ?? undefined,
   });
 
-  await syncAuthUserNameFromProfile(ctx, authUser._id, data);
+  await syncAuthUserNameFromApplication(ctx, authUser._id, data);
 
   if (previousResume && previousResume !== resumeStorageId) {
     await ctx.storage.delete(previousResume);
@@ -126,10 +125,11 @@ async function upsertRegistration(
     firstName: data.firstName,
     lastName: data.lastName,
     submittedAt,
+    hackathonName: await getHackathonName(ctx),
   });
 
   return {
-    registrationId: draftProfile._id,
+    registrationId: draftApplication._id,
     isNew: !existing,
     ok: true as const,
   };

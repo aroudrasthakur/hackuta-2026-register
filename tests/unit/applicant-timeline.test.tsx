@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ApplicantTimeline } from "../../src/pages/Profile/ApplicantTimeline";
+import { formatTimelineDate } from "../../src/pages/Profile/timelineDate";
 
 describe("ApplicantTimeline", () => {
   it("renders nothing when events array is empty", () => {
@@ -18,9 +19,7 @@ describe("ApplicantTimeline", () => {
       },
     ];
     render(<ApplicantTimeline events={events} />);
-    expect(
-      screen.getByRole("heading", { name: "Timeline" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Timeline" })).toBeInTheDocument();
   });
 
   it("renders all timeline events", () => {
@@ -63,11 +62,10 @@ describe("ApplicantTimeline", () => {
     ];
     render(<ApplicantTimeline events={events} />);
 
-    const formattedDate = new Date(timestamp).toLocaleString();
-    expect(screen.getByText(formattedDate)).toBeInTheDocument();
+    expect(screen.getByText(formatTimelineDate(timestamp))).toBeInTheDocument();
   });
 
-  it("shows 'Pending' for events without timestamp", () => {
+  it("shows 'To be announced' for events without timestamp", () => {
     const events = [
       {
         id: "future-event",
@@ -78,10 +76,10 @@ describe("ApplicantTimeline", () => {
     ];
     render(<ApplicantTimeline events={events} />);
 
-    expect(screen.getByText("Pending")).toBeInTheDocument();
+    expect(screen.getByText("To be announced")).toBeInTheDocument();
   });
 
-  it("applies correct styling for completed events", () => {
+  it("marks completed events in the list", () => {
     const events = [
       {
         id: "completed",
@@ -92,12 +90,10 @@ describe("ApplicantTimeline", () => {
     ];
     const { container } = render(<ApplicantTimeline events={events} />);
 
-    const indicator = container.querySelector('span[aria-hidden="true"]');
-    expect(indicator).toHaveClass("border-(--ocean)");
-    expect(indicator).toHaveClass("bg-(--ocean)");
+    expect(container.querySelector("li")).toHaveAttribute("data-complete", "true");
   });
 
-  it("applies correct styling for incomplete events", () => {
+  it("marks incomplete events in the list", () => {
     const events = [
       {
         id: "incomplete",
@@ -108,9 +104,7 @@ describe("ApplicantTimeline", () => {
     ];
     const { container } = render(<ApplicantTimeline events={events} />);
 
-    const indicator = container.querySelector('span[aria-hidden="true"]');
-    expect(indicator).toHaveClass("border-(--sand)");
-    expect(indicator).toHaveClass("bg-white");
+    expect(container.querySelector("li")).toHaveAttribute("data-complete", "false");
   });
 
   it("renders timeline with proper semantic structure", () => {
@@ -134,11 +128,22 @@ describe("ApplicantTimeline", () => {
       { id: "second", label: "Second", timestamp: 2, complete: true },
       { id: "third", label: "Third", timestamp: 3, complete: false },
     ];
-    const { container } = render(<ApplicantTimeline events={events} />);
+    render(<ApplicantTimeline events={events} />);
 
-    const labels = container.querySelectorAll("li p:first-of-type");
+    const labels = screen.getAllByText(/^(First|Second|Third)$/);
     expect(labels[0]).toHaveTextContent("First");
     expect(labels[1]).toHaveTextContent("Second");
     expect(labels[2]).toHaveTextContent("Third");
+  });
+
+  it("marks the first incomplete event as next up", () => {
+    const events = [
+      { id: "first", label: "First", timestamp: 1, complete: true },
+      { id: "second", label: "Second", timestamp: 2, complete: false },
+      { id: "third", label: "Third", timestamp: 3, complete: false },
+    ];
+    render(<ApplicantTimeline events={events} />);
+
+    expect(screen.getByText("Next up")).toBeInTheDocument();
   });
 });

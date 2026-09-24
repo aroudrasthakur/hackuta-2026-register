@@ -1,3 +1,4 @@
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import {
   useCallback,
@@ -7,7 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import { formToDraftPatch } from "../../../shared/registration/draftPatch";
-import { getMyProfileDraftRef, saveProfileDraftRef } from "../../convex/api";
+import { getMyApplicationDraftRef, saveApplicationDraftRef } from "../../convex/api";
 import { isMockApiEnabled } from "../../constants/mockAuth";
 import { getConvexClient } from "../../convex/client";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
@@ -62,6 +63,7 @@ import type {
 import { INITIAL_FORM } from "../../../shared/registration/types";
 import { resumeFileKey } from "../../../shared/registration/resume";
 import {
+  DRAFT_SAVE_ERROR_MESSAGE,
   isResumeFieldMessage,
   mapConvexErrorToUserMessage,
   mapUploadError,
@@ -89,6 +91,7 @@ function ApplicationFormContent({
   hasConvexClient,
   initialForm = INITIAL_FORM,
   draftHydrated = true,
+  getUploadAuthToken,
 }: {
   onSubmitted: () => void;
   savedDraft: SavedDraft;
@@ -96,10 +99,12 @@ function ApplicationFormContent({
   hasConvexClient: boolean;
   initialForm?: ApplicationFormData;
   draftHydrated?: boolean;
+  getUploadAuthToken?: () => Promise<string | null | undefined>;
 }) {
   const [form, setForm] = useState<ApplicationFormData>(initialForm);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { isAuthenticated } = useSessionAuth();
   const routing = useApplicantRouting();
@@ -108,6 +113,21 @@ function ApplicationFormContent({
     session: ResumeUploadSession;
   } | null>(null);
   const resumeUploadRef = useRef(resumeUpload);
+  const savedDraftStatus = savedDraft?.status;
+
+  const saveDraftWithStatus = useCallback(async () => {
+    if (!saveDraft || !routing.isAuthenticated) return;
+    try {
+      await saveDraft({ patch: formToDraftPatch(form) });
+      setDraftError(null);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error("Draft save failed:", error);
+      }
+      setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
+      throw error;
+    }
+  }, [form, routing.isAuthenticated, saveDraft]);
 
   useEffect(() => {
     resumeUploadRef.current = resumeUpload;
@@ -117,14 +137,22 @@ function ApplicationFormContent({
     if (!hasConvexClient || !saveDraft || !routing.isAuthenticated || !draftHydrated) {
       return;
     }
-    if (savedDraft && savedDraft.status !== "draft") return;
+    if (savedDraftStatus && savedDraftStatus !== "draft") return;
 
     const timer = window.setTimeout(() => {
-      void saveDraft({ patch: formToDraftPatch(form) }).catch(() => undefined);
+      void saveDraftWithStatus().catch(() => undefined);
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [form, hasConvexClient, routing.isAuthenticated, saveDraft, savedDraft, draftHydrated]);
+  }, [
+    draftHydrated,
+    form,
+    hasConvexClient,
+    routing.isAuthenticated,
+    saveDraft,
+    saveDraftWithStatus,
+    savedDraftStatus,
+  ]);
 
   const discardPendingResume = useCallback(async () => {
     const pending = resumeUploadRef.current;
@@ -185,7 +213,11 @@ function ApplicationFormContent({
     setSubmitting(true);
     try {
       if (hasConvexClient && saveDraft && routing.isAuthenticated) {
-        await saveDraft({ patch: formToDraftPatch(form) });
+        try {
+          await saveDraftWithStatus();
+        } catch {
+          return;
+        }
       }
       let session: ResumeUploadSession | null = null;
       if (form.resume) {
@@ -195,7 +227,8 @@ function ApplicationFormContent({
         } else {
           await discardPendingResume();
           try {
-            session = await uploadResume(form.resume);
+            const authToken = getUploadAuthToken ? await getUploadAuthToken() : null;
+            session = await uploadResume(form.resume, authToken);
             setResumeUpload({ fileKey, session });
           } catch (err) {
             const message = mapUploadError(err);
@@ -332,45 +365,48 @@ function ApplicationFormContent({
               error={errors.otherSchool}
             />
           ) : null}
+          <TextField
+            id="studentEmail"
+            label="Student email (optional)"
+            type="email"
+            inputMode="email"
+            autoComplete="section-student email"
+            spellCheck={false}
+            autoCapitalize="none"
+            value={form.studentEmail}
+            onChange={(e) => updateField("studentEmail", e.target.value)}
+            maxLength={FIELD_LIMITS.email}
+            helperText="If you signed up with a personal email, you can provide your school email here."
+            error={errors.studentEmail}
+          />
           <SelectField
             id="countryOfResidence"
             label="Country of residence"
             required
             value={form.countryOfResidence}
-            onChange={(e) =>
+            options={COUNTRIES_OF_RESIDENCE}
+            onChange={(value) =>
               updateField(
                 "countryOfResidence",
-                e.target.value as ApplicationFormData["countryOfResidence"],
+                value as ApplicationFormData["countryOfResidence"],
               )
             }
             error={errors.countryOfResidence}
-          >
-            {COUNTRIES_OF_RESIDENCE.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           <SelectField
             id="stateOfResidence"
             label="State of residence"
             required
-            helperText="Select the state or territory where you currently live."
             value={form.stateOfResidence}
-            onChange={(e) =>
+            options={STATES_OF_RESIDENCE}
+            onChange={(value) =>
               updateField(
                 "stateOfResidence",
-                e.target.value as ApplicationFormData["stateOfResidence"],
+                value as ApplicationFormData["stateOfResidence"],
               )
             }
             error={errors.stateOfResidence}
-          >
-            {STATES_OF_RESIDENCE.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           <fieldset
             className={`sm:col-span-2 ${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.internationalStudent)}`}
             aria-describedby={
@@ -407,39 +443,29 @@ function ApplicationFormContent({
             label="Level of study"
             required
             value={form.levelOfStudy}
-            onChange={(e) =>
+            options={LEVELS_OF_STUDY}
+            onChange={(value) =>
               updateField(
                 "levelOfStudy",
-                e.target.value as ApplicationFormData["levelOfStudy"],
+                value as ApplicationFormData["levelOfStudy"],
               )
             }
             error={errors.levelOfStudy}
-          >
-            {LEVELS_OF_STUDY.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           <SelectField
             id="major"
             label="Major / field of study"
             required
             value={form.major}
-            onChange={(e) =>
+            options={MAJORS}
+            onChange={(value) =>
               updateField(
                 "major",
-                e.target.value as ApplicationFormData["major"],
+                value as ApplicationFormData["major"],
               )
             }
             error={errors.major}
-          >
-            {MAJORS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           {form.major === MAJOR_OTHER_OPTION ? (
             <TextField
               id="otherMajor"
@@ -482,20 +508,15 @@ function ApplicationFormContent({
           label="Gender"
           required
           value={form.gender}
-          onChange={(e) =>
+          options={GENDERS}
+          onChange={(value) =>
             updateField(
               "gender",
-              e.target.value as ApplicationFormData["gender"],
+              value as ApplicationFormData["gender"],
             )
           }
           error={errors.gender}
-        >
-          {GENDERS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </SelectField>
+        />
 
         <fieldset
           className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.otherRaceEthnicity)}`}
@@ -556,7 +577,9 @@ function ApplicationFormContent({
         </h3>
 
         <fieldset
-          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.otherDietary)}`}
+          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(
+            !!errors.otherDietary || !!errors.otherDietaryRestrictions,
+          )}`}
         >
           <legend className={fieldsetLegendClass}>
             Dietary restrictions (select all that apply)
@@ -577,6 +600,15 @@ function ApplicationFormContent({
               />
             ))}
           </div>
+          <TextField
+            id="otherDietaryRestrictions"
+            label="Other dietary restrictions (optional)"
+            helperText="Please describe any dietary restrictions not listed above."
+            value={form.otherDietaryRestrictions}
+            onChange={(e) => updateField("otherDietaryRestrictions", e.target.value)}
+            maxLength={FIELD_LIMITS.otherDietaryRestrictions}
+            error={errors.otherDietaryRestrictions}
+          />
           {form.dietaryRestrictions.includes("Allergies") ? (
             <>
               <input
@@ -599,52 +631,20 @@ function ApplicationFormContent({
           ) : null}
         </fieldset>
 
-        <fieldset
-          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.eatsBeef)}`}
-          aria-describedby={errors.eatsBeef ? "eatsBeef-error" : undefined}
-        >
-          <legend className={fieldsetLegendClass}>
-            Do you eat beef?
-            <span aria-hidden="true"> *</span>
-          </legend>
-          <div className={inlineRadioGroupClass}>
-            <CustomRadio
-              id="eatsBeef-yes"
-              name="eatsBeef"
-              label="Yes"
-              checked={form.eatsBeef === true}
-              onChange={() => updateField("eatsBeef", true)}
-            />
-            <CustomRadio
-              id="eatsBeef-no"
-              name="eatsBeef"
-              label="No"
-              checked={form.eatsBeef === false}
-              onChange={() => updateField("eatsBeef", false)}
-            />
-          </div>
-          <FieldError id="eatsBeef-error" message={errors.eatsBeef} />
-        </fieldset>
-
         <SelectField
           id="tshirtSize"
           label="T-shirt size"
           required
           value={form.tshirtSize}
-          onChange={(e) =>
+          options={TSHIRT_SIZES}
+          onChange={(value) =>
             updateField(
               "tshirtSize",
-              e.target.value as ApplicationFormData["tshirtSize"],
+              value as ApplicationFormData["tshirtSize"],
             )
           }
           error={errors.tshirtSize}
-        >
-          {TSHIRT_SIZES.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </SelectField>
+        />
 
         <fieldset
           className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.firstHackathon)}`}
@@ -694,20 +694,15 @@ function ApplicationFormContent({
             label="How did you hear about HackUTA?"
             required
             value={form.hearAbout}
-            onChange={(e) =>
+            options={HEAR_ABOUT_OPTIONS}
+            onChange={(value) =>
               updateField(
                 "hearAbout",
-                e.target.value as ApplicationFormData["hearAbout"],
+                value as ApplicationFormData["hearAbout"],
               )
             }
             error={errors.hearAbout}
-          >
-            {HEAR_ABOUT_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </SelectField>
+          />
           {form.hearAbout === HEAR_ABOUT_OTHER_OPTION ? (
             <TextField
               id="otherHearAbout"
@@ -962,6 +957,22 @@ function ApplicationFormContent({
         </div>
       )}
 
+      {draftError && (
+        <div
+          role="status"
+          className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-sm font-medium text-amber-800"
+        >
+          <span>{draftError}</span>{" "}
+          <button
+            type="button"
+            className="font-semibold underline underline-offset-2"
+            onClick={() => void saveDraftWithStatus().catch(() => undefined)}
+          >
+            Try saving again
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-center pt-2">
         <OdysseyButton type="submit" disabled={submitting}>
           {submitting ? "Submitting your application…" : "Submit application"}
@@ -971,29 +982,55 @@ function ApplicationFormContent({
   );
 }
 
+function ApplicationFormWithUploadAuth(
+  props: Omit<
+    Parameters<typeof ApplicationFormContent>[0],
+    "getUploadAuthToken"
+  >,
+) {
+  const { fetchAccessToken } = useConvexAuth();
+  return (
+    <ApplicationFormContent
+      {...props}
+      getUploadAuthToken={() => fetchAccessToken({ forceRefreshToken: false })}
+    />
+  );
+}
+
 function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => void }) {
   const client = getConvexClient();
   const routing = useApplicantRouting();
   const savedDraft = useQuery(
-    getMyProfileDraftRef,
+    getMyApplicationDraftRef,
     client && routing.isAuthenticated ? {} : "skip",
   );
-  const saveDraft = useMutation(saveProfileDraftRef);
+  const saveDraft = useMutation(saveApplicationDraftRef);
   const isDraftLoading = savedDraft === undefined;
   const initialForm =
     !isDraftLoading && savedDraft?.draft
       ? { ...INITIAL_FORM, ...savedDraft.draft }
       : INITIAL_FORM;
 
+  if (isDraftLoading) {
+    return (
+      <main
+        className="flex min-h-[12rem] items-center justify-center"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-sm text-(--ocean)">Loading your saved application…</p>
+      </main>
+    );
+  }
+
   return (
-    <ApplicationFormContent
-      key={isDraftLoading ? "draft-loading" : "draft-ready"}
+    <ApplicationFormWithUploadAuth
       onSubmitted={onSubmitted}
       savedDraft={savedDraft ?? null}
       saveDraft={saveDraft}
       hasConvexClient={Boolean(client)}
       initialForm={initialForm}
-      draftHydrated={!isDraftLoading}
+      draftHydrated
     />
   );
 }
@@ -1006,6 +1043,7 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: () => void }) {
         savedDraft={null}
         saveDraft={null}
         hasConvexClient={false}
+        getUploadAuthToken={async () => "mock-auth-token"}
       />
     );
   }

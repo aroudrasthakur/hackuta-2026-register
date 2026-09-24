@@ -8,6 +8,11 @@ import { type MockAuthScenario } from "../../src/constants/mockAuth";
 import { useMockAuth } from "../../src/hooks/useMockAuth";
 import { SessionAuthProvider } from "../../src/hooks/useSessionAuth";
 import ProfilePage from "../../src/pages/Profile/ProfilePage";
+import {
+  profileOverviewGrid,
+  profilePageBody,
+  profileSignOutWrap,
+} from "../../src/pages/Profile/profileStyles";
 
 const { dashboardQueryResult } = vi.hoisted(() => ({
   dashboardQueryResult: { current: undefined as unknown },
@@ -50,6 +55,18 @@ function MockScenario({ scenario }: { scenario: MockAuthScenario }) {
   return null;
 }
 
+function profileLayoutNodes() {
+  const title = screen.getByRole("heading", {
+    name: /Your application( is in)?/,
+  });
+  const body = title.parentElement!.parentElement!;
+  const grid = body.children[1] as HTMLElement;
+  const signOutWrap = body.children[2] as HTMLElement;
+  const signOutButton = screen.getByRole("button", { name: "Sign out" });
+
+  return { body, grid, signOutWrap, signOutButton };
+}
+
 function renderProfilePage(scenario: MockAuthScenario = "signedInReturning") {
   vi.stubEnv("VITE_USE_MOCK_API", "true");
 
@@ -81,17 +98,32 @@ describe("ProfilePage", () => {
     renderProfilePage("signedInReturning");
 
     expect(screen.getByRole("heading", { name: "Your Journey" })).toBeInTheDocument();
-    expect(screen.getByText("applicant@example.com")).toBeInTheDocument();
     expect(screen.getByText("Sam Test")).toBeInTheDocument();
     expect(screen.getByText("The University of Texas at Arlington")).toBeInTheDocument();
-    expect(screen.getByText("State of residence")).toBeInTheDocument();
-    expect(screen.getByText("Texas")).toBeInTheDocument();
-    expect(screen.getByText("submitted")).toBeInTheDocument();
+    expect(screen.getByText("Year of study").closest("div")).toHaveTextContent("2026");
+    expect(screen.getByText("Under review")).toBeInTheDocument();
+    expect(screen.queryByText("submitted")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("HackUTA 2026 odyssey illustrations of a ship, clouds, and an island"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("profile-decorations")).toBeInTheDocument();
+    const decorations = screen.getByTestId("profile-decorations");
+    const clouds = decorations.querySelector('img[src="/images/profile/clouds.png"]');
+    const island = decorations.querySelector('img[src="/images/profile/island.png"]');
+    const ship = decorations.querySelector('img[src="/images/profile/ship.png"]');
+    expect(clouds).toHaveClass("top-0", "left-0");
+    expect(island?.compareDocumentPosition(ship!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(ship?.parentElement).toHaveClass("bottom-0");
     expect(screen.getByText("Applications open")).toBeInTheDocument();
-    expect(screen.getByText("Deadline to apply")).toBeInTheDocument();
-    expect(screen.getByText("Decisions are out")).toBeInTheDocument();
-    expect(screen.getByText("TBD")).toBeInTheDocument();
-    expect(screen.getByText("Hackathon begins")).toBeInTheDocument();
+    expect(screen.getByText("Applications close")).toBeInTheDocument();
+    expect(screen.getByText("Decisions go out")).toBeInTheDocument();
+    expect(screen.getAllByText("To be announced")).toHaveLength(2);
+    expect(screen.queryByText("RSVP due")).not.toBeInTheDocument();
+    expect(screen.getByText("Friday, September 25, 2026")).toBeInTheDocument();
+    expect(screen.getByText("The hackathon begins")).toBeInTheDocument();
+    expect(screen.queryByText("Country of residence")).not.toBeInTheDocument();
+    expect(screen.queryByText("State of residence")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue application" })).not.toBeInTheDocument();
   });
 
   it("shows start application when the applicant has not registered yet", () => {
@@ -141,6 +173,28 @@ describe("ProfilePage", () => {
 
     expect(await screen.findByText("Sign In Page")).toBeInTheDocument();
   });
+
+  it.each(["signedInReturning", "signedInNew"] as const)(
+    "renders sign-out after the overview grid for %s applicants",
+    (scenario) => {
+    renderProfilePage(scenario);
+
+    const { body, grid, signOutWrap, signOutButton } = profileLayoutNodes();
+
+    expect(body.className).toBe(profilePageBody);
+    expect(grid.className).toBe(profileOverviewGrid);
+    expect(signOutWrap.className).toBe(profileSignOutWrap);
+    expect(signOutButton.className).toContain("profile-sign-out-btn");
+    expect(signOutButton.className).toContain("!min-h-11");
+    expect(grid.compareDocumentPosition(signOutWrap)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+  );
+
+  it("uses the wide compact profile shell", () => {
+    renderProfilePage("signedInReturning");
+
+    expect(document.querySelector(".max-w-\\[min\\(96rem\\,100\\%\\)\\]")).toBeInTheDocument();
+  });
 });
 
 describe("ProfilePage (Convex mode)", () => {
@@ -148,39 +202,6 @@ describe("ProfilePage (Convex mode)", () => {
     vi.unstubAllEnvs();
     window.localStorage.clear();
     vi.stubEnv("VITE_USE_MOCK_API", "false");
-  });
-
-  it.each([undefined, "Outside the United States"])("renders persisted residence %s and tolerates legacy profiles", (stateOfResidence) => {
-    dashboardQueryResult.current = {
-      profile: { displayName: "Returning Applicant", verifiedEmail: "applicant@example.com" },
-      registration: {
-        status: "submitted", eligibilityStatus: "unreviewed",
-        submittedAt: 1_700_000_000_000, updatedAt: 1_700_000_000_000,
-        resumeStatus: "none",
-        answers: {
-          firstName: "Returning", countryOfResidence: "Canada",
-          ...(stateOfResidence ? { stateOfResidence } : {}),
-        },
-      },
-      hackathon: null,
-    };
-    render(
-      <MemoryRouter initialEntries={["/profile"]}>
-        <MockAuthProvider>
-          <SessionAuthProvider><ProfilePage /></SessionAuthProvider>
-        </MockAuthProvider>
-      </MemoryRouter>,
-    );
-    expect(screen.getByText("Returning Applicant")).toBeInTheDocument();
-    expect(screen.getByText("Canada")).toBeInTheDocument();
-    if (stateOfResidence) {
-      expect(screen.getByText("State of residence")).toBeInTheDocument();
-      expect(screen.getByText(stateOfResidence)).toBeInTheDocument();
-    } else {
-      expect(screen.queryByText("State of residence")).not.toBeInTheDocument();
-    }
-    expect(screen.queryByText(/international student/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/eat beef/i)).not.toBeInTheDocument();
   });
 
   it("shows a loading state while the dashboard query is pending", () => {
@@ -197,6 +218,110 @@ describe("ProfilePage (Convex mode)", () => {
     );
 
     expect(screen.getByText("Loading your application…")).toBeInTheDocument();
+  });
+
+  it("does not label incomplete drafts as under review", () => {
+    dashboardQueryResult.current = {
+      profile: {
+        displayName: "Draft User",
+        verifiedEmail: "draft@example.com",
+      },
+      registration: {
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        submittedAt: null,
+        answers: {
+          firstName: "Draft",
+          lastName: "User",
+          school: "The University of Texas at Arlington",
+          graduationYear: 2027,
+        },
+      },
+      hackathon: null,
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/profile"]}>
+        <MockAuthProvider>
+          <SessionAuthProvider>
+            <ProfilePage />
+          </SessionAuthProvider>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Draft User")).toBeInTheDocument();
+    expect(screen.getByText("The University of Texas at Arlington")).toBeInTheDocument();
+    expect(screen.getByText("2027")).toBeInTheDocument();
+    expect(screen.queryByText("Under review")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continue application" })).toHaveAttribute(
+      "href",
+      "/register",
+    );
+    expect(screen.getByRole("button", { name: "Sign out" }).className).toContain(
+      "profile-sign-out-btn",
+    );
+  });
+
+  function renderConvexProfile() {
+    return render(
+      <MemoryRouter initialEntries={["/profile"]}>
+        <MockAuthProvider>
+          <SessionAuthProvider>
+            <ProfilePage />
+          </SessionAuthProvider>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  function profileValue(label: string) {
+    return screen.getByText(label).nextElementSibling;
+  }
+
+  it.each([
+    [{ firstName: " Sam ", lastName: " Test " }, "Sam Test"],
+    [{ firstName: "Sam", lastName: " " }, "Sam"],
+    [{ firstName: null, lastName: "Test" }, "Test"],
+    [{}, "—"],
+  ])("falls back to form answers %j for the name when no display name exists", (answers, expected) => {
+    dashboardQueryResult.current = {
+      profile: { displayName: "  ", verifiedEmail: "a@example.com" },
+      registration: { status: "draft", eligibilityStatus: "unreviewed", submittedAt: null, answers },
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Name")).toHaveTextContent(expected);
+  });
+
+  it("uses level of study when no graduation year is saved and dashes for missing school", () => {
+    dashboardQueryResult.current = {
+      profile: { displayName: null, verifiedEmail: "a@example.com" },
+      registration: {
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        submittedAt: null,
+        answers: { levelOfStudy: " Graduate University (Masters, Professional, Doctoral, etc) ", school: " " },
+      },
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Year of study")).toHaveTextContent(
+      "Graduate University (Masters, Professional, Doctoral, etc)",
+    );
+    expect(profileValue("School")).toHaveTextContent("—");
+  });
+
+  it("shows dashes and a start button for applicants with no registration", () => {
+    dashboardQueryResult.current = {
+      profile: { displayName: null, verifiedEmail: "a@example.com" },
+      registration: null,
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Name")).toHaveTextContent("—");
+    expect(profileValue("Year of study")).toHaveTextContent("—");
+    expect(screen.getByRole("link", { name: "Start application" })).toHaveAttribute("href", "/register");
   });
 
   it("shows an error when the dashboard cannot be loaded", () => {

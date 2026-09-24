@@ -1,10 +1,15 @@
-import type {
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
+import {
+  memo,
+  useCallback,
+  useId,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+  type KeyboardEvent,
 } from "react";
 import { Children, isValidElement, useEffect, useId, useRef, useState } from "react";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
+import { useDropdownDismiss } from "./useDropdownDismiss";
 
 const OPTION_ROW_HEIGHT = 40;
 const LISTBOX_VISIBLE_ROWS = 6;
@@ -40,6 +45,7 @@ type TextFieldProps = {
   label: string;
   required?: boolean;
   error?: string | undefined;
+  helperText?: string;
 } & InputHTMLAttributes<HTMLInputElement>;
 
 export function TextField({
@@ -47,10 +53,15 @@ export function TextField({
   label,
   required,
   error,
+  helperText,
   className,
   ...inputProps
 }: TextFieldProps) {
   const errorId = `${id}-error`;
+  const helperId = `${id}-helper`;
+  const descriptionIds = [helperText ? helperId : null, error ? errorId : null]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <label className={labelClass} htmlFor={id}>
@@ -62,10 +73,15 @@ export function TextField({
         id={id}
         required={required}
         aria-invalid={!!error}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={descriptionIds || undefined}
         className={className ?? fieldClass(error)}
         {...inputProps}
       />
+      {helperText ? (
+        <p id={helperId} className="text-xs font-normal text-(--ocean)">
+          {helperText}
+        </p>
+      ) : null}
       <FieldError id={errorId} message={error} />
     </label>
   );
@@ -78,19 +94,23 @@ type SelectFieldProps = {
   error?: string | undefined;
   helperText?: string;
   placeholder?: string;
-  children: ReactNode;
-} & SelectHTMLAttributes<HTMLSelectElement>;
+  value: string;
+  options: readonly string[];
+  disabled?: boolean;
+  onChange: (value: string) => void;
+};
 
-export function SelectField({
+export const SelectField = memo(function SelectField({
   id,
   label,
   required,
   error,
   helperText,
   placeholder = "Select one",
-  children,
-  className,
-  ...selectProps
+  value,
+  options,
+  disabled,
+  onChange,
 }: SelectFieldProps) {
   const [open, setOpen] = useState(false);
   const [firstVisibleOption, setFirstVisibleOption] = useState(0);
@@ -160,6 +180,53 @@ export function SelectField({
       });
     }
   }, [open, selectedOptionIndex]);
+
+  const selectedIndex = value ? options.indexOf(value) : -1;
+  const activeOptionIndex =
+    options.length === 0 ? 0 : Math.min(activeIndex, options.length - 1);
+
+  const openList = useCallback(() => {
+    if (disabled) return;
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    setOpen(true);
+  }, [disabled, selectedIndex]);
+
+  const selectOption = useCallback(
+    (option: string) => {
+      onChange(option);
+      closeList();
+    },
+    [closeList, onChange],
+  );
+
+  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+
+    if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      openList();
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((index) => Math.min(index + 1, options.length - 1));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((index) => Math.max(index - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter" && open && options[activeOptionIndex]) {
+      event.preventDefault();
+      selectOption(options[activeOptionIndex]!);
+    }
+  };
+
+  const displayValue = value || placeholder;
 
   return (
     <div className={labelClass}>
@@ -264,4 +331,4 @@ export function SelectField({
       <FieldError id={errorId} message={error} />
     </div>
   );
-}
+});
