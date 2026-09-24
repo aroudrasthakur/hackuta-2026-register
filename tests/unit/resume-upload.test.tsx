@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MAX_RESUME_BYTES, RESUME_SIZE_ERROR_MESSAGE } from "../../shared/registration/resume";
+import {
+  MAX_RESUME_BYTES,
+  RESUME_EMPTY_ERROR_MESSAGE,
+  RESUME_SIZE_ERROR_MESSAGE,
+} from "../../shared/registration/resume";
 import { ResumeUpload } from "../../src/pages/Register/components/ResumeUpload";
 
 describe("ResumeUpload", () => {
@@ -294,7 +298,7 @@ describe("ResumeUpload", () => {
     const file = new File([], "empty.pdf", { type: "application/pdf" });
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(mockOnError).toHaveBeenCalledWith("Your PDF is empty. Please select another file.");
+    expect(mockOnError).toHaveBeenCalledWith(RESUME_EMPTY_ERROR_MESSAGE);
   });
 
   it("rejects oversized PDF files", () => {

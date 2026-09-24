@@ -78,6 +78,7 @@ describe("submit error mapping", () => {
   it.each([
     "The PDF is too large.",
     "The PDF must be between 1 byte and 2 MB.",
+    "The PDF must be between 1 byte and 5 MB.",
   ])("normalizes legacy oversized upload messages: %s", (legacyMessage) => {
     expect(mapUploadError(new Error(legacyMessage))).toBe(RESUME_SIZE_ERROR_MESSAGE);
     expect(mapResumeUploadHttpError(413, { error: legacyMessage })).toBe(

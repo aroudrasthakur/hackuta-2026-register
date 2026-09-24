@@ -8,7 +8,9 @@ import { formToDraftPatch } from "../../shared/registration/draftPatch";
 import { validRegistrationPayload } from "../fixtures/validRegistrationForm";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import {
+  RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_FILENAME_HEADER,
+  RESUME_SIZE_ERROR_MESSAGE,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../../shared/registration/resume";
 
@@ -368,17 +370,21 @@ describe("resume HTTP validation and lifecycle", () => {
     });
     expect(emptyResult.status).toBe(413);
     expect((await emptyResult.json() as { error: string }).error).toBe(
-      "Your PDF is empty. Please select another file.",
+      RESUME_EMPTY_ERROR_MESSAGE,
     );
 
     const oversizedLength = 2 * 1024 * 1024 + 1;
-    expect((await t.fetch("/resume-upload", {
+    const oversizedResult = await t.fetch("/resume-upload", {
       method: "POST",
       headers: buildUploadHeaders(new Uint8Array(1), {
         [RESUME_TEST_CONTENT_LENGTH_HEADER]: String(oversizedLength),
       }),
       body: new Uint8Array(1),
-    })).status).toBe(413);
+    });
+    expect(oversizedResult.status).toBe(413);
+    expect((await oversizedResult.json() as { error: string }).error).toBe(
+      RESUME_SIZE_ERROR_MESSAGE,
+    );
   });
 
   it("rejects uploads without Content-Length before reading the body", async () => {

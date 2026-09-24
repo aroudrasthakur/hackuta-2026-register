@@ -51,6 +51,7 @@ const UPLOAD_SERVER_MESSAGE_ALIASES: Record<string, string> = {
   "Please upload a PDF.": "Please select a PDF file.",
   "The PDF is too large.": RESUME_SIZE_ERROR_MESSAGE,
   "The PDF must be between 1 byte and 2 MB.": RESUME_SIZE_ERROR_MESSAGE,
+  "The PDF must be between 1 byte and 5 MB.": RESUME_SIZE_ERROR_MESSAGE,
   "The PDF is empty.": RESUME_EMPTY_ERROR_MESSAGE,
   "The PDF is empty. Please select another file.": RESUME_EMPTY_ERROR_MESSAGE,
 };
