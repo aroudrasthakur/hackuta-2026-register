@@ -650,14 +650,7 @@ function ApplicationFormContent({
                 onChange={(file) => {
                   void (async () => {
                     await discardPendingResume();
-                    updateField("resume", file);
-                    if (!file) {
-                      setErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.resume;
-                        return next;
-                      });
-                    }
+                    setForm((prev) => ({ ...prev, resume: file }));
                   })();
                 }}
                 onError={(error) => {

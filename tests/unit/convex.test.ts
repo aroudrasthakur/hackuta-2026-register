@@ -170,15 +170,15 @@ describe("convex registrations", () => {
   });
 
   it.each([
-    ["application/pdf", ""],
-    ["text/plain", "not a pdf"],
-    ["application/pdf", "x".repeat(2 * 1024 * 1024 + 1)],
-  ])("rejects invalid stored file metadata (%s)", async (type, contents) => {
+    ["application/pdf", "", "valid PDF resume"],
+    ["text/plain", "not a pdf", "valid PDF resume"],
+    ["application/pdf", "x".repeat(2 * 1024 * 1024 + 1), "2 MB limit"],
+  ])("rejects invalid stored file metadata (%s)", async (type, contents, expectedMessage) => {
     const t = await authTest();
     const storageId = await storeFile(t, contents, type);
     await expect(t.mutation("registrations:register", {
       data: { ...validRegistrationPayload(), resumeStorageId: storageId },
-    })).rejects.toThrow("valid PDF resume");
+    })).rejects.toThrow(expectedMessage);
   });
 
   it("rate limits by an API-derived client key, independent of applicant PII", async () => {
