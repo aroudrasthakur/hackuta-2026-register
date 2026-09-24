@@ -16,6 +16,7 @@ import {
   type ApplicantAnswerFieldKey,
   type DraftPatchPayload,
 } from "./applicantFields";
+import { normalizeEmail } from "../lib/normalizeEmail";
 import type { ApplicationFormData } from "./types";
 
 function parseOptionalInt(raw: string): number | null {
@@ -41,7 +42,10 @@ export function formToDraftPatch(form: ApplicationFormData): DraftPatchPayload {
   const patch = {} as DraftPatchPayload;
 
   for (const key of TRIMMED_STRING_FIELDS) {
-    patch[key] = form[key].trim();
+    patch[key] =
+      key === "studentEmail"
+        ? normalizeEmail(form[key]) ?? ""
+        : form[key].trim();
   }
 
   for (const key of PLAIN_STRING_FIELDS) {

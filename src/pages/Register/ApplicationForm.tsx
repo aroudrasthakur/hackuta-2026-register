@@ -365,6 +365,20 @@ function ApplicationFormContent({
               error={errors.otherSchool}
             />
           ) : null}
+          <TextField
+            id="studentEmail"
+            label="Student email (optional)"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            spellCheck={false}
+            autoCapitalize="none"
+            value={form.studentEmail}
+            onChange={(e) => updateField("studentEmail", e.target.value)}
+            maxLength={FIELD_LIMITS.email}
+            helperText="If you signed up with a personal email, you can provide your school email here."
+            error={errors.studentEmail}
+          />
           <SelectField
             id="countryOfResidence"
             label="Country of residence"
@@ -383,7 +397,6 @@ function ApplicationFormContent({
             id="stateOfResidence"
             label="State of residence"
             required
-            helperText="Select the state or territory where you currently live."
             value={form.stateOfResidence}
             options={STATES_OF_RESIDENCE}
             onChange={(value) =>

@@ -50,6 +50,15 @@ describe("formToDraftPatch", () => {
     expect(isClearedDraftValue(patch.otherDietaryRestrictions)).toBe(true);
   });
 
+  it("normalizes student email in draft patches", () => {
+    const patch = formToDraftPatch({
+      ...INITIAL_FORM,
+      studentEmail: "  Student@Mail.UTA.edu  ",
+    });
+
+    expect(patch.studentEmail).toBe("student@mail.uta.edu");
+  });
+
   it("trims other dietary restrictions in draft patches", () => {
     const patch = formToDraftPatch({
       ...INITIAL_FORM,
@@ -145,6 +154,16 @@ describe("applicationToDraftForm", () => {
       otherDietaryRestrictions: "No shellfish",
     });
     expect(restored.otherDietaryRestrictions).toBe("No shellfish");
+  });
+
+  it("defaults missing student email on older applications", () => {
+    const restored = applicationToDraftForm({ firstName: "Returning" });
+    expect(restored.studentEmail).toBe("");
+  });
+
+  it("restores stored student email", () => {
+    const restored = applicationToDraftForm({ studentEmail: "student@mail.utexas.edu" });
+    expect(restored.studentEmail).toBe("student@mail.utexas.edu");
   });
 });
 

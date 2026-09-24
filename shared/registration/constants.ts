@@ -150,6 +150,7 @@ export const HEAR_ABOUT_OTHER_OPTION = "Other" as const;
 export const FIELD_LIMITS = {
   name: 100,
   phone: 30,
+  email: 254,
   school: 200,
   major: 200,
   hearAbout: 200,

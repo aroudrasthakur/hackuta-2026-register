@@ -196,6 +196,43 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("No Pork")).not.toBeChecked();
   });
 
+  it("shows optional student email near the school field", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.getByLabelText(/Student email \(optional\)/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "If you signed up with a personal email, you can provide your school email here.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("autosaves and restores student email", async () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    vi.useFakeTimers();
+    const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.change(document.getElementById("studentEmail")!, {
+      target: { value: "student@mail.utexas.edu" },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    expect(draftApi.save).toHaveBeenCalledOnce();
+    const { patch } = draftApi.save.mock.calls[0]![0];
+    expect(patch.studentEmail).toBe("student@mail.utexas.edu");
+
+    view.unmount();
+    draftApi.result = { status: "draft", draft: patch };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(document.getElementById("studentEmail")).toHaveValue("student@mail.utexas.edu");
+  });
+
+  it("shows a student email validation error for malformed addresses", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.change(document.getElementById("studentEmail")!, {
+      target: { value: "not-an-email" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+    expect(screen.getByText("Enter a valid student email address.")).toBeInTheDocument();
+  });
+
   it("shows optional other dietary restrictions below the checkboxes", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(
@@ -255,13 +292,14 @@ describe("ApplicationForm", () => {
     expect(screen.getByText("applicant@example.com")).toBeInTheDocument();
   });
 
-  it("starts new answers empty and associates residence help and errors", () => {
+  it("starts new answers empty and associates residence errors", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     const state = screen.getByLabelText(/State of residence/);
     expect(state).toHaveTextContent("Select one");
-    expect(state).toHaveAttribute("aria-describedby", "stateOfResidence-helper");
-    expect(screen.getByText("Select the state or territory where you currently live."))
-      .toBeInTheDocument();
+    expect(state).not.toHaveAttribute("aria-describedby");
+    expect(
+      screen.queryByText("Select the state or territory where you currently live."),
+    ).not.toBeInTheDocument();
     const international = within(
       screen.getByRole("group", { name: /Are you an international student/ }),
     );
@@ -271,10 +309,7 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("No Pork")).not.toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
-    expect(state).toHaveAttribute(
-      "aria-describedby",
-      "stateOfResidence-helper stateOfResidence-error",
-    );
+    expect(state).toHaveAttribute("aria-describedby", "stateOfResidence-error");
     expect(screen.getByText("Please select your state or territory of residence."))
       .toBeInTheDocument();
     expect(screen.getByText("Please let us know if you are an international student."))

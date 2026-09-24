@@ -999,6 +999,46 @@ describe("convex applicant auth flows", () => {
     });
   });
 
+  it("reloads student email from the saved draft query", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...INITIAL_FORM,
+        studentEmail: "student@mail.utexas.edu",
+      }),
+    });
+
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: { studentEmail: "student@mail.utexas.edu" },
+    });
+  });
+
+  it("persists student email through submission and dashboard answers", async () => {
+    const t = await authTest();
+    const studentEmail = "student@mail.utexas.edu";
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        studentEmail,
+      }),
+    });
+    await t.mutation("registrations:submitRegistration", {
+      data: {
+        ...validRegistrationPayload(),
+        studentEmail,
+      },
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.studentEmail).toBe(studentEmail);
+
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
+      registration: { answers: Record<string, unknown> };
+    };
+    expect(dashboard.registration.answers.studentEmail).toBe(studentEmail);
+    await drainScheduledFunctions(t);
+  });
+
   it("reloads other dietary restrictions from the saved draft query", async () => {
     const t = await authTest();
     await t.mutation("applications:saveApplicationDraft", {
