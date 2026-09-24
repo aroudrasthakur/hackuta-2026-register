@@ -12,12 +12,12 @@ import {
 import { getHackathonName } from "./lib/eventConfig";
 import { requireVerifiedAuthUser } from "./lib/auth";
 import {
-  ensureDraftProfile,
-  findProfileByResume,
-  getProfileByUser,
-  profileFormWasSubmitted,
-  syncAuthUserNameFromProfile,
-} from "./lib/profiles";
+  applicationFormWasSubmitted,
+  ensureDraftApplication,
+  findApplicationByResume,
+  getApplicationByUser,
+  syncAuthUserNameFromApplication,
+} from "./lib/applications";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import {
   findUploadSessionByToken,
@@ -45,10 +45,10 @@ async function upsertRegistration(
 
   const { resumeStorageId: rawStorageId, ...fields } = data;
 
-  const existing = await getProfileByUser(ctx, authUser._id);
-  const draftProfile = existing ?? (await ensureDraftProfile(ctx));
+  const existing = await getApplicationByUser(ctx, authUser._id);
+  const draftApplication = existing ?? (await ensureDraftApplication(ctx));
 
-  if (profileFormWasSubmitted(draftProfile)) {
+  if (applicationFormWasSubmitted(draftApplication)) {
     throw new Error("You have already submitted an application.");
   }
 
@@ -62,14 +62,14 @@ async function upsertRegistration(
       ? await ctx.db.system.get("_storage", resumeStorageId)
       : null;
     const attachment = resumeStorageId
-      ? await findProfileByResume(ctx, resumeStorageId)
+      ? await findApplicationByResume(ctx, resumeStorageId)
       : null;
 
-    if (attachment && attachment._id !== draftProfile._id) {
+    if (attachment && attachment._id !== draftApplication._id) {
       throw new Error("This resume is already attached to another application.");
     }
 
-    const retainingOwnResume = attachment?._id === draftProfile._id;
+    const retainingOwnResume = attachment?._id === draftApplication._id;
     const session = resumeUploadToken
       ? await findUploadSessionByToken(ctx, resumeUploadToken)
       : null;
@@ -97,13 +97,13 @@ async function upsertRegistration(
   }
 
   const submittedAt = Date.now();
-  const previousResume = draftProfile.resumeStorageId;
+  const previousResume = draftApplication.resumeStorageId;
 
-  await ctx.db.patch(draftProfile._id, {
+  await ctx.db.patch(draftApplication._id, {
     ...fields,
-    otherSchool: draftProfile.otherSchool,
-    otherMajor: draftProfile.otherMajor,
-    otherHearAbout: draftProfile.otherHearAbout,
+    otherSchool: draftApplication.otherSchool,
+    otherMajor: draftApplication.otherMajor,
+    otherHearAbout: draftApplication.otherHearAbout,
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
     status: "submitted",
@@ -114,7 +114,7 @@ async function upsertRegistration(
     resumeStorageId: resumeStorageId ?? undefined,
   });
 
-  await syncAuthUserNameFromProfile(ctx, authUser._id, data);
+  await syncAuthUserNameFromApplication(ctx, authUser._id, data);
 
   if (previousResume && previousResume !== resumeStorageId) {
     await ctx.storage.delete(previousResume);
@@ -129,7 +129,7 @@ async function upsertRegistration(
   });
 
   return {
-    registrationId: draftProfile._id,
+    registrationId: draftApplication._id,
     isNew: !existing,
     ok: true as const,
   };

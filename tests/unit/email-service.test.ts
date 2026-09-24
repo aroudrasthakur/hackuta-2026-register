@@ -25,6 +25,15 @@ describe("buildApplicationConfirmationEmailContent", () => {
     expect(content.html).toContain("https://hackuta.com");
   });
 
+  it("falls back to neutral copy when the name or hackathon name is blank", () => {
+    const content = buildApplicationConfirmationEmailContent({
+      applicantName: "   ",
+      submittedAt: Date.parse("2026-09-21T22:06:00.000Z"),
+      hackathonName: " ",
+    });
+    expect(content.text).toContain("Hi there,");
+    expect(content.subject).toBe("HackUTA application received");
+  });
 });
 
 describe("buildOtpEmailContent", () => {
@@ -52,6 +61,10 @@ describe("smtp config", () => {
   });
 
   it("requires SMTP environment variables", async () => {
+    vi.unstubAllEnvs();
+    for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM"]) {
+      delete process.env[key];
+    }
     vi.resetModules();
     const { getSmtpConfig } = await import("../../convex/email/smtp");
     expect(() => getSmtpConfig()).toThrow("Email is not configured.");

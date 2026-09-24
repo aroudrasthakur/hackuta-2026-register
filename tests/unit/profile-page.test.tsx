@@ -220,6 +220,67 @@ describe("ProfilePage (Convex mode)", () => {
     );
   });
 
+  function renderConvexProfile() {
+    return render(
+      <MemoryRouter initialEntries={["/profile"]}>
+        <MockAuthProvider>
+          <SessionAuthProvider>
+            <ProfilePage />
+          </SessionAuthProvider>
+        </MockAuthProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  function profileValue(label: string) {
+    return screen.getByText(label).nextElementSibling;
+  }
+
+  it.each([
+    [{ firstName: " Sam ", lastName: " Test " }, "Sam Test"],
+    [{ firstName: "Sam", lastName: " " }, "Sam"],
+    [{ firstName: null, lastName: "Test" }, "Test"],
+    [{}, "—"],
+  ])("falls back to form answers %j for the name when no display name exists", (answers, expected) => {
+    dashboardQueryResult.current = {
+      profile: { displayName: "  ", verifiedEmail: "a@example.com" },
+      registration: { status: "draft", eligibilityStatus: "unreviewed", submittedAt: null, answers },
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Name")).toHaveTextContent(expected);
+  });
+
+  it("uses level of study when no graduation year is saved and dashes for missing school", () => {
+    dashboardQueryResult.current = {
+      profile: { displayName: null, verifiedEmail: "a@example.com" },
+      registration: {
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        submittedAt: null,
+        answers: { levelOfStudy: " Graduate University (Masters, Professional, Doctoral, etc) ", school: " " },
+      },
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Year of study")).toHaveTextContent(
+      "Graduate University (Masters, Professional, Doctoral, etc)",
+    );
+    expect(profileValue("School")).toHaveTextContent("—");
+  });
+
+  it("shows dashes and a start button for applicants with no registration", () => {
+    dashboardQueryResult.current = {
+      profile: { displayName: null, verifiedEmail: "a@example.com" },
+      registration: null,
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Name")).toHaveTextContent("—");
+    expect(profileValue("Year of study")).toHaveTextContent("—");
+    expect(screen.getByRole("link", { name: "Start application" })).toHaveAttribute("href", "/register");
+  });
+
   it("shows an error when the dashboard cannot be loaded", () => {
     dashboardQueryResult.current = null;
 

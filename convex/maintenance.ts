@@ -5,7 +5,7 @@ import type schema from "./schema";
 type MutationCtx = GenericMutationCtx<DataModelFromSchemaDefinition<typeof schema>>;
 
 type ResettableTable =
-  | "profiles"
+  | "applications"
   | "resumeUploadSessions"
   | "rateLimits"
   | "authRefreshTokens"
@@ -51,7 +51,7 @@ export const resetAllData = internalMutation({
   handler: async (ctx) => {
     await deleteAllStorage(ctx);
 
-    await deleteAllFromTable(ctx, "profiles");
+    await deleteAllFromTable(ctx, "applications");
     await deleteAllFromTable(ctx, "resumeUploadSessions");
     await deleteAllFromTable(ctx, "rateLimits");
 

@@ -12,25 +12,27 @@ import type schema from "../schema";
 export { getAuthUser, requireAuthUser };
 
 type DataModel = DataModelFromSchemaDefinition<typeof schema>;
-type ProfileDoc = DocumentByName<DataModel, "profiles">;
+type ApplicationDoc = DocumentByName<DataModel, "applications">;
 type MutationCtx = GenericMutationCtx<DataModel>;
 
-export async function getProfileByUser(
+export async function getApplicationByUser(
   ctx: AuthCtx,
   authUserId: GenericId<"users">,
 ) {
   return ctx.db
-    .query("profiles")
+    .query("applications")
     .withIndex("by_auth_user", (q) => q.eq("authUserId", authUserId))
     .first();
 }
 
 /** Whether the applicant completed a successful registration form submit. */
-export function profileFormWasSubmitted(profile: Pick<ProfileDoc, "formSubmitted" | "submittedAt">) {
-  return profile.formSubmitted === true || profile.submittedAt != null;
+export function applicationFormWasSubmitted(
+  application: Pick<ApplicationDoc, "formSubmitted" | "submittedAt">,
+) {
+  return application.formSubmitted === true || application.submittedAt != null;
 }
 
-export async function ensureDraftProfile(ctx: MutationCtx) {
+export async function ensureDraftApplication(ctx: MutationCtx) {
   await ensureEventConfig(ctx);
   const authUser = await requireAuthUser(ctx);
   const email = normalizeEmail(authUser.email);
@@ -38,7 +40,7 @@ export async function ensureDraftProfile(ctx: MutationCtx) {
     throw new Error("A verified email is required.");
   }
 
-  const existing = await getProfileByUser(ctx, authUser._id);
+  const existing = await getApplicationByUser(ctx, authUser._id);
   if (existing) {
     const emailVerificationTime =
       authUser.emailVerificationTime ?? existing.emailVerificationTime;
@@ -53,7 +55,7 @@ export async function ensureDraftProfile(ctx: MutationCtx) {
   }
 
   const now = Date.now();
-  const profileId = await ctx.db.insert("profiles", {
+  const applicationId = await ctx.db.insert("applications", {
     authUserId: authUser._id,
     email,
     emailVerificationTime: authUser.emailVerificationTime,
@@ -63,24 +65,24 @@ export async function ensureDraftProfile(ctx: MutationCtx) {
     createdAt: now,
     updatedAt: now,
   });
-  const profile = await ctx.db.get(profileId);
-  if (!profile) {
-    throw new Error("Profile could not be created.");
+  const application = await ctx.db.get(applicationId);
+  if (!application) {
+    throw new Error("Application could not be created.");
   }
-  return profile;
+  return application;
 }
 
-export async function findProfileByResume(
+export async function findApplicationByResume(
   ctx: AuthCtx,
   storageId: GenericId<"_storage">,
 ) {
   return ctx.db
-    .query("profiles")
+    .query("applications")
     .withIndex("by_resume", (q) => q.eq("resumeStorageId", storageId))
     .first();
 }
 
-export function formatProfileFullName(fields: {
+export function formatApplicantFullName(fields: {
   firstName?: string | null;
   lastName?: string | null;
 }) {
@@ -91,12 +93,12 @@ export function formatProfileFullName(fields: {
 }
 
 /** Keep auth `users.name` in sync with the application form display name. */
-export async function syncAuthUserNameFromProfile(
+export async function syncAuthUserNameFromApplication(
   ctx: MutationCtx,
   authUserId: GenericId<"users">,
   fields: { firstName?: string | null; lastName?: string | null },
 ) {
-  const name = formatProfileFullName(fields);
+  const name = formatApplicantFullName(fields);
   const user = await ctx.db.get(authUserId);
   if (!user) return;
 
@@ -116,34 +118,34 @@ export async function syncAuthUserNameFromProfile(
   }
 }
 
-export function projectApplicantAnswers(profile: ProfileDoc) {
+export function projectApplicantAnswers(application: ApplicationDoc) {
   return {
-    firstName: profile.firstName,
-    lastName: profile.lastName,
-    phone: profile.phone,
-    age: profile.age,
-    school: profile.school,
-    countryOfResidence: profile.countryOfResidence,
-    stateOfResidence: profile.stateOfResidence,
-    levelOfStudy: profile.levelOfStudy,
-    major: profile.major,
-    graduationYear: profile.graduationYear,
-    gender: profile.gender,
-    raceEthnicity: profile.raceEthnicity,
-    otherRaceEthnicity: profile.otherRaceEthnicity,
-    dietaryRestrictions: profile.dietaryRestrictions,
-    otherDietary: profile.otherDietary,
-    tshirtSize: profile.tshirtSize,
-    firstHackathon: profile.firstHackathon,
-    hearAbout: profile.hearAbout,
-    linkedin: profile.linkedin,
-    github: profile.github,
-    portfolio: profile.portfolio,
-    devpost: profile.devpost,
-    accessibilityNeeds: profile.accessibilityNeeds,
-    emergencyContactName: profile.emergencyContactName,
-    emergencyContactPhone: profile.emergencyContactPhone,
-    mlhCommunicationsConsent: profile.mlhCommunicationsConsent,
+    firstName: application.firstName,
+    lastName: application.lastName,
+    phone: application.phone,
+    age: application.age,
+    school: application.school,
+    countryOfResidence: application.countryOfResidence,
+    stateOfResidence: application.stateOfResidence,
+    levelOfStudy: application.levelOfStudy,
+    major: application.major,
+    graduationYear: application.graduationYear,
+    gender: application.gender,
+    raceEthnicity: application.raceEthnicity,
+    otherRaceEthnicity: application.otherRaceEthnicity,
+    dietaryRestrictions: application.dietaryRestrictions,
+    otherDietary: application.otherDietary,
+    otherDietaryRestrictions: application.otherDietaryRestrictions,
+    tshirtSize: application.tshirtSize,
+    firstHackathon: application.firstHackathon,
+    hearAbout: application.hearAbout,
+    linkedin: application.linkedin,
+    github: application.github,
+    portfolio: application.portfolio,
+    devpost: application.devpost,
+    accessibilityNeeds: application.accessibilityNeeds,
+    emergencyContactName: application.emergencyContactName,
+    emergencyContactPhone: application.emergencyContactPhone,
+    mlhCommunicationsConsent: application.mlhCommunicationsConsent,
   };
 }
-

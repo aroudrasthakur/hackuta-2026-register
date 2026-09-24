@@ -8,7 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import { formToDraftPatch } from "../../../shared/registration/draftPatch";
-import { getMyProfileDraftRef, saveProfileDraftRef } from "../../convex/api";
+import { getMyApplicationDraftRef, saveApplicationDraftRef } from "../../convex/api";
 import { isMockApiEnabled } from "../../constants/mockAuth";
 import { getConvexClient } from "../../convex/client";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
@@ -146,6 +146,7 @@ function ApplicationFormContent({
     return () => window.clearTimeout(timer);
   }, [
     draftHydrated,
+    form,
     hasConvexClient,
     routing.isAuthenticated,
     saveDraft,
@@ -563,7 +564,9 @@ function ApplicationFormContent({
         </h3>
 
         <fieldset
-          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.otherDietary)}`}
+          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(
+            !!errors.otherDietary || !!errors.otherDietaryRestrictions,
+          )}`}
         >
           <legend className={fieldsetLegendClass}>
             Dietary restrictions (select all that apply)
@@ -584,6 +587,15 @@ function ApplicationFormContent({
               />
             ))}
           </div>
+          <TextField
+            id="otherDietaryRestrictions"
+            label="Other dietary restrictions (optional)"
+            helperText="Please describe any dietary restrictions not listed above."
+            value={form.otherDietaryRestrictions}
+            onChange={(e) => updateField("otherDietaryRestrictions", e.target.value)}
+            maxLength={FIELD_LIMITS.otherDietaryRestrictions}
+            error={errors.otherDietaryRestrictions}
+          />
           {form.dietaryRestrictions.includes("Allergies") ? (
             <>
               <input
@@ -605,62 +617,6 @@ function ApplicationFormContent({
             </>
           ) : null}
         </fieldset>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <fieldset
-            className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.eatsBeef)}`}
-            aria-describedby={errors.eatsBeef ? "eatsBeef-error" : undefined}
-          >
-            <legend className={fieldsetLegendClass}>
-              Do you eat beef?
-              <span aria-hidden="true"> *</span>
-            </legend>
-            <div className={inlineRadioGroupClass}>
-              <CustomRadio
-                id="eatsBeef-yes"
-                name="eatsBeef"
-                label="Yes"
-                checked={form.eatsBeef === true}
-                onChange={() => updateField("eatsBeef", true)}
-              />
-              <CustomRadio
-                id="eatsBeef-no"
-                name="eatsBeef"
-                label="No"
-                checked={form.eatsBeef === false}
-                onChange={() => updateField("eatsBeef", false)}
-              />
-            </div>
-            <FieldError id="eatsBeef-error" message={errors.eatsBeef} />
-          </fieldset>
-
-          <fieldset
-            className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.eatsPork)}`}
-            aria-describedby={errors.eatsPork ? "eatsPork-error" : undefined}
-          >
-            <legend className={fieldsetLegendClass}>
-              Do you eat pork?
-              <span aria-hidden="true"> *</span>
-            </legend>
-            <div className={inlineRadioGroupClass}>
-              <CustomRadio
-                id="eatsPork-yes"
-                name="eatsPork"
-                label="Yes"
-                checked={form.eatsPork === true}
-                onChange={() => updateField("eatsPork", true)}
-              />
-              <CustomRadio
-                id="eatsPork-no"
-                name="eatsPork"
-                label="No"
-                checked={form.eatsPork === false}
-                onChange={() => updateField("eatsPork", false)}
-              />
-            </div>
-            <FieldError id="eatsPork-error" message={errors.eatsPork} />
-          </fieldset>
-        </div>
 
         <SelectField
           id="tshirtSize"
@@ -1032,10 +988,10 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
   const client = getConvexClient();
   const routing = useApplicantRouting();
   const savedDraft = useQuery(
-    getMyProfileDraftRef,
+    getMyApplicationDraftRef,
     client && routing.isAuthenticated ? {} : "skip",
   );
-  const saveDraft = useMutation(saveProfileDraftRef);
+  const saveDraft = useMutation(saveApplicationDraftRef);
   const isDraftLoading = savedDraft === undefined;
   const initialForm =
     !isDraftLoading && savedDraft?.draft

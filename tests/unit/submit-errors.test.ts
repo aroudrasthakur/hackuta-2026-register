@@ -10,7 +10,11 @@ import {
   RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../../shared/registration/resume";
-import { RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE } from "../../shared/registration/submitErrors";
+import {
+  RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE,
+  RESUME_UPLOAD_ERROR_MESSAGE,
+  SIGN_IN_REQUIRED_MESSAGE,
+} from "../../shared/registration/submitErrors";
 
 describe("submit error mapping", () => {
   it("passes through known server messages in production mode", () => {
@@ -102,6 +106,59 @@ describe("submit error mapping", () => {
     expect(mapConvexErrorToUserMessage(new Error(validationMessage))).not.toBe(
       RESUME_SIZE_ERROR_MESSAGE,
     );
+  });
+
+  it.each([
+    ["Authentication required", SIGN_IN_REQUIRED_MESSAGE],
+    ["[CONVEX M(registrations:submit)] Authentication required.", SIGN_IN_REQUIRED_MESSAGE],
+    ["Please verify your email first", "Please verify your email before submitting your application."],
+    ["A verified email is required", "Please verify your email before submitting your application."],
+    ["User already submitted", "You have already submitted an application."],
+    ["Storage id already attached elsewhere", "This resume is already attached to another application."],
+    ["Uploaded resume is too large for storage", RESUME_SIZE_ERROR_MESSAGE],
+    ["The PDF has too many pages.", "The PDF has too many pages."],
+    [
+      "Too many resume upload attempts. Please wait a few minutes and try again.",
+      "Too many resume upload attempts. Please wait a few minutes and try again.",
+    ],
+    [SIGN_IN_REQUIRED_MESSAGE, SIGN_IN_REQUIRED_MESSAGE],
+  ])("maps submission failure %j to safe copy", (message, expected) => {
+    expect(mapConvexErrorToUserMessage(new Error(message))).toBe(expected);
+  });
+
+  it("recognises legacy 5 MB wording only when it refers to a PDF or resume", () => {
+    expect(mapUploadError(new Error("Resume must be under 5 MB"))).toBe(RESUME_SIZE_ERROR_MESSAGE);
+    expect(mapUploadError(new Error("Video must be under 5 MB"))).toBe(RESUME_UPLOAD_ERROR_MESSAGE);
+  });
+
+  it("maps upload aliases and non-Error values", () => {
+    expect(mapUploadError(new Error("The resume could not be stored."))).toBe(
+      RESUME_UPLOAD_ERROR_MESSAGE,
+    );
+    expect(mapUploadError(new Error("Please upload a PDF."))).toBe("Please select a PDF file.");
+    expect(mapUploadError("network down")).toBe(RESUME_UPLOAD_ERROR_MESSAGE);
+    expect(mapUploadError(new Error(""))).toBe(RESUME_UPLOAD_ERROR_MESSAGE);
+  });
+
+  it.each([
+    [400, "We couldn't upload your resume. Please try again."],
+    [411, "We couldn't upload your resume. Please try again."],
+  ])("maps HTTP %i with no usable body", (status, expected) => {
+    expect(mapResumeUploadHttpError(status, null)).toBe(expected);
+    expect(mapResumeUploadHttpError(status, "text body")).toBe(expected);
+    expect(mapResumeUploadHttpError(status, { error: 42 })).toBe(expected);
+    expect(mapResumeUploadHttpError(status, { message: "nope" })).toBe(expected);
+  });
+
+  it("falls back to the status mapping when the server error is unrecognised", () => {
+    expect(mapResumeUploadHttpError(415, { error: "Some internal stack trace" })).toBe(
+      "Please select a PDF file.",
+    );
+  });
+
+  it("classifies resume field messages", () => {
+    expect(isResumeFieldMessage(RESUME_SIZE_ERROR_MESSAGE)).toBe(true);
+    expect(isResumeFieldMessage("You have already submitted an application.")).toBe(false);
   });
 
   it("ignores malformed error bodies", () => {

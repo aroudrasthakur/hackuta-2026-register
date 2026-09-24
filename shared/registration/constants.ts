@@ -48,6 +48,8 @@ export const DIETARY_OPTIONS = [
   "Allergies",
   "Kosher",
   "Halal",
+  "No Beef",
+  "No Pork",
 ] as const;
 
 export const STATES_OF_RESIDENCE = [
@@ -154,6 +156,7 @@ export const FIELD_LIMITS = {
   url: 2048,
   accessibilityNeeds: 2000,
   otherDietary: 500,
+  otherDietaryRestrictions: 500,
   otherMajor: 200,
   otherSchool: 200,
   otherHearAbout: 200,

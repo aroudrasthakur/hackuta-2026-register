@@ -8,21 +8,22 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 
 | Path | Summary |
 | --- | --- |
-| [schema.ts](schema.ts) | Tables: profiles, eventConfig, rateLimits, resume uploads, auth |
+| [schema.ts](schema.ts) | Tables: applications, eventConfig, rateLimits, resume uploads, auth |
 | [auth.ts](auth.ts) | Convex Auth — password, sign-up OTP, and password-reset OTP |
 | [passwordReset.ts](passwordReset.ts) | Post-reset session invalidation mutation |
 | [auth.config.ts](auth.config.ts) | Auth provider configuration |
 | [http.ts](http.ts) | HTTP router — auth routes + POST /resume-upload |
-| [applicant.ts](applicant.ts) | Profile bootstrap and routing state |
+| [applicant.ts](applicant.ts) | Application bootstrap and routing state |
 | [eventConfig.ts](eventConfig.ts) | Server-side hackathon display name |
-| [profiles.ts](profiles.ts) | Draft load/save and applicant dashboard |
+| [applications.ts](applications.ts) | Draft load/save and applicant dashboard |
 | [registrations.ts](registrations.ts) | Application submission |
 | [resumeUploads.ts](resumeUploads.ts) | Upload rate limits, sessions, discard, scheduled cleanup |
 | [rateLimits.ts](rateLimits.ts) | Sign-up and password-reset OTP cooldowns; internal rate-limit mutations |
-| [profileFields.ts](profileFields.ts) | Convex validators built from shared field registry |
+| [applicationFields.ts](applicationFields.ts) | Convex validators built from shared field registry |
 | [resumeUploadSecurity.ts](resumeUploadSecurity.ts) | Resume upload origin allowlist |
 | [pdfValidation.ts](pdfValidation.ts) | PDF magic-byte validation for uploads |
 | [maintenance.ts](maintenance.ts) | Internal resetAllData (**destructive**) |
+| [migrations.ts](migrations.ts) | One-time data migrations |
 | [crons.ts](crons.ts) | Scheduled resume-session cleanup |
 | [lib/](lib/README.md) | Shared server helpers |
 | [email/](email/README.md) | SMTP + transactional email actions |
@@ -30,8 +31,8 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 ### Module boundaries
 
 - **auth.ts** — Configures HackutaPassword with sign-up OTP (`email-verification`) and password-reset OTP (`password-reset`) email providers.
-- **applicant.ts** — Ensures a draft profile exists after sign-in and exposes routing queries for guards. Does not load or save form field drafts.
-- **profiles.ts** — Draft autosave hydration, draft patches, and the profile-page dashboard query.
+- **applicant.ts** — Ensures a draft application exists after sign-in and exposes routing queries for guards. Does not load or save form field drafts.
+- **applications.ts** — Draft autosave hydration, draft patches, and the profile-page dashboard query.
 - **passwordReset.ts** — Clears all auth sessions after a successful password reset.
 
 ## Public API (client-facing)
@@ -39,10 +40,10 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | Function | Auth | Used by |
 | --- | --- | --- |
 | applicant:getApplicantRoutingState | Optional session | [useApplicantRouting](../src/hooks/useApplicantRouting.ts) |
-| applicant:ensureApplicantProfile | Required | [SignInPage](../src/pages/SignIn/SignInPage.tsx) |
-| profiles:getMyProfileDraft | Required | [ApplicationForm](../src/pages/Register/ApplicationForm.tsx) |
-| profiles:saveProfileDraft | Required | [ApplicationForm](../src/pages/Register/ApplicationForm.tsx) |
-| profiles:getMyApplicantDashboard | Required | [ProfilePage](../src/pages/Profile/ProfilePage.tsx) |
+| applicant:ensureApplicantApplication | Required | [SignInPage](../src/pages/SignIn/SignInPage.tsx) |
+| applications:getMyApplicationDraft | Required | [ApplicationForm](../src/pages/Register/ApplicationForm.tsx) |
+| applications:saveApplicationDraft | Required | [ApplicationForm](../src/pages/Register/ApplicationForm.tsx) |
+| applications:getMyApplicantDashboard | Required | [ProfilePage](../src/pages/Profile/ProfilePage.tsx) |
 | registrations:register | Required, verified email | [registerApi.ts](../src/pages/Register/registerApi.ts) |
 | registrations:submitRegistration | Required, verified email | Alias of register |
 | resumeUploads:discardUploadSession | Required; session must belong to caller | [registerApi.ts](../src/pages/Register/registerApi.ts) |
