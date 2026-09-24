@@ -4,7 +4,7 @@ import type {
   GenericMutationCtx,
   GenericQueryCtx,
 } from "convex/server";
-import type { Id } from "../_generated/dataModel";
+import type { GenericId } from "convex/values";
 import type schema from "../schema";
 import { normalizeEmail } from "./normalizeEmail";
 
@@ -15,7 +15,7 @@ export type AuthCtx = QueryCtx | MutationCtx;
 
 export async function requireAuthUserId(ctx: {
   auth: AuthCtx["auth"];
-}): Promise<Id<"users">> {
+}): Promise<GenericId<"users">> {
   const authUserId = await getAuthUserId(ctx as AuthCtx);
   if (!authUserId) {
     throw new Error("Authentication required.");
