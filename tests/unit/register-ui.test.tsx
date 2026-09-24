@@ -116,6 +116,10 @@ function fillValidApplicationForm() {
       .getByLabelText("No"),
   );
   fireEvent.click(
+    within(screen.getByRole("group", { name: /Do you eat pork/ }))
+      .getByLabelText("No"),
+  );
+  fireEvent.click(
     within(screen.getByRole("group", { name: /Is this your first hackathon/ }))
       .getByLabelText("Yes"),
   );
@@ -156,6 +160,7 @@ describe("SuccessStep", () => {
 
 describe("ApplicationForm", () => {
   beforeEach(async () => {
+    vi.useRealTimers();
     draftApi.result = null;
     draftApi.save.mockClear();
     const api = await import("../../src/pages/Register/registerApi");
@@ -179,7 +184,7 @@ describe("ApplicationForm", () => {
     fireEvent.change(screen.getByLabelText(/State of residence/), {
       target: { value: "Outside the United States" },
     });
-    for (const name of [/Are you an international student/, /Do you eat beef/]) {
+    for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
       fireEvent.click(within(screen.getByRole("group", { name })).getByLabelText(answer ? "Yes" : "No"));
     }
     fireEvent.click(within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("Halal"));
@@ -192,6 +197,7 @@ describe("ApplicationForm", () => {
       stateOfResidence: "Outside the United States",
       internationalStudent: answer,
       eatsBeef: answer,
+      eatsPork: answer,
       dietaryRestrictions: ["Halal"],
     });
 
@@ -204,14 +210,14 @@ describe("ApplicationForm", () => {
     draftApi.result = { status: "draft", draft: patch };
     refreshed.rerender(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(screen.getByLabelText(/State of residence/)).toHaveValue("Outside the United States");
-    for (const name of [/Are you an international student/, /Do you eat beef/]) {
+    for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
       const group = within(screen.getByRole("group", { name }));
       expect(group.getByLabelText(answer ? "Yes" : "No")).toBeChecked();
       expect(group.getByLabelText(answer ? "No" : "Yes")).not.toBeChecked();
     }
     expect(screen.getByLabelText("Halal")).toBeChecked();
     refreshed.unmount();
-  });
+  }, 15_000);
 
   it("loads a legacy draft with the new questions unanswered", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
@@ -219,7 +225,7 @@ describe("ApplicationForm", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(screen.getByLabelText(/First name/)).toHaveValue("Returning");
     expect(screen.getByLabelText(/State of residence/)).toHaveValue("");
-    for (const name of [/Are you an international student/, /Do you eat beef/]) {
+    for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
       const group = within(screen.getByRole("group", { name }));
       expect(group.getByLabelText("Yes")).not.toBeChecked();
       expect(group.getByLabelText("No")).not.toBeChecked();
@@ -230,6 +236,7 @@ describe("ApplicationForm", () => {
     ["stateOfResidence", "stateOfResidence"],
     ["internationalStudent", "internationalStudent-yes"],
     ["eatsBeef", "eatsBeef-yes"],
+    ["eatsPork", "eatsPork-yes"],
   ] as const)("focuses unanswered %s on submit", (field, focusId) => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     draftApi.result = { status: "draft", draft: {
@@ -257,10 +264,13 @@ describe("ApplicationForm", () => {
       screen.getByRole("group", { name: /Are you an international student/ }),
     );
     const beef = within(screen.getByRole("group", { name: /Do you eat beef/ }));
+    const pork = within(screen.getByRole("group", { name: /Do you eat pork/ }));
     expect(international.getByLabelText("Yes")).not.toBeChecked();
     expect(international.getByLabelText("No")).not.toBeChecked();
     expect(beef.getByLabelText("Yes")).not.toBeChecked();
     expect(beef.getByLabelText("No")).not.toBeChecked();
+    expect(pork.getByLabelText("Yes")).not.toBeChecked();
+    expect(pork.getByLabelText("No")).not.toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
     expect(state).toHaveAttribute(
@@ -272,6 +282,8 @@ describe("ApplicationForm", () => {
     expect(screen.getByText("Please let us know if you are an international student."))
       .toBeInTheDocument();
     expect(screen.getByText("Please let us know if you eat beef."))
+      .toBeInTheDocument();
+    expect(screen.getByText("Please let us know if you eat pork."))
       .toBeInTheDocument();
   });
 
@@ -353,6 +365,7 @@ describe("ApplicationForm", () => {
         stateOfResidence: "Texas",
         internationalStudent: false,
         eatsBeef: false,
+        eatsPork: false,
         firstHackathon: false,
       }),
       { storageId: "resume-id", uploadToken: "upload-token" },

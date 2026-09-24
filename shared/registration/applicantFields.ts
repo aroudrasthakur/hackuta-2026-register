@@ -46,6 +46,7 @@ export const NULLABLE_BOOLEAN_FIELDS = [
   "firstHackathon",
   "internationalStudent",
   "eatsBeef",
+  "eatsPork",
 ] as const;
 
 export const REQUIRED_BOOLEAN_FIELDS = [

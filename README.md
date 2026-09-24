@@ -250,7 +250,6 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security model. Summary:
 
 | Task                          | Command                                                                                                        |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Seed hackathon record         | `npx convex run seed:seedHackathon`                                                                            |
 | Reset all data                | Convex dashboard → internal `maintenance:resetAllData` (or `npx convex run maintenance:resetAllData --prod`)   |
 | Clear OTP limits for an email | Run internal mutation `rateLimits:clearOtpSendLimitsForEmail` from the Convex dashboard (Functions → internal) |
 

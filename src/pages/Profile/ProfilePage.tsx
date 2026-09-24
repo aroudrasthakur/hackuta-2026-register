@@ -4,6 +4,7 @@ import { OdysseyButton } from "../../components/OdysseyButton";
 import { PageShell } from "../../components/PageShell";
 import { SignOutButton } from "../../components/SignOutButton";
 import { StormPageFrame } from "../../components/StormPageFrame";
+import { useHackathonName } from "../../hooks/useHackathonName";
 import { useMockAuth } from "../../hooks/useMockAuth";
 import { getMyApplicantDashboardRef } from "../../convex/api";
 import { getConvexClient } from "../../convex/client";
@@ -23,16 +24,17 @@ import {
   profilePageTitle,
 } from "./profileStyles";
 
-const PROFILE_SHELL = {
-  title: "Your Journey",
-  subtitle: "HackUTA 2026 applicant dashboard",
-} as const;
-
-function ProfilePageShell({ children }: { children: ReactNode }) {
+function ProfilePageShell({
+  subtitle,
+  children,
+}: {
+  subtitle: string;
+  children: ReactNode;
+}) {
   return (
     <StormPageFrame>
       <ProfileAsset />
-      <PageShell {...PROFILE_SHELL} frameless wide compact>
+      <PageShell title="Your Journey" subtitle={subtitle} frameless wide compact>
         {children}
       </PageShell>
     </StormPageFrame>
@@ -61,7 +63,9 @@ function yearOfStudy(answers: {
 
 export default function ProfilePage() {
   const mockAuth = useMockAuth();
+  const hackathonName = useHackathonName();
   const client = getConvexClient();
+  const pageSubtitle = `${hackathonName} applicant dashboard`;
   const dashboard = useQuery(
     getMyApplicantDashboardRef,
     client && !mockAuth.enabled ? {} : "skip",
@@ -69,7 +73,7 @@ export default function ProfilePage() {
 
   if (!mockAuth.enabled && dashboard === undefined) {
     return (
-      <ProfilePageShell>
+      <ProfilePageShell subtitle={pageSubtitle}>
         <p className="text-sm text-(--ocean)" role="status" aria-live="polite">
           Loading your application…
         </p>
@@ -108,7 +112,7 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <ProfilePageShell>
+      <ProfilePageShell subtitle={pageSubtitle}>
         <p className="text-sm text-red-600" role="alert">
           We couldn&apos;t load your application. Please try again.
         </p>
@@ -128,7 +132,7 @@ export default function ProfilePage() {
   const studyYear = yearOfStudy(answers);
 
   return (
-    <ProfilePageShell>
+    <ProfilePageShell subtitle={pageSubtitle}>
       <div className="flex flex-col gap-6">
         <header>
           <h2 className={profilePageTitle}>

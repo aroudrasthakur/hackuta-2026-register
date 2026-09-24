@@ -12,16 +12,14 @@ if (!convexUrl || !authToken) {
 const client = new ConvexHttpClient(convexUrl);
 client.setAuth(authToken);
 
-const hackathon = await client.query("hackathons:getHackathonBySlug", {
-  slug: "hackuta-2026",
-});
-if (!hackathon) {
-  throw new Error("The deployed hackuta-2026 hackathon record was not found.");
-}
-
 const routing = await client.query("applicant:getApplicantRoutingState", {});
 if (!routing?.authenticated) {
   throw new Error("Authenticated routing check failed.");
 }
 
-console.log(`Convex deployment verified for ${hackathon.slug}.`);
+const eventConfig = await client.query("eventConfig:getPublicEventConfig", {});
+if (!eventConfig?.name) {
+  throw new Error("Public event config was not returned.");
+}
+
+console.log(`Convex deployment verified for hackuta-2026 (${eventConfig.name}).`);

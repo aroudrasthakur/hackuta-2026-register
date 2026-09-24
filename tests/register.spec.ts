@@ -45,6 +45,8 @@ async function fillApplicationForm(page: Page) {
   await page.getByLabel("T-shirt size", { exact: false }).selectOption("M");
   await page.getByRole("group", { name: /Do you eat beef/ })
     .getByLabel("No").check({ force: true });
+  await page.getByRole("group", { name: /Do you eat pork/ })
+    .getByLabel("No").check({ force: true });
   await page.getByRole("group", { name: /Is this your first hackathon/ })
     .getByLabel("Yes").check({ force: true });
   await page.getByLabel("How did you hear about HackUTA?", { exact: false }).selectOption("Discord");
@@ -109,6 +111,8 @@ test.describe("registration", () => {
     await expect(page.getByText("Please let us know if you are an international student."))
       .toBeVisible();
     await expect(page.getByText("Please let us know if you eat beef."))
+      .toBeVisible();
+    await expect(page.getByText("Please let us know if you eat pork."))
       .toBeVisible();
     await expect(
       page.getByRole("alert").filter({ hasText: /One or more of your answers is invalid/ }),

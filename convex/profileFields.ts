@@ -71,14 +71,13 @@ const applicantDraftPatchFields = {
 };
 
 /**
- * Applicant profile — one row per auth user per hackathon.
+ * Applicant profile — one row per auth user.
  * Passwords and auth secrets live in Convex Auth tables only.
  */
 export const profileRecord = {
   authUserId: v.id("users"),
   email: v.string(),
   emailVerificationTime: v.optional(v.number()),
-  hackathonId: v.string(),
   status: profileStatus,
   eligibilityStatus,
   createdAt: v.number(),

@@ -8,7 +8,6 @@ type ResettableTable =
   | "profiles"
   | "resumeUploadSessions"
   | "rateLimits"
-  | "hackathons"
   | "authRefreshTokens"
   | "authVerificationCodes"
   | "authVerifiers"
@@ -55,7 +54,6 @@ export const resetAllData = internalMutation({
     await deleteAllFromTable(ctx, "profiles");
     await deleteAllFromTable(ctx, "resumeUploadSessions");
     await deleteAllFromTable(ctx, "rateLimits");
-    await deleteAllFromTable(ctx, "hackathons");
 
     await deleteAllFromTable(ctx, "authRefreshTokens");
     await deleteAllFromTable(ctx, "authVerificationCodes");

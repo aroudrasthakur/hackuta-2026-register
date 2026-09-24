@@ -4,32 +4,26 @@
  * Owns profile row creation after sign-in and lightweight routing queries used
  * by route guards. Draft fields and dashboard payloads live in profiles.ts.
  */
-import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { HACKATHON_ID } from "../shared/registration/constants";
 import {
   ensureDraftProfile,
   getAuthUser,
-  getProfileByUserAndHackathon,
+  getProfileByUser,
   profileFormWasSubmitted,
 } from "./lib/profiles";
 import { normalizeEmail } from "./lib/normalizeEmail";
 
 export const ensureApplicantProfile = mutation({
-  args: {
-    hackathonId: v.optional(v.string()),
-  },
-  handler: async (ctx, { hackathonId = HACKATHON_ID }) => {
-    const profile = await ensureDraftProfile(ctx, hackathonId);
+  args: {},
+  handler: async (ctx) => {
+    const profile = await ensureDraftProfile(ctx);
     return { profileId: profile._id, status: profile.status };
   },
 });
 
 export const getApplicantRoutingState = query({
-  args: {
-    hackathonId: v.optional(v.string()),
-  },
-  handler: async (ctx, { hackathonId = HACKATHON_ID }) => {
+  args: {},
+  handler: async (ctx) => {
     const authUser = await getAuthUser(ctx);
     if (!authUser) {
       return {
@@ -39,7 +33,7 @@ export const getApplicantRoutingState = query({
       };
     }
 
-    const profile = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
+    const profile = await getProfileByUser(ctx, authUser._id);
     const hasSubmittedRegistration =
       profile !== null && profileFormWasSubmitted(profile);
 
