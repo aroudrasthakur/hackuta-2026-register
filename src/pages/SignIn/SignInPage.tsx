@@ -39,7 +39,7 @@ type ConvexPasswordSignIn = (
 ) => Promise<{ signingIn: boolean }>;
 
 type EnsureProfileMutation = (args: Record<string, never>) => Promise<unknown>;
-type FetchAccessToken = (args: { forceRefreshToken?: boolean }) => Promise<string | null>;
+type FetchAccessToken = (args: { forceRefreshToken: boolean }) => Promise<string | null>;
 
 function SignInPageContent({
   convexSignIn,
