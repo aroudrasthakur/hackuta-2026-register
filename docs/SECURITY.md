@@ -90,10 +90,12 @@ Server errors return JSON `{ "error": "..." }` with appropriate HTTP status. The
 
 | Secret | Where | Never |
 | --- | --- | --- |
-| SMTP, JWT keys | Convex deployment env | `VITE_*` or git |
+| Email service API key, JWT keys | Convex deployment env | `VITE_*` or git |
 | Convex URLs | Vercel build env | Committed in repo |
 
-Rotate SMTP and JWT independently per environment. Dev keys must not be copied to prod.
+Rotate the email service API key and JWT keys independently per environment. Dev keys must not be copied to prod.
+
+The email service client (`convex/email/emailService.ts`) only sends the API key over HTTPS (plain HTTP is allowed only for `localhost` test services), never logs the key or email bodies, and keeps error messages free of both. The `emailDeliveries` table stores queue IDs and recipients only — never subjects, bodies, or codes.
 
 ## Operational security
 

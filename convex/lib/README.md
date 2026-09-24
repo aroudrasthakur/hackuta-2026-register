@@ -7,6 +7,7 @@ Shared logic imported by top-level Convex modules. Not exported to the client di
 | [auth.ts](auth.ts) | requireAuthUserId, getAuthUser, verified-user guards |
 | [applications.ts](applications.ts) | Application CRUD helpers, answer projection, draft ensure |
 | [draftPatch.ts](draftPatch.ts) | Applies autosave patches to application rows |
+| [emailDeliveries.ts](emailDeliveries.ts) | Email kind validator shared by the schema and email tracking |
 | [eventConfig.ts](eventConfig.ts) | Hackathon name seed/read |
 | [hackutaPassword.ts](hackutaPassword.ts) | Custom Password provider with reset reuse check |
 | [assertPasswordNotReused.ts](assertPasswordNotReused.ts) | Blocks password reset when new password matches current hash |

@@ -25,7 +25,7 @@ Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
 - **Frontend:** Vite, React 19, TypeScript, Tailwind CSS v4, React Router 7
 - **Backend:** [Convex](https://convex.dev) — database, file storage, HTTP actions, scheduled jobs
-- **Auth:** [@convex-dev/auth](https://labs.convex.dev/auth) password sign-up/sign-in + 6-digit email OTP verification + forgot-password reset (cPanel SMTP)
+- **Auth:** [@convex-dev/auth](https://labs.convex.dev/auth) password sign-up/sign-in + 6-digit email OTP verification + forgot-password reset (HackUTA email service)
 - **Validation:** Zod schemas shared between client and Convex (`shared/`)
 - **Testing:** Vitest (unit), Playwright (e2e + accessibility), 85% Istanbul coverage thresholds, enforced globally and per functional area
 
@@ -61,7 +61,7 @@ Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
 - Node.js 22+
 - A Convex account and CLI (`npm i -g convex` or use `npx convex`)
-- cPanel mailbox credentials for OTP and confirmation email (production)
+- An API key for the HackUTA email service (ask an organizer) to send OTP and confirmation email
 
 ### Local setup
 
@@ -87,16 +87,16 @@ Configure your **dev** Convex deployment (`standing-manatee-425`):
 
 ```bash
 node scripts/generateAuthKeys.mjs   # JWT keys (dev-only; do not copy from prod)
-node scripts/sync-dev-convex-env.mjs # SMTP/email from prod + localhost origin allowlist
+node scripts/sync-dev-convex-env.mjs # email service settings from prod + localhost origin allowlist
 ```
 
-`sync-dev-convex-env.mjs` sets dev-specific `SITE_URL`, localhost CORS, and copies shared mail settings from production. Localhost origins are ignored on production unless `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` is set — keep that unset on prod.
+`sync-dev-convex-env.mjs` sets dev-specific `SITE_URL`, localhost CORS, and copies the email service settings (`EMAIL_SERVICE_URL`, `EMAIL_SERVICE_API_KEY`) from production. Localhost origins are ignored on production unless `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` is set — keep that unset on prod.
 
 ### Production deploy
 
 1. **Convex:** `npm run convex:deploy` (or `npx convex deploy --prod`)
 2. **Vercel:** connect repo; set build env vars (see [Environment variables](#environment-variables))
-3. Set Convex **production** deployment vars: `SITE_URL`, `REGISTRATION_ALLOWED_ORIGINS`, SMTP, JWT keys. Do **not** set `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` on production.
+3. Set Convex **production** deployment vars: `SITE_URL`, `REGISTRATION_ALLOWED_ORIGINS`, `EMAIL_SERVICE_URL`, `EMAIL_SERVICE_API_KEY`, JWT keys. Do **not** set `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` on production.
 
 ```bash
 npx convex env set --prod SITE_URL https://register.hackuta.com
@@ -114,7 +114,7 @@ npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
 ```
 
 1. Visitor opens `/sign-in` and creates an account (email, password, confirm) or signs in with existing credentials.
-2. New accounts receive a 6-digit verification code (10-minute expiry) via SMTP.
+2. New accounts receive a 6-digit verification code (10-minute expiry) via the HackUTA email service.
 3. After verification, Convex Auth establishes a JWT session and ensures a draft `applications` row exists.
 4. The app routes to `/register` (not yet submitted) or `/profile` (already submitted).
 5. Forgot password: request a separate reset OTP, verify the code, set a new password (must differ from the current one), then sign in again.
@@ -158,30 +158,32 @@ See [docs/API.md](docs/API.md#rate-limits) for server-side enforcement details.
 
 ### Convex deployment (`npx convex env set`)
 
-| Variable                                               | Purpose                                                                                          |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `SITE_URL`                                             | Frontend origin for Convex Auth redirects                                                        |
-| `REGISTRATION_ALLOWED_ORIGINS`                         | Comma-separated browser origins allowed for resume upload CORS (also includes `SITE_URL` origin) |
-| `JWT_PRIVATE_KEY`, `JWKS`                              | Convex Auth signing keys (from `scripts/generateAuthKeys.mjs`)                                   |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | cPanel SMTP                                                                                      |
-| `EMAIL_FROM`                                           | From address for outbound mail                                                                   |
-| `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS`                 | Dev only — allow `localhost:5273` resume uploads                                                 |
+| Variable                               | Purpose                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `SITE_URL`                             | Frontend origin for Convex Auth redirects                                                        |
+| `REGISTRATION_ALLOWED_ORIGINS`         | Comma-separated browser origins allowed for resume upload CORS (also includes `SITE_URL` origin) |
+| `JWT_PRIVATE_KEY`, `JWKS`              | Convex Auth signing keys (from `scripts/generateAuthKeys.mjs`)                                   |
+| `EMAIL_SERVICE_URL`                    | HackUTA email service base URL (`https://emailservice.hackuta.com`)                              |
+| `EMAIL_SERVICE_API_KEY`                | Email service API key (secret)                                                                   |
+| `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` | Dev only — allow `localhost:5273` resume uploads                                                 |
 
-**Do not** set SMTP or JWT values as `VITE_*` — they belong only on the Convex deployment.
+**Do not** set email service or JWT values as `VITE_*` — they belong only on the Convex deployment.
 
-### cPanel SMTP
+### Email service
 
-Find settings under **Email Accounts → Connect Devices**:
+OTP, password-reset, and application confirmation emails are queued with the HackUTA email service (`POST /send-email`) from Convex actions in [convex/email/](convex/email/README.md). Ask an organizer for the API key:
 
 ```bash
-npx convex env set SMTP_HOST mail.example.com
-npx convex env set SMTP_PORT 465          # 465 = implicit TLS; 587 = STARTTLS
-npx convex env set SMTP_USER noreply@hackuta.org
-npx convex env set SMTP_PASSWORD your-mailbox-password
-npx convex env set EMAIL_FROM noreply@hackuta.org
+npx convex env set EMAIL_SERVICE_URL https://emailservice.hackuta.com
+npx convex env set EMAIL_SERVICE_API_KEY <api-key>
 ```
 
-Configure SPF and DKIM under cPanel **Email Deliverability**. Test by creating an account and requesting a verification code.
+- The service sends `body` as **plain text**, so the plain-text version of each template is used.
+- A returned ID means the email was **queued**, not delivered. Each ID is recorded in the `emailDeliveries` table (kind, recipient, time; never the content or code).
+- Check delivery from the Convex dashboard: internal `emailDeliveries:listEmailDeliveriesForRecipient` to find the ID, then `email/checkEmailStatus:checkEmailStatus` to ask the service (`pending` → `success`).
+- Requests time out after 10 seconds and are never retried automatically.
+
+Test by creating an account and requesting a verification code.
 
 ## Mock mode
 
@@ -189,7 +191,7 @@ When `VITE_USE_MOCK_API=true`:
 
 - Convex Auth is bypassed via `MockAuthProvider`.
 - Mock OTP code: **`042681`**
-- Registration submissions succeed without SMTP or authenticated Convex mutations.
+- Registration submissions succeed without the email service or authenticated Convex mutations.
 
 CI builds with mock mode enabled for Playwright CSP tests. Live Vercel production deploys must leave this unset or `false`.
 

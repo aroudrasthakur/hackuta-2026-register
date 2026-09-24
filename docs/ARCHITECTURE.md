@@ -42,7 +42,8 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 | rateLimits.ts | Sign-up and password-reset OTP throttling |
 | resumeUploadSecurity.ts | Upload origin allowlist |
 | pdfValidation.ts | Server-side PDF parse |
-| email/ | SMTP actions + HTML templates |
+| emailDeliveries.ts | Queue-ID tracking for sent emails |
+| email/ | Email service client, email actions, templates |
 | lib/ | Auth, applications, draft patch helpers |
 
 ## Request flows
@@ -51,7 +52,7 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 
 ```
 /sign-in → Password provider (email + password)
-         → email-verification OTP (6 digits via SMTP)
+         → email-verification OTP (6 digits via the HackUTA email service)
          → JWT session
          → ensureApplicantApplication
          → route to /register or /profile

@@ -36,7 +36,7 @@ npm run build
 
 ## Do not
 
-- Commit `.env.local`, SMTP passwords, or JWT private keys
+- Commit `.env.local`, the email service API key, or JWT private keys
 - Set `VITE_USE_MOCK_API=true` on production Vercel
 - Set `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` on production Convex
 - Add `dangerouslySetInnerHTML` for user content

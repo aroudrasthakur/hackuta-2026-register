@@ -44,8 +44,8 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | convex.test.ts | Registrations, resume HTTP route, drafts, seed, cleanup |
 | resume-upload-security.test.ts | Upload origin allowlist |
 | rate-limits.test.ts | Sign-up and password-reset OTP rate-limit mutations |
-| email-actions.test.ts | Email action wiring |
-| email-service.test.ts | SMTP helper |
+| email-actions.test.ts | Email actions: plain-text sends, delivery tracking, recipient lookup, status check |
+| email-service.test.ts | Email service client (config, errors, timeouts, tracking) and templates |
 | backend-authorization.test.ts | Auth boundaries, profile lifecycle, upload sessions, upload failure recovery, maintenance and migrations |
 | hackuta-password.test.ts | Password provider flows: sign-up, sign-in, reset, reset verification, email verification |
 | convex-auth-config.test.ts | Auth provider wiring, OTP generation, rate-limited email delivery |
@@ -84,7 +84,7 @@ Convex integration tests use convex-test with import.meta.glob over convex/**/*.
 
 ## E2E (`register.spec.ts`, `profile.spec.ts`)
 
-Runs against the dev server or a production build (PLAYWRIGHT_USE_BUILD=true). CI uses mock auth (VITE_USE_MOCK_API=true) — no live Convex or SMTP.
+Runs against the dev server or a production build (PLAYWRIGHT_USE_BUILD=true). CI uses mock auth (VITE_USE_MOCK_API=true) — no live Convex or email service.
 
 | Spec | Covers |
 | --- | --- |
