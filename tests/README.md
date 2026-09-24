@@ -7,8 +7,9 @@ Quality gates for the registration app: Vitest unit/integration tests and Playwr
 | Path | Summary |
 | --- | --- |
 | [unit/](unit/) | Vitest — shared modules, Convex handlers, React pages and hooks |
-| [fixtures/](fixtures/) | Shared registration form payloads for tests |
+| [fixtures/](fixtures/) | Shared payloads and Playwright helpers (registration form, auth, profile layout) |
 | [register.spec.ts](register.spec.ts) | Playwright e2e — sign-up, OTP, application flow, CSP headers |
+| [profile.spec.ts](profile.spec.ts) | Playwright e2e — profile overview layout and sign-out placement (mobile + desktop) |
 | [playwright-coverage.ts](playwright-coverage.ts) | Playwright fixture wrapper for Istanbul coverage |
 | [unit/setup.ts](unit/setup.ts) | Vitest global setup (@testing-library/jest-dom) |
 
@@ -32,6 +33,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | resume-upload-policy.test.ts | Client resume policy |
 | pdf-validation.test.ts | Server PDF parse |
 | hackathon-timeline.test.ts | Timeline builder |
+| dietary-migration.test.ts | Legacy eatsBeef/eatsPork → dietaryRestrictions migration mapping |
 | mlh-texas-schools.test.ts | Texas school ordering |
 | validation-build.test.ts | Schema build smoke test |
 
@@ -52,7 +54,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 
 | File | Covers |
 | --- | --- |
-| sign-in.test.tsx, sign-in-extended.test.tsx | Sign-in / OTP UI |
+| sign-in.test.tsx, sign-in-extended.test.tsx | Sign-in / OTP UI (including secondary action buttons) |
 | forgot-password.test.tsx | Forgot-password flow (mock auth) |
 | sign-in-convex.test.tsx | Sign-in, OTP resend, and password reset against mocked Convex auth |
 | auth-components.test.tsx | OTP input, route guard, sign-out, mock auth provider |
@@ -79,11 +81,16 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 
 Convex integration tests use convex-test with import.meta.glob over convex/**/*.ts. HTTP upload tests use X-Test-Origin and X-Test-Content-Length because the test harness cannot set Content-Length.
 
-## E2E (`register.spec.ts`)
+## E2E (`register.spec.ts`, `profile.spec.ts`)
 
 Runs against the dev server or a production build (PLAYWRIGHT_USE_BUILD=true). CI uses mock auth (VITE_USE_MOCK_API=true) — no live Convex or SMTP.
 
-Covers password sign-up, mock OTP verify, multi-step registration, and production security headers.
+| Spec | Covers |
+| --- | --- |
+| register.spec.ts | Password sign-up, mock OTP verify, multi-step registration, dietary options, CSP headers |
+| profile.spec.ts | Profile overview grid, sign-out below details/timeline, mobile and desktop viewports |
+
+Shared Playwright helpers: [fixtures/playwrightAuth.ts](fixtures/playwrightAuth.ts), [fixtures/playwrightRegistration.ts](fixtures/playwrightRegistration.ts), [fixtures/profileLayout.ts](fixtures/profileLayout.ts).
 
 Contact-form e2e lives in the separate [hackuta-2026-registration](https://github.com/aroudrasthakur/hackuta-2026-registration) repo.
 

@@ -40,6 +40,21 @@ After a successful reset, the app invalidates all auth sessions, signs out, and 
 
 Signup OTPs use provider `email-verification`; reset OTPs use `password-reset` (separate buckets and email templates).
 
+## UI actions
+
+Primary submits use `.sign-in-btn`. Secondary navigation uses `.sign-in-btn.sign-in-btn--secondary` — grouped in `.sign-in-actions` below the primary button, or in `.sign-in-otp__footer` beside the text-style resend control.
+
+| Step | Primary | Secondary |
+| --- | --- | --- |
+| Credentials (sign in) | Sign in | Forgot password?, Need an account? Create one (`.sign-in-actions`) |
+| Credentials (sign up) | Create account | Already have an account? Sign in (`.sign-in-actions`) |
+| Email verification | Verify email | Resend (`.sign-in-resend`), Back to sign in (`.sign-in-otp__footer`) |
+| Forgot password — email | Send code | Back to sign in (`.sign-in-actions`) |
+| Forgot password — OTP | Continue | Resend (`.sign-in-resend`), Change email (`.sign-in-otp__footer`) |
+| Forgot password — new password | Save new password | Back to reset code (`.sign-in-actions`) |
+
+Styles: [src/styles/README.md](../../styles/README.md) · [index.css](../../styles/index.css).
+
 ## Related
 
 | Location | Role |

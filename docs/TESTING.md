@@ -82,7 +82,7 @@ Convex tests use `convex-test` with `import.meta.glob` over `convex/**/*.ts`. Lo
 
 ## E2E tests
 
-Playwright covers password sign-up, mock OTP verify, registration UI, and CSP header assertions (register.spec.ts). Contact form tests remain in hackuta-2026-registration.
+Playwright covers password sign-up, mock OTP verify, registration UI, profile layout/sign-out, and CSP header assertions (`register.spec.ts`, `profile.spec.ts`). Contact form tests remain in hackuta-2026-registration.
 
 CI builds with `VITE_USE_MOCK_API=true` — no live Convex or SMTP in browser jobs.
 
