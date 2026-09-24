@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { FormEvent } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { SignInPasswordInput } from "../../src/components/SignInPasswordInput";
 
@@ -83,7 +84,7 @@ describe("SignInPasswordInput", () => {
 
   it("does not submit the surrounding form when the toggle is clicked", async () => {
     const user = userEvent.setup();
-    const onSubmit = vi.fn((event: SubmitEvent) => event.preventDefault());
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault());
 
     render(
       <form onSubmit={onSubmit}>
