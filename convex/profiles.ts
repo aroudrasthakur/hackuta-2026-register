@@ -4,7 +4,6 @@
  * Owns draft load/save and the profile page payload. Profile bootstrap and
  * routing state live in applicant.ts.
  */
-import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
   HACKATHON_SCHEDULE,
