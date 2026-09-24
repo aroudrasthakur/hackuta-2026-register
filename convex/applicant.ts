@@ -1,23 +1,23 @@
 /**
  * Applicant bootstrap and routing state.
  *
- * Owns profile row creation after sign-in and lightweight routing queries used
- * by route guards. Draft fields and dashboard payloads live in profiles.ts.
+ * Owns application row creation after sign-in and lightweight routing queries used
+ * by route guards. Draft fields and dashboard payloads live in applications.ts.
  */
 import { mutation, query } from "./_generated/server";
 import {
-  ensureDraftProfile,
+  applicationFormWasSubmitted,
+  ensureDraftApplication,
+  getApplicationByUser,
   getAuthUser,
-  getProfileByUser,
-  profileFormWasSubmitted,
-} from "./lib/profiles";
+} from "./lib/applications";
 import { normalizeEmail } from "./lib/normalizeEmail";
 
-export const ensureApplicantProfile = mutation({
+export const ensureApplicantApplication = mutation({
   args: {},
   handler: async (ctx) => {
-    const profile = await ensureDraftProfile(ctx);
-    return { profileId: profile._id, status: profile.status };
+    const application = await ensureDraftApplication(ctx);
+    return { applicationId: application._id, status: application.status };
   },
 });
 
@@ -33,9 +33,9 @@ export const getApplicantRoutingState = query({
       };
     }
 
-    const profile = await getProfileByUser(ctx, authUser._id);
+    const application = await getApplicationByUser(ctx, authUser._id);
     const hasSubmittedRegistration =
-      profile !== null && profileFormWasSubmitted(profile);
+      application !== null && applicationFormWasSubmitted(application);
 
     return {
       authenticated: true as const,

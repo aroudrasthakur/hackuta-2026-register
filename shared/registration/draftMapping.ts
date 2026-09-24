@@ -25,8 +25,8 @@ function parseOptionalInt(raw: string): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-/** Profile columns needed to hydrate the registration form (excludes resume blob). */
-export type StoredApplicantProfile = Partial<
+/** Application columns needed to hydrate the registration form (excludes resume blob). */
+export type StoredApplicantApplication = Partial<
   Record<
     ApplicantAnswerFieldKey,
     string | number | boolean | string[] | null | undefined
@@ -74,47 +74,47 @@ export function formToDraftPatch(form: ApplicationFormData): DraftPatchPayload {
   return patch;
 }
 
-/** Map stored profile columns back into form state (resume stays null). */
-export function profileToDraftForm(
-  profile: StoredApplicantProfile,
+/** Map stored application columns back into form state (resume stays null). */
+export function applicationToDraftForm(
+  application: StoredApplicantApplication,
 ): Omit<ApplicationFormData, "resume"> {
   const values: Record<string, unknown> = {};
 
   for (const key of TRIMMED_STRING_FIELDS) {
-    values[key] = (profile[key] as string | undefined) ?? "";
+    values[key] = (application[key] as string | undefined) ?? "";
   }
 
   for (const key of PLAIN_STRING_FIELDS) {
-    values[key] = (profile[key] as string | undefined) ?? "";
+    values[key] = (application[key] as string | undefined) ?? "";
   }
 
   for (const key of CONDITIONAL_STRING_FIELDS) {
-    values[key] = (profile[key] as string | undefined) ?? "";
+    values[key] = (application[key] as string | undefined) ?? "";
   }
 
   for (const key of OPTIONAL_INT_FIELDS) {
-    const stored = profile[key];
+    const stored = application[key];
     values[key] = stored !== undefined && stored !== null ? String(stored) : "";
   }
 
   for (const key of STRING_ARRAY_FIELDS) {
-    values[key] = [...((profile[key] as string[] | undefined) ?? [])];
+    values[key] = [...((application[key] as string[] | undefined) ?? [])];
   }
 
   for (const key of NULLABLE_BOOLEAN_FIELDS) {
-    values[key] = (profile[key] as boolean | null | undefined) ?? null;
+    values[key] = (application[key] as boolean | null | undefined) ?? null;
   }
 
   for (const key of REQUIRED_BOOLEAN_FIELDS) {
-    values[key] = (profile[key] as boolean | undefined) ?? false;
+    values[key] = (application[key] as boolean | undefined) ?? false;
   }
 
   return values as Omit<ApplicationFormData, "resume">;
 }
 
-/** Apply a full draft snapshot, removing cleared fields from the stored profile. */
-export function mergeDraftPatchIntoProfile<T extends Record<string, unknown>>(
-  profile: T,
+/** Apply a full draft snapshot, removing cleared fields from the stored application. */
+export function mergeDraftPatchIntoApplication<T extends Record<string, unknown>>(
+  application: T,
   patch: DraftPatchPayload,
   meta: {
     email: string;
@@ -122,7 +122,7 @@ export function mergeDraftPatchIntoProfile<T extends Record<string, unknown>>(
     updatedAt: number;
   },
 ): Omit<T, "_id" | "_creationTime"> {
-  const next: Record<string, unknown> = { ...profile, ...meta };
+  const next: Record<string, unknown> = { ...application, ...meta };
 
   for (const key of APPLICANT_ANSWER_FIELD_KEYS) {
     const value = patch[key];
