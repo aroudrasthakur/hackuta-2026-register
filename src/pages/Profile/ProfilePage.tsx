@@ -73,6 +73,7 @@ export default function ProfilePage() {
                 lastName: "Test",
                 school: "The University of Texas at Arlington",
                 countryOfResidence: "United States of America",
+                stateOfResidence: "Texas",
                 levelOfStudy: "Undergraduate University (3+ year)",
                 graduationYear: 2026,
               },
@@ -183,6 +184,12 @@ export default function ProfilePage() {
                     <ProfileField
                       label="Country of residence"
                       value={registration.answers.countryOfResidence}
+                    />
+                  ) : null}
+                  {registration.answers.stateOfResidence ? (
+                    <ProfileField
+                      label="State of residence"
+                      value={registration.answers.stateOfResidence}
                     />
                   ) : null}
                   {registration.answers.levelOfStudy ? (

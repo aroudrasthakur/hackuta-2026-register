@@ -35,6 +35,7 @@ import {
   MAJOR_OTHER_OPTION,
   MAJORS,
   SCHOOL_OTHER_OPTION,
+  STATES_OF_RESIDENCE,
   MAX_GRADUATION_YEAR,
   MIN_GRADUATION_YEAR,
   MLH_CODE_OF_CONDUCT_URL,
@@ -351,6 +352,57 @@ function ApplicationFormContent({
             ))}
           </SelectField>
           <SelectField
+            id="stateOfResidence"
+            label="State of residence"
+            required
+            helperText="Select the state or territory where you currently live."
+            value={form.stateOfResidence}
+            onChange={(e) =>
+              updateField(
+                "stateOfResidence",
+                e.target.value as ApplicationFormData["stateOfResidence"],
+              )
+            }
+            error={errors.stateOfResidence}
+          >
+            {STATES_OF_RESIDENCE.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </SelectField>
+          <fieldset
+            className={`sm:col-span-2 ${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.internationalStudent)}`}
+            aria-describedby={
+              errors.internationalStudent ? "internationalStudent-error" : undefined
+            }
+          >
+            <legend className={fieldsetLegendClass}>
+              Are you an international student?
+              <span aria-hidden="true"> *</span>
+            </legend>
+            <div className={inlineRadioGroupClass}>
+              <CustomRadio
+                id="internationalStudent-yes"
+                name="internationalStudent"
+                label="Yes"
+                checked={form.internationalStudent === true}
+                onChange={() => updateField("internationalStudent", true)}
+              />
+              <CustomRadio
+                id="internationalStudent-no"
+                name="internationalStudent"
+                label="No"
+                checked={form.internationalStudent === false}
+                onChange={() => updateField("internationalStudent", false)}
+              />
+            </div>
+            <FieldError
+              id="internationalStudent-error"
+              message={errors.internationalStudent}
+            />
+          </fieldset>
+          <SelectField
             id="levelOfStudy"
             label="Level of study"
             required
@@ -545,6 +597,33 @@ function ApplicationFormContent({
               />
             </>
           ) : null}
+        </fieldset>
+
+        <fieldset
+          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.eatsBeef)}`}
+          aria-describedby={errors.eatsBeef ? "eatsBeef-error" : undefined}
+        >
+          <legend className={fieldsetLegendClass}>
+            Do you eat beef?
+            <span aria-hidden="true"> *</span>
+          </legend>
+          <div className={inlineRadioGroupClass}>
+            <CustomRadio
+              id="eatsBeef-yes"
+              name="eatsBeef"
+              label="Yes"
+              checked={form.eatsBeef === true}
+              onChange={() => updateField("eatsBeef", true)}
+            />
+            <CustomRadio
+              id="eatsBeef-no"
+              name="eatsBeef"
+              label="No"
+              checked={form.eatsBeef === false}
+              onChange={() => updateField("eatsBeef", false)}
+            />
+          </div>
+          <FieldError id="eatsBeef-error" message={errors.eatsBeef} />
         </fieldset>
 
         <SelectField

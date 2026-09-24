@@ -85,6 +85,55 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("requires a listed state or territory and accepts applicants outside the United States", () => {
+    const form = validRegistrationForm();
+    form.stateOfResidence = "";
+    const missing = validateApplicationForm(form);
+    expect(missing.success).toBe(false);
+    if (!missing.success) {
+      expect(missing.errors.stateOfResidence).toBe(
+        "Please select your state or territory of residence.",
+      );
+    }
+
+    form.stateOfResidence = "Not a state" as typeof form.stateOfResidence;
+    expect(validateApplicationForm(form).success).toBe(false);
+
+    form.countryOfResidence = "Canada";
+    form.stateOfResidence = "Outside the United States";
+    const outside = validateApplicationForm(form);
+    expect(outside.success).toBe(true);
+    if (outside.success) {
+      expect(outside.payload.stateOfResidence).toBe("Outside the United States");
+    }
+  });
+
+  it("requires explicit Yes or No answers without changing dietary restrictions", () => {
+    const form = validRegistrationForm();
+    form.internationalStudent = null;
+    form.eatsBeef = null;
+    const unanswered = validateApplicationForm(form);
+    expect(unanswered.success).toBe(false);
+    if (!unanswered.success) {
+      expect(unanswered.errors.internationalStudent).toBe(
+        "Please let us know if you are an international student.",
+      );
+      expect(unanswered.errors.eatsBeef).toBe("Please let us know if you eat beef.");
+    }
+
+    for (const answer of [true, false]) {
+      form.internationalStudent = answer;
+      form.eatsBeef = answer;
+      const result = validateApplicationForm(form);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.payload.internationalStudent).toBe(answer);
+        expect(result.payload.eatsBeef).toBe(answer);
+        expect(result.payload.dietaryRestrictions).toEqual([]);
+      }
+    }
+  });
+
   it("rejects schools that are not on the MLH list", () => {
     const form = validRegistrationForm();
     form.school = "UT Arlington" as typeof form.school;
@@ -292,6 +341,15 @@ describe("validateRegistrationPayload", () => {
 
     expect(parsed.success).toBe(true);
     expect(validateRegistrationPayload(payload).success).toBe(true);
+  });
+
+  it("rejects submissions missing the new required answers", () => {
+    const payload = validPayloadFromForm();
+    for (const field of ["stateOfResidence", "internationalStudent", "eatsBeef"] as const) {
+      const incomplete = { ...payload };
+      delete (incomplete as Partial<typeof payload>)[field];
+      expect(validateRegistrationPayload(incomplete).success).toBe(false);
+    }
   });
 
   it("rejects invalid enum values", () => {

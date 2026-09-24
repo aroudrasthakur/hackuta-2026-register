@@ -139,6 +139,16 @@ describe("convex registrations", () => {
     });
     expect(first.ok).toBe(true);
     expect(first.isNew).toBe(true);
+    const stored = await t.run((ctx) => ctx.db.query("profiles").first());
+    expect(stored).toMatchObject({
+      stateOfResidence: "Texas",
+      internationalStudent: false,
+      eatsBeef: false,
+      dietaryRestrictions: [],
+    });
+    await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { answers: { stateOfResidence: "Texas" } },
+    });
 
     await drainScheduledFunctions(t);
 
@@ -744,6 +754,9 @@ describe("convex applicant auth flows", () => {
         ...INITIAL_FORM,
         firstName: "Draft",
         lastName: "User",
+        stateOfResidence: "Outside the United States",
+        internationalStudent: true,
+        eatsBeef: false,
       }),
     });
     const draft = await t.query("profiles:getMyProfileDraft", {});
@@ -752,7 +765,16 @@ describe("convex applicant auth flows", () => {
       draft: {
         firstName: "Draft",
         lastName: "User",
+        stateOfResidence: "Outside the United States",
+        internationalStudent: true,
+        eatsBeef: false,
       },
+    });
+    const stored = await t.run((ctx) => ctx.db.query("profiles").first());
+    expect(stored).toMatchObject({
+      stateOfResidence: "Outside the United States",
+      internationalStudent: true,
+      eatsBeef: false,
     });
   });
 });

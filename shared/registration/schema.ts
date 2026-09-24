@@ -17,6 +17,7 @@ import {
   MIN_GRADUATION_YEAR,
   RACE_ETHNICITY_OPTIONS,
   SCHOOL_OTHER_OPTION,
+  STATES_OF_RESIDENCE,
   TSHIRT_SIZES,
 } from "./constants";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
@@ -148,6 +149,12 @@ export const registrationPayloadSchema = z
       max: 100,
       message: "Please select your country of residence.",
     }).refine((value) => COUNTRIES_SET.has(value), "Please select a country from the list."),
+    stateOfResidence: z.enum(STATES_OF_RESIDENCE, {
+      message: "Please select your state or territory of residence.",
+    }),
+    internationalStudent: z.boolean({
+      message: "Please let us know if you are an international student.",
+    }),
     levelOfStudy: levelOfStudySchema,
     major: safePlainText({
       max: FIELD_LIMITS.major,
@@ -168,6 +175,9 @@ export const registrationPayloadSchema = z
       tooLongMessage: "Race / ethnicity details are too long.",
     }),
     dietaryRestrictions: z.array(dietaryOptionSchema).default([]),
+    eatsBeef: z.boolean({
+      message: "Please let us know if you eat beef.",
+    }),
     otherDietary: safeOptionalPlainText({
       max: FIELD_LIMITS.otherDietary,
       tooLongMessage: "Dietary details are too long.",

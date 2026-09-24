@@ -8,6 +8,7 @@ import type {
   MAJORS,
   RACE_ETHNICITY_OPTIONS,
   SCHOOL_OTHER_OPTION,
+  STATES_OF_RESIDENCE,
   TSHIRT_SIZES,
 } from "./constants";
 import type { MlhSchool } from "./mlhSchools";
@@ -21,6 +22,7 @@ export type DietaryOption = (typeof DIETARY_OPTIONS)[number];
 export type Major = (typeof MAJORS)[number];
 export type TshirtSize = (typeof TSHIRT_SIZES)[number];
 export type HearAboutOption = (typeof HEAR_ABOUT_OPTIONS)[number];
+export type StateOfResidence = (typeof STATES_OF_RESIDENCE)[number];
 
 /** UI form state — union refinements for selects; `resume` is client-only. */
 export type ApplicationFormData = {
@@ -31,7 +33,7 @@ export type ApplicationFormData = {
   school: MlhSchool | typeof SCHOOL_OTHER_OPTION | "";
   otherSchool: string;
   countryOfResidence: CountryOfResidence | "";
-  stateOfResidence: string;
+  stateOfResidence: StateOfResidence | "";
   levelOfStudy: LevelOfStudy | "";
   major: Major | "";
   otherMajor: string;
@@ -72,6 +74,8 @@ export const FIELD_ORDER: FieldName[] = [
   "school",
   "otherSchool",
   "countryOfResidence",
+  "stateOfResidence",
+  "internationalStudent",
   "levelOfStudy",
   "major",
   "otherMajor",
@@ -79,6 +83,7 @@ export const FIELD_ORDER: FieldName[] = [
   "gender",
   "otherRaceEthnicity",
   "otherDietary",
+  "eatsBeef",
   "tshirtSize",
   "firstHackathon",
   "hearAbout",
@@ -101,6 +106,8 @@ export const INITIAL_FORM: ApplicationFormData = {
 
 /** Maps validation keys to DOM ids used for focus management. */
 export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
+  internationalStudent: "internationalStudent-yes",
+  eatsBeef: "eatsBeef-yes",
   firstHackathon: "firstHackathon-yes",
   resume: "resume-upload",
   codeOfConductAgreed: "codeOfConductAgreed",
