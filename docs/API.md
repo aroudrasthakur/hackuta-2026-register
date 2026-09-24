@@ -13,9 +13,9 @@ Function names use Convex `module:function` notation (e.g. `registrations:regist
 
 ## Authentication
 
-Auth uses [@convex-dev/auth](https://labs.convex.dev/auth) with the **Password** provider plus **email OTP verification** on sign-up.
+Auth uses [@convex-dev/auth](https://labs.convex.dev/auth) with the **Password** provider (via [HackutaPassword](../convex/lib/hackutaPassword.ts)) plus **email OTP verification** on sign-up and **email OTP password reset**.
 
-Password rules (client + server): min 8 characters, at least one uppercase, one lowercase, and one digit.
+Password rules (client + server): min 8 characters, at least one uppercase, one lowercase, and one digit. Password reset rejects a new password that matches the current password.
 
 ### Sign up / sign in (action)
 
@@ -27,7 +27,18 @@ Password rules (client + server): min 8 characters, at least one uppercase, one 
 | Verify email | `email`, `code`, `flow=email-verification` | `{ signingIn: true }`; establishes JWT session |
 | Sign in | `email`, `password`, `flow=signIn` | `{ signingIn: true }` when email already verified |
 
-OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Resend cooldown **30 s**; max **5 sends/hour**; max **5 failed verifications/hour**.
+Sign-up OTP provider: `email-verification`. Resend cooldown **30 s**; max **5 sends/hour** (bucket `otp_send`); max **5 failed verifications/hour** (Convex Auth `authRateLimits`).
+
+### Forgot password (action)
+
+| Step | FormData fields | Result |
+| --- | --- | --- |
+| Request reset | `email`, `flow=reset` | Sends 6-digit reset email when account exists; client always shows neutral confirmation copy |
+| Reset password | `email`, `code`, `newPassword`, `flow=reset-verification` | Verifies reset OTP, updates password hash, invalidates other sessions; client signs out and returns to sign-in |
+
+Reset OTP provider: `password-reset` (separate from sign-up verification). Resend cooldown **30 s**; max **5 sends/hour** (bucket `password_reset_send`). Sign-up OTPs cannot authorize password reset.
+
+Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Reused passwords are rejected before OTP consumption.
 
 ### Sign out (action)
 
@@ -78,6 +89,12 @@ OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Re
 
 Lookup attempts are rate-limited; invalid emails get a neutral response.
 
+### `rateLimits:getPasswordResetSendCooldown`
+
+**Type:** mutation · **Auth:** none · `{ email: string }`
+
+Same response shape as `getOtpSendCooldown`. Tracks the `password_reset_send` bucket separately from sign-up OTP sends.
+
 ---
 
 ## Public mutations
@@ -114,6 +131,10 @@ First submit creates the applicant record; sign-in alone does not write applicat
 ### `applicant:ensureApplicantProfile`
 
 **Auth:** required · `{}` — ensures a draft `profiles` row exists after sign-in.
+
+### `passwordReset:invalidateSessionsAfterPasswordReset`
+
+**Auth:** required · `{}` — deletes all `authSessions` and linked `authRefreshTokens` for the current user. Called after a successful `reset-verification` sign-in so the user must sign in again with the new password.
 
 ---
 
@@ -196,7 +217,7 @@ Responses include `X-Content-Type-Options: nosniff` and `Cache-Control: no-store
 
 ### Mutations and actions
 
-Convex throws `Error` with a string message. The client maps known messages through `mapConvexErrorToUserMessage()` / `mapUploadError()`; unknown errors become generic copy.
+Convex throws `Error` with a string message. The client maps known messages through `mapConvexErrorToUserMessage()` / `mapUploadError()` / `mapAuthError()` / `mapPasswordResetError()`; unknown errors become generic copy.
 
 ### Registration field validation
 
@@ -212,6 +233,8 @@ Client-side Zod errors return per-field messages from `shared/registration/schem
 | Registration server | `shared/registration/validation.ts` | `validateRegistrationPayload()` |
 | Sanitization | `shared/lib/sanitizeInput.ts` | Control chars stripped; markup patterns rejected |
 | Password | `shared/auth/password.ts` | Length, upper/lower/digit |
+| Password reset copy | `shared/auth/passwordResetMessages.ts` | Neutral request confirmation, success, reuse, and rate-limit messages |
+| Auth error mapping | `shared/auth/errorMessages.ts` | mapAuthError, mapPasswordResetError |
 | Resume (client) | `shared/registration/resume.ts` | `.pdf` only, ≤ 2 MB |
 | Resume (server) | `convex/pdfValidation.ts` | Magic bytes, parse, ≤ 25 pages |
 
@@ -227,8 +250,10 @@ Not callable from the public client.
 
 | Function | Purpose |
 | --- | --- |
-| `assertOtpSendAllowed` | OTP cooldown / hourly cap |
+| `assertOtpSendAllowed` | Sign-up OTP cooldown / hourly cap |
 | `recordOtpSend` | Bucket `otp_send` |
+| `assertPasswordResetSendAllowed` | Password-reset OTP cooldown / hourly cap |
+| `recordPasswordResetSend` | Bucket `password_reset_send` |
 | `clearOtpSendLimitsForEmail` | Support/testing reset |
 ### Resume pipeline (`resumeUploads`)
 
@@ -242,7 +267,8 @@ Not callable from the public client.
 
 | Function | Purpose |
 | --- | --- |
-| `email/sendOtpEmail:sendOtpEmail` | OTP / verification mail |
+| `email/sendOtpEmail:sendOtpEmail` | Sign-up verification mail |
+| `email/sendPasswordResetEmail:sendPasswordResetEmail` | Password reset mail |
 | `email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail` | Post-submit confirmation |
 
 User content in HTML emails is escaped via `escapeHtml()`.
@@ -261,6 +287,8 @@ User content in HTML emails is escaped via `escapeHtml()`.
 | --- | --- | --- | --- |
 | `otp_send` | normalized email | 5 sends | 1 hour |
 | `otp_send` | normalized email | 30 s cooldown | between sends |
+| `password_reset_send` | normalized email | 5 sends | 1 hour |
+| `password_reset_send` | normalized email | 30 s cooldown | between sends |
 | `resume_upload` | client IP hash | 5 uploads | 10 minutes |
 | `resume_upload` | global | 100 uploads | 10 minutes |
 
@@ -311,7 +339,8 @@ One row per auth user. All application form fields are top-level columns.
 | UI | API |
 | --- | --- |
 | Sign-in / sign-up | `auth:signIn`, `auth:signOut` |
-| OTP cooldown | `rateLimits:getOtpSendCooldown` |
+| Forgot password | `auth:signIn` (`flow=reset`, `flow=reset-verification`), `passwordReset:invalidateSessionsAfterPasswordReset` |
+| OTP cooldown | `rateLimits:getOtpSendCooldown`, `rateLimits:getPasswordResetSendCooldown` |
 | Ensure profile | `applicant:ensureApplicantProfile` |
 | Route guards | `applicant:getApplicantRoutingState` |
 | Applicant dashboard | `profiles:getMyApplicantDashboard` |

@@ -25,7 +25,7 @@ Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
 - **Frontend:** Vite, React 19, TypeScript, Tailwind CSS v4, React Router 7
 - **Backend:** [Convex](https://convex.dev) — database, file storage, HTTP actions, scheduled jobs
-- **Auth:** [@convex-dev/auth](https://labs.convex.dev/auth) password sign-up/sign-in + 6-digit email OTP verification (cPanel SMTP)
+- **Auth:** [@convex-dev/auth](https://labs.convex.dev/auth) password sign-up/sign-in + 6-digit email OTP verification + forgot-password reset (cPanel SMTP)
 - **Validation:** Zod schemas shared between client and Convex (`shared/`)
 - **Testing:** Vitest (unit), Playwright (e2e + accessibility), 80% Istanbul coverage thresholds
 
@@ -108,6 +108,7 @@ npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
 
 ```
 /sign-in  →  password + email OTP (sign-up)  →  /register (new) or /profile (returning)
+         →  forgot password? → reset OTP → new password → back to sign-in
                 ↓
          draft autosave on /register (profiles table)
 ```
@@ -116,16 +117,19 @@ npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
 2. New accounts receive a 6-digit verification code (10-minute expiry) via SMTP.
 3. After verification, Convex Auth establishes a JWT session and ensures a draft `profiles` row exists.
 4. The app routes to `/register` (not yet submitted) or `/profile` (already submitted).
-5. On `/register`, form fields autosave every ~800ms; applicants can leave and resume later.
-6. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:register`. Unneeded uploads can be discarded via `resumeUploads:discardUploadSession`.
-7. Sign-out returns the visitor to `/sign-in`.
+5. Forgot password: request a separate reset OTP, verify the code, set a new password (must differ from the current one), then sign in again.
+6. On `/register`, form fields autosave every ~800ms; applicants can leave and resume later.
+7. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:register`. Unneeded uploads can be discarded via `resumeUploads:discardUploadSession`.
+8. Sign-out returns the visitor to `/sign-in`.
 
 ### OTP rate limits
 
+Sign-up and password-reset OTPs use separate rate-limit buckets (`otp_send`, `password_reset_send`) with the same limits:
+
 | Limit                  | Value                                              |
 | ---------------------- | -------------------------------------------------- |
-| Resend cooldown        | 30 seconds (shared across email step and OTP step) |
-| Sends per hour         | 5 per email address                                |
+| Resend cooldown        | 30 seconds (per flow step)                         |
+| Sends per hour         | 5 per email address (per bucket)                   |
 | Code expiry            | 10 minutes                                         |
 | Failed verify attempts | 5 per hour (Convex Auth)                           |
 
@@ -136,7 +140,7 @@ See [docs/API.md](docs/API.md#rate-limits) for server-side enforcement details.
 | Path        | Access                           | Purpose                                                                          |
 | ----------- | -------------------------------- | -------------------------------------------------------------------------------- |
 | `/`         | Public                           | Redirects authenticated users to `/register` or `/profile`; others to `/sign-in` |
-| `/sign-in`  | Public                           | Password sign-up / sign-in + OTP verify                                          |
+| `/sign-in`  | Public                           | Password sign-up / sign-in, OTP verify, forgot-password reset                    |
 | `/register` | Authenticated, not yet submitted | Multi-step application form with draft autosave                                  |
 | `/profile`  | Authenticated                    | Applicant dashboard (status, timeline, sign-out)                                 |
 

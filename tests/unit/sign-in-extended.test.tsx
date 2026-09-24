@@ -198,6 +198,14 @@ describe("SignInPage extended", () => {
     expect(verifyButton).not.toBeDisabled();
   });
 
+  it("shows the forgot password entry point in sign-in mode", async () => {
+    const user = userEvent.setup();
+    renderSignIn();
+
+    await user.click(screen.getByRole("button", { name: /Already have an account/i }));
+    expect(screen.getByRole("button", { name: "Forgot password?" })).toBeInTheDocument();
+  });
+
   it("switches between sign up and sign in modes", async () => {
     const user = userEvent.setup();
     renderSignIn();

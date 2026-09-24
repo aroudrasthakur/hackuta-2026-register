@@ -10,13 +10,23 @@ import {
 import {
   OTP_SEND_BUCKET,
   OTP_STATUS_LOOKUP_BUCKET,
+  PASSWORD_RESET_SEND_BUCKET,
 } from "../../convex/lib/rateLimitBuckets";
 
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 
 const getOtpSendCooldown = makeFunctionReference<"mutation">("rateLimits:getOtpSendCooldown");
+const getPasswordResetSendCooldown = makeFunctionReference<"mutation">(
+  "rateLimits:getPasswordResetSendCooldown",
+);
 const assertOtpSendAllowed = makeFunctionReference<"mutation">("rateLimits:assertOtpSendAllowed");
+const assertPasswordResetSendAllowed = makeFunctionReference<"mutation">(
+  "rateLimits:assertPasswordResetSendAllowed",
+);
 const recordOtpSend = makeFunctionReference<"mutation">("rateLimits:recordOtpSend");
+const recordPasswordResetSend = makeFunctionReference<"mutation">(
+  "rateLimits:recordPasswordResetSend",
+);
 
 describe("rateLimits", () => {
   it("reports remaining OTP cooldown seconds", async () => {
@@ -142,6 +152,65 @@ describe("rateLimits", () => {
 
       const status = await ctx.runMutation(getOtpSendCooldown, { email });
       expect(status).toEqual({ waitSeconds: 0, hourlyLimitReached: false });
+    });
+  });
+
+  it("tracks password reset sends separately from signup OTP sends", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const email = "reset-only@example.com";
+      await ctx.runMutation(recordPasswordResetSend, { email });
+
+      const resetAttempts = await ctx.db
+        .query("rateLimits")
+        .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", PASSWORD_RESET_SEND_BUCKET))
+        .filter((q) => q.eq(q.field("key"), email))
+        .collect();
+      const signupAttempts = await ctx.db
+        .query("rateLimits")
+        .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
+        .filter((q) => q.eq(q.field("key"), email))
+        .collect();
+
+      expect(resetAttempts).toHaveLength(1);
+      expect(signupAttempts).toHaveLength(0);
+      await expect(ctx.runMutation(assertOtpSendAllowed, { email })).resolves.not.toThrow();
+    });
+  });
+
+  it("blocks password reset sends during cooldown window", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const email = "reset-cooldown@example.com";
+      const now = Date.now();
+
+      await ctx.db.insert("rateLimits", {
+        bucket: PASSWORD_RESET_SEND_BUCKET,
+        key: email,
+        createdAt: now - 5_000,
+      });
+
+      await expect(ctx.runMutation(assertPasswordResetSendAllowed, { email })).rejects.toThrow(
+        "Please wait before requesting another code.",
+      );
+    });
+  });
+
+  it("reports password reset cooldown separately from signup OTP cooldown", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const email = "reset-status@example.com";
+      const now = Date.now();
+
+      await ctx.db.insert("rateLimits", {
+        bucket: PASSWORD_RESET_SEND_BUCKET,
+        key: email,
+        createdAt: now - 15_000,
+      });
+
+      const status = await ctx.runMutation(getPasswordResetSendCooldown, { email });
+      expect(status.hourlyLimitReached).toBe(false);
+      expect(status.waitSeconds).toBeGreaterThan(0);
     });
   });
 });

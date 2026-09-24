@@ -19,6 +19,8 @@ Browser-side Convex wiring. Server functions live in [convex/](../../convex/READ
 | saveProfileDraftRef | profiles:saveProfileDraft |
 | ensureApplicantProfileRef | applicant:ensureApplicantProfile |
 | getOtpSendCooldownRef | rateLimits:getOtpSendCooldown |
+| getPasswordResetSendCooldownRef | rateLimits:getPasswordResetSendCooldown |
+| invalidateSessionsAfterPasswordResetRef | passwordReset:invalidateSessionsAfterPasswordReset |
 
 [registerApi.ts](../pages/Register/registerApi.ts) defines refs for registrations:register and resumeUploads:discardUploadSession.
 
@@ -28,5 +30,6 @@ Browser-side Convex wiring. Server functions live in [convex/](../../convex/READ
 | --- | --- |
 | [convex/README.md](../../convex/README.md) | Server-side modules and public API |
 | [pages/Register/registerApi.ts](../pages/Register/registerApi.ts) | Submit and resume upload client |
+| [pages/SignIn/](../pages/SignIn/) | Sign-in and forgot-password flows |
 
 Parent index: [../README.md](../README.md).
