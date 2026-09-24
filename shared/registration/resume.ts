@@ -1,4 +1,4 @@
-export const MAX_RESUME_BYTES = 5 * 1024 * 1024;
+export const MAX_RESUME_BYTES = 2 * 1024 * 1024;
 export const MAX_RESUME_PAGES = 25;
 export const ALLOWED_RESUME_EXTENSIONS = [".pdf"] as const;
 export const ALLOWED_RESUME_CONTENT_TYPE = "application/pdf";
