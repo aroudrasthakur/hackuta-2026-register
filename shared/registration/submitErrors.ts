@@ -1,3 +1,5 @@
+import { RESUME_SIZE_ERROR_MESSAGE } from "./resume";
+
 export const SUBMIT_ERROR_MESSAGE =
   "We couldn't submit your application. Please try again.";
 
@@ -21,7 +23,7 @@ const USER_FACING_SERVER_MESSAGES = new Set([
 const RESUME_FIELD_MESSAGES = new Set([
   "Please select a PDF file.",
   "Your PDF is empty. Please select another file.",
-  "Your PDF must be 2 MB or smaller.",
+  RESUME_SIZE_ERROR_MESSAGE,
   "Please upload a PDF.",
   "The PDF is too large.",
   "The PDF must be between 1 byte and 2 MB.",
@@ -101,7 +103,7 @@ export function mapResumeUploadHttpError(
     case 411:
       return "We couldn't upload your resume. Please try again.";
     case 413:
-      return "Your PDF must be 2 MB or smaller.";
+      return RESUME_SIZE_ERROR_MESSAGE;
     case 415:
       return "Please select a PDF file.";
     case 422:

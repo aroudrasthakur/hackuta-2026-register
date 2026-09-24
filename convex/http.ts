@@ -7,6 +7,7 @@ import {
   MAX_RESUME_BYTES,
   parseResumeContentLength,
   RESUME_FILENAME_HEADER,
+  RESUME_SIZE_ERROR_MESSAGE,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../shared/registration/resume";
 import { validateResumePdfBytes } from "./pdfValidation";
@@ -106,8 +107,11 @@ const uploadResume = httpAction(async (ctx, request) => {
         origin,
       );
     }
-    if (contentLength.reason === "too_large" || contentLength.reason === "empty") {
-      return response(request, { error: "The PDF is too large." }, 413, origin);
+    if (contentLength.reason === "too_large") {
+      return response(request, { error: RESUME_SIZE_ERROR_MESSAGE }, 413, origin);
+    }
+    if (contentLength.reason === "empty") {
+      return response(request, { error: "The PDF is empty." }, 413, origin);
     }
     return response(request, { error: "Invalid upload request." }, 400, origin);
   }
@@ -127,7 +131,7 @@ const uploadResume = httpAction(async (ctx, request) => {
 
   const bytes = new Uint8Array(await request.arrayBuffer());
   if (bytes.length !== contentLength.length || bytes.length > MAX_RESUME_BYTES) {
-    return response(request, { error: "The PDF must be between 1 byte and 2 MB." }, 413, origin);
+    return response(request, { error: RESUME_SIZE_ERROR_MESSAGE }, 413, origin);
   }
 
   try {

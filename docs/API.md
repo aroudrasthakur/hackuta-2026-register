@@ -102,7 +102,8 @@ First submit creates the applicant record; sign-in alone does not write applicat
 | Message | Cause |
 | --- | --- |
 | `You have already submitted an application.` | Duplicate submit |
-| `Please upload a valid PDF resume of 5 MB or smaller.` | Bad/missing resume metadata or token |
+| `Please upload a valid PDF resume of 2 MB or smaller.` | Bad/missing resume metadata or token |
+| `Your resume exceeds the 2 MB limit. Please upload a smaller PDF.` | Resume exceeds size limit |
 | `This resume is already attached to another application.` | Storage ID reuse |
 | `Authentication required.` | Missing/invalid session |
 
@@ -209,7 +210,7 @@ Client-side Zod errors return per-field messages from `shared/registration/schem
 | Registration server | `shared/registration/validation.ts` | `validateRegistrationPayload()` |
 | Sanitization | `shared/lib/sanitizeInput.ts` | Control chars stripped; markup patterns rejected |
 | Password | `shared/auth/password.ts` | Length, upper/lower/digit |
-| Resume (client) | `shared/registration/resume.ts` | `.pdf` only, ≤ 5 MB |
+| Resume (client) | `shared/registration/resume.ts` | `.pdf` only, ≤ 2 MB |
 | Resume (server) | `convex/pdfValidation.ts` | Magic bytes, parse, ≤ 25 pages |
 
 Full field list: `shared/registration/schema.ts` and `shared/registration/constants.ts`.

@@ -25,6 +25,14 @@ describe("resume upload policy", () => {
       ok: false,
       reason: "too_large",
     });
+    expect(parseResumeContentLength(String(MAX_RESUME_BYTES))).toEqual({
+      ok: true,
+      length: MAX_RESUME_BYTES,
+    });
+    expect(parseResumeContentLength(String(MAX_RESUME_BYTES - 1))).toEqual({
+      ok: true,
+      length: MAX_RESUME_BYTES - 1,
+    });
     expect(parseResumeContentLength("1024")).toEqual({ ok: true, length: 1024 });
   });
 

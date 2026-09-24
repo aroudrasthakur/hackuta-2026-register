@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_RESUME_BYTES, RESUME_SIZE_ERROR_MESSAGE } from "../../shared/registration/resume";
 import { ResumeUpload } from "../../src/pages/Register/components/ResumeUpload";
 
 describe("ResumeUpload", () => {
@@ -25,7 +26,7 @@ describe("ResumeUpload", () => {
     expect(
       screen.getByText("Click to upload or drag and drop"),
     ).toBeInTheDocument();
-    expect(screen.getByText("PDF only, up to 5 MB")).toBeInTheDocument();
+    expect(screen.getByText("PDF only, up to 2 MB")).toBeInTheDocument();
   });
 
   it("shows choose file button", () => {
@@ -174,7 +175,7 @@ describe("ResumeUpload", () => {
 
     expect(
       screen.getByText(
-        "Upload your resume as a PDF file. Maximum file size is 5 MB.",
+        "Upload your resume as a PDF file. Maximum file size is 2 MB.",
       ),
     ).toBeInTheDocument();
   });
@@ -309,10 +310,30 @@ describe("ResumeUpload", () => {
     const file = new File(["x"], "large.pdf", {
       type: "application/pdf",
     });
-    Object.defineProperty(file, "size", { value: 5 * 1024 * 1024 + 1 });
+    Object.defineProperty(file, "size", { value: MAX_RESUME_BYTES + 1 });
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(mockOnError).toHaveBeenCalledWith("Your PDF must be 5 MB or smaller.");
+    expect(mockOnError).toHaveBeenCalledWith(RESUME_SIZE_ERROR_MESSAGE);
+  });
+
+  it("accepts a PDF exactly at the size limit", () => {
+    render(
+      <ResumeUpload
+        file={null}
+        onChange={mockOnChange}
+        onError={mockOnError}
+      />,
+    );
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["x"], "large.pdf", {
+      type: "application/pdf",
+    });
+    Object.defineProperty(file, "size", { value: MAX_RESUME_BYTES });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(mockOnError).toHaveBeenCalledWith(undefined);
+    expect(mockOnChange).toHaveBeenCalledWith(file);
   });
 
   it("opens the file picker from the choose file button", async () => {

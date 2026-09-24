@@ -6,6 +6,7 @@ import {
   mapUploadError,
   SUBMIT_ERROR_MESSAGE,
 } from "../../shared/registration/submitErrors";
+import { RESUME_SIZE_ERROR_MESSAGE } from "../../shared/registration/resume";
 
 describe("submit error mapping", () => {
   it("passes through known server messages in production mode", () => {
@@ -33,7 +34,7 @@ describe("submit error mapping", () => {
     );
     expect(mapResumeUploadHttpError(429, { error: "Too many uploads. Please try again later." }))
       .toBe("Too many uploads. Please try again later.");
-    expect(mapResumeUploadHttpError(413, {})).toBe("Your PDF must be 5 MB or smaller.");
+    expect(mapResumeUploadHttpError(413, {})).toBe(RESUME_SIZE_ERROR_MESSAGE);
     expect(mapResumeUploadHttpError(415, {})).toBe("Please select a PDF file.");
     expect(mapResumeUploadHttpError(403, {})).toBe(
       "Resume upload is unavailable. Please try again later or contact us.",

@@ -22,7 +22,7 @@ describe("validateApplicationForm", () => {
   it.each([
     new File(["text"], "resume.txt", { type: "text/plain" }),
     new File([], "resume.pdf", { type: "application/pdf" }),
-    new File(["x".repeat(5 * 1024 * 1024 + 1)], "resume.pdf", { type: "application/pdf" }),
+    new File(["x".repeat(2 * 1024 * 1024 + 1)], "resume.pdf", { type: "application/pdf" }),
   ])("blocks submission of invalid resume files", (resume) => {
     const result = validateApplicationForm({ ...validRegistrationForm(), resume });
     expect(result.success).toBe(false);

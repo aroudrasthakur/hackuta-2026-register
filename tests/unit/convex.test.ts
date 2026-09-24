@@ -172,7 +172,7 @@ describe("convex registrations", () => {
   it.each([
     ["application/pdf", ""],
     ["text/plain", "not a pdf"],
-    ["application/pdf", "x".repeat(5 * 1024 * 1024 + 1)],
+    ["application/pdf", "x".repeat(2 * 1024 * 1024 + 1)],
   ])("rejects invalid stored file metadata (%s)", async (type, contents) => {
     const t = await authTest();
     const storageId = await storeFile(t, contents, type);
@@ -367,7 +367,7 @@ describe("resume HTTP validation and lifecycle", () => {
       body: emptyBody,
     })).status).toBe(413);
 
-    const oversizedLength = 5 * 1024 * 1024 + 1;
+    const oversizedLength = 2 * 1024 * 1024 + 1;
     expect((await t.fetch("/resume-upload", {
       method: "POST",
       headers: buildUploadHeaders(new Uint8Array(1), {
