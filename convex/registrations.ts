@@ -9,6 +9,7 @@ import {
   MAX_RESUME_BYTES,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../shared/registration/resume";
+import { getHackathonName } from "./lib/eventConfig";
 import { requireVerifiedAuthUser } from "./lib/auth";
 import {
   ensureDraftProfile,
@@ -123,6 +124,7 @@ async function upsertRegistration(
     firstName: data.firstName,
     lastName: data.lastName,
     submittedAt,
+    hackathonName: await getHackathonName(ctx),
   });
 
   return {
