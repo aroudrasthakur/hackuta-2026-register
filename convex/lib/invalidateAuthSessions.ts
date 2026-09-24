@@ -1,9 +1,9 @@
-import type { DataModelFromSchemaDefinition, GenericMutationCtx } from "convex/server";
+import type { GenericMutationCtx } from "convex/server";
 import type { GenericId } from "convex/values";
-import type schema from "../schema";
 
-type DataModel = DataModelFromSchemaDefinition<typeof schema>;
-type MutationCtx = GenericMutationCtx<DataModel>;
+/** Wide ctx type — full schema auth tables break GenericDataModel in CI/deploy tsc. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional wide db for auth session cleanup
+type MutationCtx = GenericMutationCtx<any>;
 
 /** Remove every session and refresh token for the given auth user. */
 export async function invalidateAllSessionsForUser(

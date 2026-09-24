@@ -28,7 +28,7 @@ describe("assertPasswordNotReused", () => {
   });
 
   it("allows reset when the new password differs", async () => {
-    vi.mocked(retrieveAccount).mockResolvedValue(null);
+    vi.mocked(retrieveAccount).mockResolvedValue(null as never);
 
     await expect(
       assertPasswordNotReused({} as never, "password", "user@example.com", "NewPass1"),
