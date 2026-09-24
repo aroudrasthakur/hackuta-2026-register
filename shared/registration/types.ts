@@ -31,6 +31,7 @@ export type ApplicationFormData = {
   school: MlhSchool | typeof SCHOOL_OTHER_OPTION | "";
   otherSchool: string;
   countryOfResidence: CountryOfResidence | "";
+  stateOfResidence: string;
   levelOfStudy: LevelOfStudy | "";
   major: Major | "";
   otherMajor: string;
@@ -42,6 +43,8 @@ export type ApplicationFormData = {
   otherDietary: string;
   tshirtSize: TshirtSize | "";
   firstHackathon: boolean | null;
+  internationalStudent: boolean | null;
+  eatsBeef: boolean | null;
   hearAbout: HearAboutOption | "";
   otherHearAbout: string;
   resume: File | null;

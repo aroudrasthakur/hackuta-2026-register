@@ -23,6 +23,7 @@ export const TRIMMED_STRING_FIELDS = [
 export const PLAIN_STRING_FIELDS = [
   "school",
   "countryOfResidence",
+  "stateOfResidence",
   "levelOfStudy",
   "major",
   "gender",
@@ -41,7 +42,11 @@ export const OPTIONAL_INT_FIELDS = ["age", "graduationYear"] as const;
 
 export const STRING_ARRAY_FIELDS = ["raceEthnicity", "dietaryRestrictions"] as const;
 
-export const NULLABLE_BOOLEAN_FIELDS = ["firstHackathon"] as const;
+export const NULLABLE_BOOLEAN_FIELDS = [
+  "firstHackathon",
+  "internationalStudent",
+  "eatsBeef",
+] as const;
 
 export const REQUIRED_BOOLEAN_FIELDS = [
   "codeOfConductAgreed",
