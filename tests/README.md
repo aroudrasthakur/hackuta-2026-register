@@ -50,6 +50,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | File | Covers |
 | --- | --- |
 | sign-in.test.tsx, sign-in-extended.test.tsx | Sign-in / OTP UI |
+| sign-in-password-input.test.tsx | Sign-in password visibility toggle |
 | forgot-password.test.tsx | Forgot-password flow (mock auth) |
 | register-ui.test.tsx, register-api.test.ts | Application form and API client |
 | resume-upload.test.tsx | Resume widget |
