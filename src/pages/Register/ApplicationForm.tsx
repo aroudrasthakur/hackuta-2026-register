@@ -370,7 +370,7 @@ function ApplicationFormContent({
             label="Student email (optional)"
             type="email"
             inputMode="email"
-            autoComplete="email"
+            autoComplete="section-student email"
             spellCheck={false}
             autoCapitalize="none"
             value={form.studentEmail}

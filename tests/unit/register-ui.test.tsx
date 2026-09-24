@@ -199,6 +199,10 @@ describe("ApplicationForm", () => {
   it("shows optional student email near the school field", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(screen.getByLabelText(/Student email \(optional\)/)).toBeInTheDocument();
+    expect(document.getElementById("studentEmail")).toHaveAttribute(
+      "autocomplete",
+      "section-student email",
+    );
     expect(
       screen.getByText(
         "If you signed up with a personal email, you can provide your school email here.",
