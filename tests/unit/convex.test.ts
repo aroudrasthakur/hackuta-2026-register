@@ -924,14 +924,12 @@ describe("convex applicant auth flows", () => {
       "applications-open",
       "application-deadline",
       "decisions-out",
-      "rsvp-due",
       "hackathon-begins",
     ]);
     expect(dashboard.timeline.map((event) => event.label)).toEqual([
       "Applications open",
       "Applications close",
       "Decisions go out",
-      "RSVP due",
       "The hackathon begins",
     ]);
   });
@@ -961,7 +959,7 @@ describe("convex applicant auth flows", () => {
     const applicationsOpen = dashboard.timeline.find((event) => event.id === "applications-open");
     const hackathonBegins = dashboard.timeline.find((event) => event.id === "hackathon-begins");
 
-    expect(applicationsOpen?.complete).toBe(true);
+    expect(applicationsOpen?.complete).toBe(false);
     expect(hackathonBegins?.complete).toBe(false);
   });
 

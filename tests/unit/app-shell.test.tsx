@@ -281,7 +281,7 @@ describe("presentational components", () => {
       </PageShell>,
     );
     expect(screen.queryByRole("main")).not.toBeInTheDocument();
-    expect(container.firstElementChild!.className).toContain("max-w-6xl");
+    expect(container.firstElementChild!.className).toContain("max-w-[min(96rem,100%)]");
     expect(container.firstElementChild!.className).toContain("py-6");
     expect(screen.getByRole("heading", { name: "Only title" })).toBeInTheDocument();
 

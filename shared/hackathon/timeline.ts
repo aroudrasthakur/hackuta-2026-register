@@ -55,14 +55,6 @@ export function buildHackathonTimeline(
       description: "All applicants will receive an email with their application decision.",
     }),
     milestone({
-      id: "rsvp-due",
-      label: "RSVP due",
-      timestamp: hackathon.rsvpDueAt ?? null,
-      now,
-      description:
-        "Confirm your participation by this date. Unconfirmed spots may be offered to applicants on the waitlist.",
-    }),
-    milestone({
       id: "hackathon-begins",
       label: "The hackathon begins",
       timestamp: hackathon.startsAt,
