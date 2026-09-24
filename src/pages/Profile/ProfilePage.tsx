@@ -20,9 +20,12 @@ import {
   profileCompactButton,
   profileOverviewGrid,
   profileOverviewPanel,
+  profileOverviewTimelinePanel,
   profilePageBody,
   profilePageSubtitle,
+  profilePageSubtitleSubmitted,
   profilePageTitle,
+  profilePageTitleSubmitted,
   profileSignOutButton,
   profileSignOutWrap,
 } from "./profileStyles";
@@ -37,7 +40,13 @@ function ProfilePageShell({
   return (
     <StormPageFrame>
       <ProfileAsset />
-      <PageShell title="Your Journey" subtitle={subtitle} frameless wide compact>
+      <PageShell
+        title="Your Journey"
+        subtitle={subtitle}
+        frameless
+        wide
+        compact
+      >
         {children}
       </PageShell>
     </StormPageFrame>
@@ -55,10 +64,12 @@ function applicantName(
   return first || last || "—";
 }
 
-function yearOfStudy(answers: {
-  graduationYear?: number | string | null;
-  levelOfStudy?: string | null;
-} | null) {
+function yearOfStudy(
+  answers: {
+    graduationYear?: number | string | null;
+    levelOfStudy?: string | null;
+  } | null,
+) {
   if (answers?.graduationYear) return String(answers.graduationYear);
   if (answers?.levelOfStudy?.trim()) return answers.levelOfStudy.trim();
   return "—";
@@ -68,7 +79,7 @@ export default function ProfilePage() {
   const mockAuth = useMockAuth();
   const hackathonName = useHackathonName();
   const client = getConvexClient();
-  const pageSubtitle = `${hackathonName} applicant dashboard`;
+  const pageSubtitle = `${hackathonName}`;
   const dashboard = useQuery(
     getMyApplicantDashboardRef,
     client && !mockAuth.enabled ? {} : "skip",
@@ -128,7 +139,9 @@ export default function ProfilePage() {
   const timeline = buildHackathonTimeline(
     resolveHackathonTimelineSource(profile.hackathon),
   );
-  const submitted = Boolean(registration?.submittedAt && registration.status !== "draft");
+  const submitted = Boolean(
+    registration?.submittedAt && registration.status !== "draft",
+  );
   const statusLabel = getApplicantStatusLabel(registration);
   const name = applicantName(profile.profile.displayName, answers);
   const school = answers?.school?.trim() || "—";
@@ -138,10 +151,16 @@ export default function ProfilePage() {
     <ProfilePageShell subtitle={pageSubtitle}>
       <div className={profilePageBody}>
         <header>
-          <h2 className={profilePageTitle}>
+          <h2
+            className={submitted ? profilePageTitleSubmitted : profilePageTitle}
+          >
             {submitted ? "Your application is in" : "Your application"}
           </h2>
-          <p className={profilePageSubtitle}>
+          <p
+            className={
+              submitted ? profilePageSubtitleSubmitted : profilePageSubtitle
+            }
+          >
             {submitted
               ? "Nothing left to do. We'll email you when decisions go out."
               : "Start or finish your application before the deadline. Your progress is saved automatically."}
@@ -151,27 +170,44 @@ export default function ProfilePage() {
         <div className={profileOverviewGrid}>
           <aside className={profileOverviewPanel}>
             <dl className={profileFieldStack}>
-              <ProfileField label="Name" value={name} />
-              <ProfileField label="School" value={school} />
-              <ProfileField label="Year of study" value={studyYear} />
+              <ProfileField label="Name" value={name} emphasized={submitted} />
+              <ProfileField
+                label="School"
+                value={school}
+                emphasized={submitted}
+              />
+              <ProfileField
+                label="Year of study"
+                value={studyYear}
+                emphasized={submitted}
+              />
               {statusLabel ? (
-                <ProfileField label="Status" value={statusLabel} />
+                <ProfileField
+                  label="Status"
+                  value={statusLabel}
+                  emphasized={submitted}
+                />
               ) : null}
             </dl>
 
             {!submitted ? (
               <div className="flex justify-start">
-                <OdysseyButton href="/register" className={profileCompactButton}>
+                <OdysseyButton
+                  href="/register"
+                  className={profileCompactButton}
+                >
                   {registration ? "Continue application" : "Start application"}
                 </OdysseyButton>
               </div>
             ) : null}
           </aside>
 
-          <div className={profileOverviewPanel}>
+          <div className={profileOverviewTimelinePanel}>
             <ApplicantTimeline events={timeline} />
             {!registration ? (
-              <p className={profileMetaText}>You haven&apos;t started an application yet.</p>
+              <p className={profileMetaText}>
+                You haven&apos;t started an application yet.
+              </p>
             ) : null}
           </div>
         </div>

@@ -12,7 +12,6 @@ describe("buildHackathonTimeline", () => {
       "Applications open",
       "Applications close",
       "Decisions go out",
-      "RSVP due",
       "The hackathon begins",
     ]);
   });
@@ -24,13 +23,12 @@ describe("buildHackathonTimeline", () => {
     );
 
     expect(timeline.find((event) => event.id === "applications-open")?.complete).toBe(true);
-    expect(timeline.find((event) => event.id === "application-deadline")?.complete).toBe(true);
-    expect(timeline.find((event) => event.id === "decisions-out")).toMatchObject({
+    expect(timeline.find((event) => event.id === "application-deadline")).toMatchObject({
       complete: false,
       dateLabel: "To be announced",
       timestamp: null,
     });
-    expect(timeline.find((event) => event.id === "rsvp-due")).toMatchObject({
+    expect(timeline.find((event) => event.id === "decisions-out")).toMatchObject({
       complete: false,
       dateLabel: "To be announced",
       timestamp: null,
@@ -53,8 +51,9 @@ describe("buildHackathonTimeline", () => {
 
   it("uses the canonical schedule constants", () => {
     expect(HACKATHON_SCHEDULE.registrationOpensAt).toBe(
-      Date.parse("2026-09-21T00:00:00-05:00"),
+      Date.parse("2026-09-25T00:00:00-05:00"),
     );
+    expect(HACKATHON_SCHEDULE.registrationClosesAt).toBeNull();
     expect(HACKATHON_SCHEDULE.startsAt).toBe(Date.parse("2026-11-14T09:00:00-06:00"));
   });
 });
