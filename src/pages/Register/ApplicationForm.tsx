@@ -146,6 +146,7 @@ function ApplicationFormContent({
     return () => window.clearTimeout(timer);
   }, [
     draftHydrated,
+    form,
     hasConvexClient,
     routing.isAuthenticated,
     saveDraft,
@@ -563,7 +564,9 @@ function ApplicationFormContent({
         </h3>
 
         <fieldset
-          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.otherDietary)}`}
+          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(
+            !!errors.otherDietary || !!errors.otherDietaryRestrictions,
+          )}`}
         >
           <legend className={fieldsetLegendClass}>
             Dietary restrictions (select all that apply)
@@ -584,6 +587,15 @@ function ApplicationFormContent({
               />
             ))}
           </div>
+          <TextField
+            id="otherDietaryRestrictions"
+            label="Other dietary restrictions (optional)"
+            helperText="Please describe any dietary restrictions not listed above."
+            value={form.otherDietaryRestrictions}
+            onChange={(e) => updateField("otherDietaryRestrictions", e.target.value)}
+            maxLength={FIELD_LIMITS.otherDietaryRestrictions}
+            error={errors.otherDietaryRestrictions}
+          />
           {form.dietaryRestrictions.includes("Allergies") ? (
             <>
               <input

@@ -89,6 +89,20 @@ describe("registration constants", () => {
       expect(APPLICANT_ANSWER_FIELD_KEYS).not.toContain("eatsPork");
     });
 
+    it("registers every application form field except resume for draft autosave", async () => {
+      const { APPLICANT_ANSWER_FIELD_KEYS } = await import(
+        "../../shared/registration/applicantFields"
+      );
+      const { INITIAL_FORM } = await import("../../shared/registration/types");
+      const persisted = new Set<string>(APPLICANT_ANSWER_FIELD_KEYS);
+      const formKeys = Object.keys(INITIAL_FORM).filter((key) => key !== "resume");
+
+      expect(formKeys).toHaveLength(persisted.size);
+      for (const key of formKeys) {
+        expect(persisted.has(key)).toBe(true);
+      }
+    });
+
     it("has race/ethnicity options", () => {
       expect(Array.isArray(RACE_ETHNICITY_OPTIONS)).toBe(true);
       expect(RACE_ETHNICITY_OPTIONS.length).toBeGreaterThan(0);

@@ -196,6 +196,34 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("No Pork")).not.toBeChecked();
   });
 
+  it("shows optional other dietary restrictions below the checkboxes", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(
+      screen.getByLabelText(/Other dietary restrictions \(optional\)/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Please describe any dietary restrictions not listed above."),
+    ).toBeInTheDocument();
+  });
+
+  it("autosaves and restores other dietary restrictions", async () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    vi.useFakeTimers();
+    const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.change(document.getElementById("otherDietaryRestrictions")!, {
+      target: { value: "No shellfish" },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    expect(draftApi.save).toHaveBeenCalledOnce();
+    const { patch } = draftApi.save.mock.calls[0]![0];
+    expect(patch.otherDietaryRestrictions).toBe("No shellfish");
+
+    view.unmount();
+    draftApi.result = { status: "draft", draft: patch };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(document.getElementById("otherDietaryRestrictions")).toHaveValue("No shellfish");
+  });
+
   it("does not render standalone beef or pork questions", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(screen.queryByRole("group", { name: /Do you eat beef/i })).not.toBeInTheDocument();

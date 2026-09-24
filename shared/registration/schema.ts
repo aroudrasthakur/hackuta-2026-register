@@ -178,6 +178,10 @@ export const registrationPayloadSchema = z
       max: FIELD_LIMITS.otherDietary,
       tooLongMessage: "Dietary details are too long.",
     }),
+    otherDietaryRestrictions: safeOptionalPlainText({
+      max: FIELD_LIMITS.otherDietaryRestrictions,
+      tooLongMessage: "Other dietary restrictions are too long.",
+    }),
     tshirtSize: tshirtSizeSchema,
     firstHackathon: z.boolean({
       message: "Please let us know if this is your first hackathon.",

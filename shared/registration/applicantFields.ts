@@ -10,6 +10,7 @@ export const TRIMMED_STRING_FIELDS = [
   "phone",
   "otherRaceEthnicity",
   "otherDietary",
+  "otherDietaryRestrictions",
   "linkedin",
   "github",
   "portfolio",

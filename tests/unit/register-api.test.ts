@@ -36,6 +36,7 @@ const payload: RegistrationPayload = {
   raceEthnicity: [],
   dietaryRestrictions: [],
   otherDietary: "",
+  otherDietaryRestrictions: undefined,
   tshirtSize: "M",
   firstHackathon: true,
   hearAbout: "Discord",
