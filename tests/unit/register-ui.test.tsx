@@ -23,10 +23,6 @@ import { LANDING_URL } from "../../src/constants/site";
 import { ApplicationForm } from "../../src/pages/Register/ApplicationForm";
 import { SuccessStep } from "../../src/pages/Register/SuccessStep";
 
-const { draftMutationMock } = vi.hoisted(() => ({
-  draftMutationMock: vi.fn(),
-}));
-
 vi.mock("../../src/hooks/useSessionAuth", () => ({
   useSessionAuth: () => ({
     isLoading: false,

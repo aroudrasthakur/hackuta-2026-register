@@ -81,8 +81,8 @@ export function mapUploadError(error: unknown): string {
 
 export function mapConvexErrorToUserMessage(error: unknown): string {
   const detail = error instanceof Error ? error.message.trim() : "";
-  const normalized = normalizeUploadServerMessage(detail);
-  if (normalized) return normalized;
+  const normalizedUploadMessage = normalizeUploadServerMessage(detail);
+  if (normalizedUploadMessage) return normalizedUploadMessage;
   if (USER_FACING_SERVER_MESSAGES.has(detail)) {
     return detail;
   }
