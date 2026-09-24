@@ -37,6 +37,7 @@ async function fillApplicationForm(page: Page) {
   await page.locator("#age").fill("20");
   await page.locator("#school").fill("Texas at Arlington");
   await page.getByRole("button", { name: "The University of Texas at Arlington" }).click();
+  await page.getByLabel(/Student email \(optional\)/).fill("student@mail.utexas.edu");
   await selectListboxOption(page, "countryOfResidence", "United States of America");
   await selectListboxOption(page, "stateOfResidence", "Texas");
   await page.getByRole("group", { name: /Are you an international student/ })
@@ -111,6 +112,12 @@ test.describe("registration", () => {
     await expect(dietary.getByLabel("No Pork")).toBeVisible();
     await expect(page.getByRole("group", { name: /Do you eat beef/i })).toHaveCount(0);
     await expect(page.getByRole("group", { name: /Do you eat pork/i })).toHaveCount(0);
+    await expect(page.getByLabel(/Student email \(optional\)/)).toBeVisible();
+    await expect(
+      page.getByText(
+        "If you signed up with a personal email, you can provide your school email here.",
+      ),
+    ).toBeVisible();
     await expect(page.getByLabel(/Other dietary restrictions \(optional\)/)).toBeVisible();
     await expect(
       page.getByText("Please describe any dietary restrictions not listed above."),

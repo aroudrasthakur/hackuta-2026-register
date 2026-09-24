@@ -323,6 +323,46 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("allows blank student email without blocking submission", () => {
+    const form = validRegistrationForm();
+    form.studentEmail = "";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.studentEmail).toBeUndefined();
+    }
+  });
+
+  it.each([
+    "student@mail.utexas.edu",
+    "sam@my-university.org",
+    "  Student@School.Academy  ",
+  ])("accepts valid student email addresses (%s)", (studentEmail) => {
+    const form = validRegistrationForm();
+    form.studentEmail = studentEmail;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.studentEmail).toBe(studentEmail.trim().toLowerCase());
+    }
+  });
+
+  it("rejects malformed student email addresses", () => {
+    const form = validRegistrationForm();
+    form.studentEmail = "not-an-email";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.studentEmail).toBe("Enter a valid student email address.");
+    }
+  });
+
   it("keeps allergy follow-up required even when other dietary restrictions are provided", () => {
     const form = validRegistrationForm();
     form.dietaryRestrictions = ["Allergies"];

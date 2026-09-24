@@ -32,6 +32,7 @@ export type ApplicationFormData = {
   age: string;
   school: MlhSchool | typeof SCHOOL_OTHER_OPTION | "";
   otherSchool: string;
+  studentEmail: string;
   countryOfResidence: CountryOfResidence | "";
   stateOfResidence: StateOfResidence | "";
   levelOfStudy: LevelOfStudy | "";
@@ -73,6 +74,7 @@ export const FIELD_ORDER: FieldName[] = [
   "age",
   "school",
   "otherSchool",
+  "studentEmail",
   "countryOfResidence",
   "stateOfResidence",
   "internationalStudent",
@@ -107,6 +109,7 @@ export const INITIAL_FORM: ApplicationFormData = {
 
 /** Maps validation keys to DOM ids used for focus management. */
 export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
+  studentEmail: "studentEmail",
   internationalStudent: "internationalStudent-yes",
   firstHackathon: "firstHackathon-yes",
   resume: "resume-upload",

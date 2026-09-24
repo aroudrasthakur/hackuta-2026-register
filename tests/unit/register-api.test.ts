@@ -25,6 +25,7 @@ const payload: RegistrationPayload = {
   phone: "5551234567",
   age: 20,
   school: "The University of Texas at Arlington",
+  studentEmail: undefined,
   countryOfResidence: "United States of America",
   stateOfResidence: "Texas",
   internationalStudent: false,

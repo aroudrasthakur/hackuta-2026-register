@@ -56,6 +56,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     phone: form.phone,
     age: form.age.trim() === "" ? Number.NaN : Number(form.age.trim()),
     school: resolveSchool(form),
+    studentEmail: form.studentEmail,
     countryOfResidence: form.countryOfResidence,
     stateOfResidence: form.stateOfResidence,
     internationalStudent: form.internationalStudent ?? undefined,

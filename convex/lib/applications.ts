@@ -125,6 +125,7 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     phone: application.phone,
     age: application.age,
     school: application.school,
+    studentEmail: application.studentEmail,
     countryOfResidence: application.countryOfResidence,
     stateOfResidence: application.stateOfResidence,
     levelOfStudy: application.levelOfStudy,

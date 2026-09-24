@@ -19,6 +19,7 @@ import {
   STATES_OF_RESIDENCE,
   TSHIRT_SIZES,
 } from "./constants";
+import { isValidEmailSyntax, normalizeEmail } from "../lib/normalizeEmail";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
 
 export function isValidPhone(value: string) {
@@ -83,6 +84,27 @@ function safeOptionalPlainText(options: {
     .transform((value) => value || undefined);
 }
 
+function optionalEmail(message = "Enter a valid student email address.") {
+  return z
+    .string()
+    .transform((value) => sanitizePlainText(value).trim())
+    .pipe(
+      z
+        .string()
+        .max(FIELD_LIMITS.email, "Student email is too long.")
+        .refine(
+          (value) => value === "" || !containsDangerousMarkup(value),
+          "Please remove HTML or script content.",
+        ),
+    )
+    .optional()
+    .transform((value) => normalizeEmail(value))
+    .refine(
+      (value) => value === undefined || isValidEmailSyntax(value),
+      message,
+    );
+}
+
 function optionalHttpUrl(label: string) {
   return z
     .string()
@@ -144,6 +166,7 @@ export const registrationPayloadSchema = z
         (value !== SCHOOL_OTHER_OPTION && value.length > 0),
       "Please select a school from the list or enter your school name.",
     ),
+    studentEmail: optionalEmail(),
     countryOfResidence: safePlainText({
       max: 100,
       message: "Please select your country of residence.",
