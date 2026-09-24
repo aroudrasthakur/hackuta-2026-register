@@ -369,6 +369,7 @@ function SignInPageContent({
                 setPassword(event.target.value);
                 setError(null);
               }}
+              className="sign-in-field__input"
               aria-invalid={!!error}
             />
           </label>
@@ -386,6 +387,7 @@ function SignInPageContent({
                   setConfirmPassword(event.target.value);
                   setError(null);
                 }}
+                className="sign-in-field__input"
                 aria-invalid={!!error}
               />
             </label>

@@ -391,6 +391,7 @@ export function ForgotPasswordFlow({
                 setNewPassword(event.target.value);
                 setError(null);
               }}
+              className="sign-in-field__input"
               aria-invalid={!!error}
             />
           </label>
@@ -407,6 +408,7 @@ export function ForgotPasswordFlow({
                 setConfirmPassword(event.target.value);
                 setError(null);
               }}
+              className="sign-in-field__input"
               aria-invalid={!!error}
             />
           </label>
