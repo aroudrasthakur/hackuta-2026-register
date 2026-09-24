@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { ConvexAuthProvider } from '@convex-dev/auth/react'
@@ -10,10 +10,11 @@ import { SessionAuthProvider } from './hooks/useSessionAuth'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { convexClient } from './convex/client'
 import HomeRedirect from './pages/HomeRedirect'
-import ProfilePage from './pages/Profile/ProfilePage'
-import RegisterPage from './pages/Register/RegisterPage'
-import SignInPage from './pages/SignIn/SignInPage'
 import './styles/index.css'
+
+const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage'))
+const RegisterPage = lazy(() => import('./pages/Register/RegisterPage'))
+const SignInPage = lazy(() => import('./pages/SignIn/SignInPage'))
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')
@@ -24,27 +25,29 @@ const app = (
   <React.StrictMode>
     <BrowserRouter>
       <AuthBootstrap>
-        <Routes>
-          <Route path="/" element={<HomeRedirect />} />
-          <Route path="/sign-in" element={<SignInPage />} />
-          <Route
-            path="/register"
-            element={
-              <ProtectedRoute requireAuth requireNoSubmittedRegistration>
-                <RegisterPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute requireAuth>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/" element={<HomeRedirect />} />
+            <Route path="/sign-in" element={<SignInPage />} />
+            <Route
+              path="/register"
+              element={
+                <ProtectedRoute requireAuth requireNoSubmittedRegistration>
+                  <RegisterPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute requireAuth>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </AuthBootstrap>
     </BrowserRouter>
   </React.StrictMode>

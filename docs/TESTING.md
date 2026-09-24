@@ -43,6 +43,8 @@ Convex tests use `convex-test` with `import.meta.glob` over `convex/**/*.ts`. Lo
 
 Playwright covers password sign-up, mock OTP verify, registration UI, and CSP header assertions (register.spec.ts). Contact form tests remain in hackuta-2026-registration.
 
+The registration suite also records the click-to-visible duration for the country dropdown. See [PERFORMANCE.md](PERFORMANCE.md) for the interaction budget and diagnosis.
+
 CI builds with `VITE_USE_MOCK_API=true` — no live Convex or SMTP in browser jobs.
 
 ## CI pipeline

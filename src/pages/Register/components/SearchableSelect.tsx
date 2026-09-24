@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useDeferredValue,
   type KeyboardEvent,
 } from "react";
 import { FieldError, RequiredMark } from "./FormFields";
@@ -43,11 +44,17 @@ export function SearchableSelect({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const deferredQuery = useDeferredValue(query);
 
   const inputValue = open ? query : value;
 
+  const searchableOptions = useMemo(
+    () => options.map((option) => ({ option, normalized: option.toLowerCase() })),
+    [options],
+  );
+
   const filteredOptions = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    const normalized = deferredQuery.trim().toLowerCase();
     const matchingExtras = (extraOptions ?? []).filter((option) =>
       normalized ? option.toLowerCase().includes(normalized) : true,
     );
@@ -60,12 +67,13 @@ export function SearchableSelect({
     }
 
     return [
-      ...options
-        .filter((option) => option.toLowerCase().includes(normalized))
-        .slice(0, MAX_RESULTS),
+      ...searchableOptions
+        .filter((option) => option.normalized.includes(normalized))
+        .slice(0, MAX_RESULTS)
+        .map((option) => option.option),
       ...matchingExtras,
     ];
-  }, [extraOptions, featuredOptions, options, query]);
+  }, [deferredQuery, extraOptions, featuredOptions, options, searchableOptions]);
 
   const activeOptionIndex =
     filteredOptions.length === 0
@@ -79,6 +87,8 @@ export function SearchableSelect({
   };
 
   useEffect(() => {
+    if (!open) return;
+
     const handlePointerDown = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
         setOpen(false);
@@ -86,7 +96,7 @@ export function SearchableSelect({
     };
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, []);
+  }, [open]);
 
   const errorId = `${id}-error`;
 
@@ -161,7 +171,7 @@ export function SearchableSelect({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border-2 border-(--sand) bg-white py-1 shadow-lg"
+          className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border-2 border-(--sand) bg-(--light) py-1 shadow-lg"
         >
           {filteredOptions.map((option, index) => (
             <li key={option} role="option" aria-selected={option === value}>
@@ -169,7 +179,7 @@ export function SearchableSelect({
                 type="button"
                 className={`block w-full px-3 py-2 text-left text-sm hover:bg-(--clay) ${
                   index === activeOptionIndex || option === value
-                    ? "bg-(--clay) font-medium text-(--ink)"
+                    ? "bg-white font-bold text-(--ocean)"
                     : "text-(--ink)"
                 }`}
                 onMouseDown={(event) => event.preventDefault()}
