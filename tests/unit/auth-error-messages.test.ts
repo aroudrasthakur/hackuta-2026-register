@@ -22,6 +22,7 @@ describe("authentication error mapping", () => {
 
   it("maps verification failures without exposing provider details", () => {
     expect(mapAuthError(new Error("Verification code has expired"))).toBe(OTP_INVALID_MESSAGE);
+    expect(mapAuthError(new Error("Invalid code"))).toBe(OTP_INVALID_MESSAGE);
     expect(mapAuthError(new Error("[CONVEX A(auth:signIn)] Server Error"))).toBe(
       AUTH_FAILED_MESSAGE,
     );

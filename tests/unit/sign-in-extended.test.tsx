@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { OTP_INVALID_MESSAGE } from "../../shared/auth/errorMessages";
 import { MockAuthProvider } from "../../src/components/MockAuthProvider";
 import { MOCK_OTP } from "../../src/constants/mockAuth";
 import { SessionAuthProvider } from "../../src/hooks/useSessionAuth";
@@ -162,11 +163,7 @@ describe("SignInPage extended", () => {
     await user.paste("111111");
     await user.click(screen.getByRole("button", { name: "Verify email" }));
 
-    expect(
-      await screen.findByText(
-        "This code is invalid or has expired. Please request a new code.",
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(OTP_INVALID_MESSAGE)).toBeInTheDocument();
   });
 
   it("keeps verify disabled until six digits are entered", async () => {
