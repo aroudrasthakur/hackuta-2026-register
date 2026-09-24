@@ -61,6 +61,7 @@ import type {
 import { INITIAL_FORM } from "../../../shared/registration/types";
 import { resumeFileKey } from "../../../shared/registration/resume";
 import {
+  DRAFT_SAVE_ERROR_MESSAGE,
   isResumeFieldMessage,
   mapConvexErrorToUserMessage,
   mapUploadError,
@@ -99,6 +100,7 @@ function ApplicationFormContent({
   const [form, setForm] = useState<ApplicationFormData>(initialForm);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { isAuthenticated } = useSessionAuth();
   const routing = useApplicantRouting();
@@ -107,6 +109,20 @@ function ApplicationFormContent({
     session: ResumeUploadSession;
   } | null>(null);
   const resumeUploadRef = useRef(resumeUpload);
+
+  const saveDraftWithStatus = useCallback(async () => {
+    if (!saveDraft || !routing.isAuthenticated) return;
+    try {
+      await saveDraft({ patch: formToDraftPatch(form) });
+      setDraftError(null);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error("Draft save failed:", error);
+      }
+      setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
+      throw error;
+    }
+  }, [form, routing.isAuthenticated, saveDraft]);
 
   useEffect(() => {
     resumeUploadRef.current = resumeUpload;
@@ -119,11 +135,18 @@ function ApplicationFormContent({
     if (savedDraft && savedDraft.status !== "draft") return;
 
     const timer = window.setTimeout(() => {
-      void saveDraft({ patch: formToDraftPatch(form) }).catch(() => undefined);
+      void saveDraftWithStatus().catch(() => undefined);
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [form, hasConvexClient, routing.isAuthenticated, saveDraft, savedDraft, draftHydrated]);
+  }, [
+    draftHydrated,
+    hasConvexClient,
+    routing.isAuthenticated,
+    saveDraft,
+    saveDraftWithStatus,
+    savedDraft,
+  ]);
 
   const discardPendingResume = useCallback(async () => {
     const pending = resumeUploadRef.current;
@@ -184,7 +207,11 @@ function ApplicationFormContent({
     setSubmitting(true);
     try {
       if (hasConvexClient && saveDraft && routing.isAuthenticated) {
-        await saveDraft({ patch: formToDraftPatch(form) });
+        try {
+          await saveDraftWithStatus();
+        } catch {
+          return;
+        }
       }
       let session: ResumeUploadSession | null = null;
       if (form.resume) {
@@ -887,6 +914,22 @@ function ApplicationFormContent({
           className="rounded-lg border-2 border-red-400 bg-red-50 p-4 text-sm font-medium text-red-700"
         >
           {submitError}
+        </div>
+      )}
+
+      {draftError && (
+        <div
+          role="status"
+          className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-sm font-medium text-amber-800"
+        >
+          <span>{draftError}</span>{" "}
+          <button
+            type="button"
+            className="font-semibold underline underline-offset-2"
+            onClick={() => void saveDraftWithStatus().catch(() => undefined)}
+          >
+            Try saving again
+          </button>
         </div>
       )}
 

@@ -9,6 +9,7 @@ coverage/
 .env.*
 !.env.example
 .DS_Store
+ERROR_HANDLING_AUDIT.txt
 # Written by `convex dev` codegen, or by scripts/ensure-convex-server-stub.mjs
 # before typechecks and unit tests when codegen is unavailable.
 convex/_generated/

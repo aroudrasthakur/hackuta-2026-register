@@ -163,7 +163,9 @@ describe("SignInPage extended", () => {
     await user.click(screen.getByRole("button", { name: "Verify email" }));
 
     expect(
-      await screen.findByText("The verification code is invalid or expired."),
+      await screen.findByText(
+        "This code is invalid or has expired. Please request a new code.",
+      ),
     ).toBeInTheDocument();
   });
 

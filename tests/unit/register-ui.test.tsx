@@ -20,6 +20,10 @@ import { LANDING_URL } from "../../src/constants/site";
 import { ApplicationForm } from "../../src/pages/Register/ApplicationForm";
 import { SuccessStep } from "../../src/pages/Register/SuccessStep";
 
+const { draftMutationMock } = vi.hoisted(() => ({
+  draftMutationMock: vi.fn(),
+}));
+
 vi.mock("../../src/hooks/useSessionAuth", () => ({
   useSessionAuth: () => ({
     isLoading: false,
@@ -45,7 +49,7 @@ vi.mock("../../src/pages/Register/registerApi", () => ({
 
 vi.mock("convex/react", () => ({
   useQuery: () => null,
-  useMutation: () => vi.fn().mockResolvedValue({ ok: true }),
+  useMutation: () => draftMutationMock,
 }));
 
 vi.mock("../../src/convex/client", () => ({
@@ -134,6 +138,7 @@ describe("SuccessStep", () => {
 
 describe("ApplicationForm", () => {
   beforeEach(async () => {
+    draftMutationMock.mockReset().mockResolvedValue({ ok: true });
     const api = await import("../../src/pages/Register/registerApi");
     vi.mocked(api.submitRegistration).mockResolvedValue({ ok: true });
     vi.mocked(api.uploadResume).mockResolvedValue({
@@ -146,6 +151,26 @@ describe("ApplicationForm", () => {
   it("shows the verified email as read-only context", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(screen.getByText("applicant@example.com")).toBeInTheDocument();
+  });
+
+  it("shows a safe autosave error without losing entered answers", async () => {
+    draftMutationMock.mockRejectedValue(new Error("database connection details"));
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    setInputValue(/First name/, "Sam");
+
+    expect(
+      await screen.findByText("We couldn't save your latest changes. Please try again.", {}, { timeout: 2_000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("database connection details")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/First name/)).toHaveValue("Sam");
+
+    draftMutationMock.mockResolvedValue({ ok: true });
+    await userEvent.click(screen.getByRole("button", { name: "Try saving again" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByText("We couldn't save your latest changes. Please try again."),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("corrects validation errors and submits optional details with a PDF only once", async () => {

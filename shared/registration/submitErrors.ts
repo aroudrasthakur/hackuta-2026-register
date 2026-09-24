@@ -1,6 +1,9 @@
 export const SUBMIT_ERROR_MESSAGE =
   "We couldn't submit your application. Please try again.";
 
+export const DRAFT_SAVE_ERROR_MESSAGE =
+  "We couldn't save your latest changes. Please try again.";
+
 export const RESUME_UPLOAD_ERROR_MESSAGE =
   "We couldn't upload your resume. Please try again.";
 
@@ -75,6 +78,22 @@ export function mapConvexErrorToUserMessage(error: unknown): string {
   const detail = error instanceof Error ? error.message.trim() : "";
   if (USER_FACING_SERVER_MESSAGES.has(detail)) {
     return detail;
+  }
+  const normalized = detail.toLowerCase();
+  if (normalized.includes("authentication required")) {
+    return SIGN_IN_REQUIRED_MESSAGE;
+  }
+  if (normalized.includes("verify your email") || normalized.includes("verified email")) {
+    return "Please verify your email before submitting your application.";
+  }
+  if (normalized.includes("already submitted")) {
+    return "You have already submitted an application.";
+  }
+  if (normalized.includes("already attached")) {
+    return "This resume is already attached to another application.";
+  }
+  if (normalized.includes("valid pdf") || (normalized.includes("resume") && normalized.includes("5 mb"))) {
+    return "Please upload a valid PDF resume of 5 MB or smaller.";
   }
   if (isResumeFieldMessage(detail)) {
     return detail;

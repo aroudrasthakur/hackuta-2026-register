@@ -181,7 +181,7 @@ describe("submitRegistration", () => {
     mutationMock.mockRejectedValue(serverError);
     const { submitRegistration } = await import("../../src/pages/Register/registerApi");
     await expect(submitRegistration(payload)).rejects.toMatchObject({
-      message: "server failure",
+      message: "We couldn't submit your application. Please try again.",
       cause: serverError,
     });
   });

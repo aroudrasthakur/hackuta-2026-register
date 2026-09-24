@@ -109,17 +109,14 @@ export function shouldTreatAsOtpRateLimit(
   return isOtpRateLimitError(error.message.trim());
 }
 
-export function getOtpSendErrorMessage(error: unknown, devMode: boolean): string | null {
+export function getOtpSendErrorMessage(error: unknown, _devMode: boolean): string | null {
+  void _devMode;
   if (!(error instanceof Error) || !error.message.trim()) {
     return null;
   }
 
   const message = error.message.trim();
   if (isOtpRateLimitError(message)) {
-    return message;
-  }
-
-  if (devMode && !isMaskedConvexAuthError(error)) {
     return message;
   }
 

@@ -52,14 +52,7 @@ async function callConvexMutation<T>(
       console.error("Convex mutation failed:", error);
     }
     const mapped = mapConvexErrorToUserMessage(error);
-    if (mapped !== SUBMIT_ERROR_MESSAGE) {
-      throw new Error(mapped, { cause: error });
-    }
-    const detail = error instanceof Error ? error.message.trim() : "";
-    if (import.meta.env.DEV && detail && detail !== "Server Error") {
-      throw new Error(detail, { cause: error });
-    }
-    throw new Error(SUBMIT_ERROR_MESSAGE, { cause: error });
+    throw new Error(mapped, { cause: error });
   }
 }
 
