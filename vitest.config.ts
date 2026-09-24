@@ -23,8 +23,9 @@ export default defineConfig({
     },
     coverage: {
       provider: "istanbul",
-      // Instrument every file in include, even when no test imports it (0%).
-      all: true,
+      // Vitest 5: include lists scoped source files even when no test imports
+      // them (reported as 0%). check-coverage.mjs re-applies the same rule when
+      // merging unit + Playwright output.
       // Scope, documented exclusions, and per-area thresholds live in
       // scripts/coverage-policy.mjs so CI and local checks stay in sync.
       include: COVERAGE_INCLUDE,
