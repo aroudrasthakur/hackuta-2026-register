@@ -138,10 +138,10 @@ describe("OTP email delivery", () => {
 
   it("does not record a send when email delivery fails", async () => {
     const ctx = fakeActionCtx();
-    ctx.runAction.mockRejectedValueOnce(new Error("SMTP down"));
+    ctx.runAction.mockRejectedValueOnce(new Error("Email service down"));
     await expect(
       password.verify.sendVerificationRequest({ identifier: "a@b.co", token: "1", expires }, ctx),
-    ).rejects.toThrow("SMTP down");
+    ).rejects.toThrow("Email service down");
     expect(ctx.runMutation).toHaveBeenCalledTimes(1);
   });
 
