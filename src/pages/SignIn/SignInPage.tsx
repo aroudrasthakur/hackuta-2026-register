@@ -23,6 +23,7 @@ import {
 } from "../../../shared/auth/errorMessages";
 import { isValidEmailSyntax, normalizeEmail } from "../../../shared/lib/normalizeEmail";
 import { OtpCodeInput } from "../../components/OtpCodeInput";
+import { SignInPasswordInput } from "../../components/SignInPasswordInput";
 import { SignInShell } from "../../components/SignInShell";
 import { useMockAuth } from "../../hooks/useMockAuth";
 import {
@@ -358,9 +359,8 @@ function SignInPageContent({
 
           <label className="sign-in-field" htmlFor="sign-in-password">
             <span className="sign-in-field__label">Password</span>
-            <input
+            <SignInPasswordInput
               id="sign-in-password"
-              type="password"
               autoComplete={mode === "signUp" ? "new-password" : "current-password"}
               placeholder="••••••••"
               required
@@ -369,7 +369,6 @@ function SignInPageContent({
                 setPassword(event.target.value);
                 setError(null);
               }}
-              className="sign-in-field__input"
               aria-invalid={!!error}
             />
           </label>
@@ -377,9 +376,8 @@ function SignInPageContent({
           {mode === "signUp" ? (
             <label className="sign-in-field" htmlFor="sign-in-confirm-password">
               <span className="sign-in-field__label">Confirm password</span>
-              <input
+              <SignInPasswordInput
                 id="sign-in-confirm-password"
-                type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
                 required
@@ -388,7 +386,6 @@ function SignInPageContent({
                   setConfirmPassword(event.target.value);
                   setError(null);
                 }}
-                className="sign-in-field__input"
                 aria-invalid={!!error}
               />
             </label>

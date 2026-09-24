@@ -471,6 +471,25 @@
       box-shadow 0.2s var(--ease-out);
   }
 
+  .sign-in-field__control {
+    position: relative;
+
+    input {
+      padding-right: 3.15rem;
+    }
+
+    > button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 2.75rem;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+  }
+
   .sign-in-field__input::placeholder {
     color: rgb(48 88 115 / 0.45);
   }
