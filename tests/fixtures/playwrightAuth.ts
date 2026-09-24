@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { MOCK_OTP } from "../../src/constants/mockAuth";
+import { MOCK_OTP, type MockAuthScenario } from "../../src/constants/mockAuth";
 
 export const TEST_PASSWORD = "Hackuta1";
 
@@ -18,6 +18,24 @@ export async function signUpAsNewApplicant(page: Page, email = "applicant@exampl
   await page.keyboard.type(MOCK_OTP);
   await page.getByRole("button", { name: "Verify email" }).click();
   await page.waitForURL("**/register");
+}
+
+async function setMockAuthScenario(
+  page: Page,
+  scenario: Extract<MockAuthScenario, "signedInNew" | "signedInReturning">,
+) {
+  await page.goto("/sign-in");
+  await page.waitForFunction(() => window.__hackutaMockAuth?.setScenario);
+  await page.evaluate((nextScenario) => {
+    window.__hackutaMockAuth!.setScenario(nextScenario);
+  }, scenario);
+}
+
+export async function openProfileAsReturningApplicant(page: Page) {
+  await setMockAuthScenario(page, "signedInReturning");
+  await page.waitForURL("**/profile");
+  await expect(page.getByRole("heading", { name: "Your Journey" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your application is in" })).toBeVisible();
 }
 
 /** Preserves in-memory mock auth; a full reload would reset the mock session. */
