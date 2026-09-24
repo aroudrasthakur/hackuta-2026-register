@@ -62,13 +62,23 @@ describe("submit error mapping", () => {
   it.each([
     "The PDF is too large.",
     "The PDF must be between 1 byte and 2 MB.",
-    "Please upload a valid PDF resume of 2 MB or smaller.",
   ])("normalizes legacy oversized upload messages: %s", (legacyMessage) => {
     expect(mapUploadError(new Error(legacyMessage))).toBe(RESUME_SIZE_ERROR_MESSAGE);
     expect(mapResumeUploadHttpError(413, { error: legacyMessage })).toBe(
       RESUME_SIZE_ERROR_MESSAGE,
     );
     expect(mapConvexErrorToUserMessage(new Error(legacyMessage))).toBe(
+      RESUME_SIZE_ERROR_MESSAGE,
+    );
+  });
+
+  it("keeps invalid MIME or upload-session errors separate from size errors", () => {
+    const validationMessage = "Please upload a valid PDF resume of 2 MB or smaller.";
+
+    expect(mapConvexErrorToUserMessage(new Error(validationMessage))).toBe(
+      validationMessage,
+    );
+    expect(mapConvexErrorToUserMessage(new Error(validationMessage))).not.toBe(
       RESUME_SIZE_ERROR_MESSAGE,
     );
   });
