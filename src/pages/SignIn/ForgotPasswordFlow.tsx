@@ -20,6 +20,7 @@ import {
 import { mapPasswordResetError, OTP_INVALID_MESSAGE } from "../../../shared/auth/errorMessages";
 import { isValidEmailSyntax, normalizeEmail } from "../../../shared/lib/normalizeEmail";
 import { OtpCodeInput } from "../../components/OtpCodeInput";
+import { SignInPasswordInput } from "../../components/SignInPasswordInput";
 import { SignInShell } from "../../components/SignInShell";
 import { MOCK_OTP } from "../../constants/mockAuth";
 import { getPasswordResetSendCooldownRef } from "../../convex/api";
@@ -384,11 +385,12 @@ export function ForgotPasswordFlow({
 
       {step === "password" ? (
         <form onSubmit={handlePasswordSubmit} noValidate className="sign-in-form">
-          <label className="sign-in-field" htmlFor="forgot-new-password">
-            <span className="sign-in-field__label">New password</span>
-            <input
+          <div className="sign-in-field">
+            <label className="sign-in-field__label" htmlFor="forgot-new-password">
+              New password
+            </label>
+            <SignInPasswordInput
               id="forgot-new-password"
-              type="password"
               autoComplete="new-password"
               placeholder="••••••••"
               required
@@ -400,13 +402,14 @@ export function ForgotPasswordFlow({
               className="sign-in-field__input"
               aria-invalid={!!error}
             />
-          </label>
+          </div>
 
-          <label className="sign-in-field" htmlFor="forgot-confirm-password">
-            <span className="sign-in-field__label">Confirm new password</span>
-            <input
+          <div className="sign-in-field">
+            <label className="sign-in-field__label" htmlFor="forgot-confirm-password">
+              Confirm new password
+            </label>
+            <SignInPasswordInput
               id="forgot-confirm-password"
-              type="password"
               autoComplete="new-password"
               placeholder="••••••••"
               required
@@ -418,7 +421,7 @@ export function ForgotPasswordFlow({
               className="sign-in-field__input"
               aria-invalid={!!error}
             />
-          </label>
+          </div>
 
           <p className="sign-in-message">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
 

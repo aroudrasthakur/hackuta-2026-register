@@ -55,6 +55,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | File | Covers |
 | --- | --- |
 | sign-in.test.tsx, sign-in-extended.test.tsx | Sign-in / OTP UI (including secondary action buttons) |
+| sign-in-password-input.test.tsx | Sign-in password visibility toggle |
 | forgot-password.test.tsx | Forgot-password flow (mock auth) |
 | sign-in-convex.test.tsx | Sign-in, OTP resend, and password reset against mocked Convex auth |
 | auth-components.test.tsx | OTP input, route guard, sign-out, mock auth provider |
