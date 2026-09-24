@@ -25,6 +25,15 @@ describe("buildApplicationConfirmationEmailContent", () => {
     expect(content.html).toContain("https://hackuta.com");
   });
 
+  it("falls back to neutral copy when the name or hackathon name is blank", () => {
+    const content = buildApplicationConfirmationEmailContent({
+      applicantName: "   ",
+      submittedAt: Date.parse("2026-09-21T22:06:00.000Z"),
+      hackathonName: " ",
+    });
+    expect(content.text).toContain("Hi there,");
+    expect(content.subject).toBe("HackUTA application received");
+  });
 });
 
 describe("buildOtpEmailContent", () => {

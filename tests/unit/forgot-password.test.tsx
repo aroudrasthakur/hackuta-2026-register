@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OTP_INVALID_MESSAGE } from "../../shared/auth/errorMessages";
@@ -110,6 +110,35 @@ describe("ForgotPasswordFlow", () => {
     await user.click(screen.getByRole("button", { name: "Save new password" }));
 
     expect(onComplete).toHaveBeenCalledWith(PASSWORD_RESET_SUCCESS_MESSAGE);
+  });
+
+  it("rejects a short reset code submitted with the Enter key", async () => {
+    const user = userEvent.setup();
+    renderFlow();
+    await user.type(screen.getByLabelText(/^Email$/i), "user@example.com");
+    await user.click(screen.getByRole("button", { name: "Send code" }));
+
+    const cells = await screen.findAllByRole("textbox");
+    await user.click(cells[0]!);
+    await user.paste("12");
+    fireEvent.submit(cells[0]!.closest("form")!);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(OTP_INVALID_MESSAGE);
+    expect(screen.getByRole("heading", { name: "Enter your reset code" })).toBeInTheDocument();
+  });
+
+  it("resends a mock reset code once the cooldown expires", async () => {
+    const user = userEvent.setup();
+    renderFlow();
+    await user.type(screen.getByLabelText(/^Email$/i), "user@example.com");
+    await user.click(screen.getByRole("button", { name: "Send code" }));
+    expect(await screen.findByRole("button", { name: /Resend code in \d+s/ })).toBeDisabled();
+
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 31_000);
+    await user.click(await screen.findByRole("button", { name: "Resend code" }, { timeout: 2_500 }));
+
+    expect(await screen.findByRole("button", { name: "Resend code in 30s" })).toBeDisabled();
+    expect(screen.getByText(PASSWORD_RESET_REQUESTED_MESSAGE)).toBeInTheDocument();
   });
 
   it("calls onCancel from the email step", async () => {

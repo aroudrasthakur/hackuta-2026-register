@@ -377,6 +377,93 @@ describe("ResumeUpload", () => {
     clickSpy.mockRestore();
   });
 
+  describe("drag and drop", () => {
+    function dropArea() {
+      return screen.getByRole("button", { name: "Upload resume" });
+    }
+
+    it("highlights while dragging and resets on drag leave", () => {
+      render(<ResumeUpload file={null} onChange={mockOnChange} onError={mockOnError} />);
+      fireEvent.dragOver(dropArea());
+      expect(screen.getByText("Drop your resume here")).toBeInTheDocument();
+      expect(dropArea().className).toContain("scale-[1.02]");
+
+      fireEvent.dragLeave(dropArea());
+      expect(screen.getByText("Click to upload or drag and drop")).toBeInTheDocument();
+    });
+
+    it("accepts a dropped PDF and clears any previous error", () => {
+      render(<ResumeUpload file={null} onChange={mockOnChange} onError={mockOnError} />);
+      const pdf = new File(["%PDF-1.7"], "dropped.pdf", { type: "application/pdf" });
+      fireEvent.dragOver(dropArea());
+      fireEvent.drop(dropArea(), { dataTransfer: { files: [pdf] } });
+
+      expect(mockOnError).toHaveBeenCalledWith(undefined);
+      expect(mockOnChange).toHaveBeenCalledWith(pdf);
+      expect(screen.getByText("Click to upload or drag and drop")).toBeInTheDocument();
+    });
+
+    it("rejects a dropped non-PDF with a validation error", () => {
+      render(<ResumeUpload file={null} onChange={mockOnChange} onError={mockOnError} />);
+      fireEvent.drop(dropArea(), {
+        dataTransfer: { files: [new File(["x"], "virus.exe", { type: "application/x-msdownload" })] },
+      });
+      expect(mockOnError).toHaveBeenCalledWith("Please select a PDF file.");
+      expect(mockOnChange).toHaveBeenCalledWith(null);
+    });
+
+    it("treats an empty drop as clearing the selection", () => {
+      render(<ResumeUpload file={null} onChange={mockOnChange} onError={mockOnError} />);
+      fireEvent.drop(dropArea(), { dataTransfer: { files: [] } });
+      expect(mockOnChange).toHaveBeenCalledWith(null);
+      expect(mockOnError).toHaveBeenCalledWith(undefined);
+    });
+
+    it("ignores drags and drops while disabled", () => {
+      render(<ResumeUpload file={null} disabled onChange={mockOnChange} onError={mockOnError} />);
+      fireEvent.dragOver(dropArea());
+      expect(screen.queryByText("Drop your resume here")).not.toBeInTheDocument();
+      fireEvent.drop(dropArea(), {
+        dataTransfer: { files: [new File(["%PDF-"], "resume.pdf", { type: "application/pdf" })] },
+      });
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+  });
+
+  it("clears the selection when the file dialog is cancelled", () => {
+    render(<ResumeUpload file={null} onChange={mockOnChange} onError={mockOnError} />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [] } });
+    expect(mockOnChange).toHaveBeenCalledWith(null);
+    expect(mockOnError).toHaveBeenCalledWith(undefined);
+  });
+
+  it("opens the file picker with the space key but ignores other keys", () => {
+    // Stub the native click: happy-dom lacks the browser's re-entrant click guard, so the
+    // input's click would bubble back to the drop zone and recurse.
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => undefined);
+    render(<ResumeUpload file={null} onChange={mockOnChange} onError={mockOnError} />);
+    const area = screen.getByRole("button", { name: "Upload resume" });
+    fireEvent.keyDown(area, { key: "a" });
+    expect(clickSpy).not.toHaveBeenCalled();
+    fireEvent.keyDown(area, { key: " " });
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    clickSpy.mockRestore();
+  });
+
+  it("ignores keyboard activation while disabled", () => {
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => undefined);
+    render(<ResumeUpload file={null} disabled onChange={mockOnChange} onError={mockOnError} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Upload resume" }), { key: "Enter" });
+    expect(clickSpy).not.toHaveBeenCalled();
+    clickSpy.mockRestore();
+  });
+
+  it("formats an empty selected file as 0 Bytes", () => {
+    render(<ResumeUpload file={new File([], "empty.pdf")} onChange={mockOnChange} onError={mockOnError} />);
+    expect(screen.getByText("0 Bytes")).toBeInTheDocument();
+  });
+
   it("does not open the file picker while disabled", async () => {
     const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
     render(

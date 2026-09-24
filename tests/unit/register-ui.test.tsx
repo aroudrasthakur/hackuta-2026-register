@@ -10,15 +10,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApplicationFormData } from "../../shared/registration/types";
-import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
-import {
-  VALID_COUNTRY,
-  VALID_GENDER,
-  VALID_LEVEL_OF_STUDY,
-  VALID_MAJOR,
-  VALID_SCHOOL,
-  validRegistrationForm,
-} from "../fixtures/validRegistrationForm";
+import { validRegistrationForm } from "../fixtures/validRegistrationForm";
+import { fillValidApplicationForm, selectListboxOption } from "../fixtures/fillApplicationForm";
 import { LANDING_URL } from "../../src/constants/site";
 import { ApplicationForm } from "../../src/pages/Register/ApplicationForm";
 import { SuccessStep } from "../../src/pages/Register/SuccessStep";
@@ -87,57 +80,11 @@ function setInputValueById(id: string, value: string) {
   fireEvent.change(input, { target: { value } });
 }
 
-function selectListboxOption(label: RegExp | string, optionName: string) {
-  fireEvent.click(screen.getByLabelText(label));
-  fireEvent.click(screen.getByRole("button", { name: optionName }));
-}
-
 function selectSearchableOption(label: RegExp | string, optionName: string) {
   const input = screen.getByLabelText(label);
   fireEvent.focus(input);
   fireEvent.change(input, { target: { value: optionName } });
   fireEvent.click(screen.getByRole("button", { name: optionName }));
-}
-
-function fillValidApplicationForm() {
-  setInputValue(/First name/, "Sam");
-  setInputValue(/Last name/, "Test");
-  setInputValue(/Phone number/, "5551234567");
-  setInputValue(/Age/i, "20");
-  setInputValue(/School \/ university/, "Texas at Arlington");
-  fireEvent.click(screen.getByRole("button", { name: VALID_SCHOOL }));
-  selectListboxOption(/Country of residence/, VALID_COUNTRY);
-  selectListboxOption(/State of residence/, "Texas");
-  fireEvent.click(
-    within(screen.getByRole("group", { name: /Are you an international student/ }))
-      .getByLabelText("No"),
-  );
-  selectListboxOption(/Level of study/, VALID_LEVEL_OF_STUDY);
-  selectListboxOption(/Major \/ field of study/, VALID_MAJOR);
-  setInputValue(/Expected graduation year/, String(MIN_GRADUATION_YEAR));
-  selectListboxOption(/^Gender/, VALID_GENDER);
-  selectListboxOption(/T-shirt size/, "M");
-  fireEvent.click(
-    within(screen.getByRole("group", { name: /Do you eat beef/ }))
-      .getByLabelText("No"),
-  );
-  fireEvent.click(
-    within(screen.getByRole("group", { name: /Do you eat pork/ }))
-      .getByLabelText("No"),
-  );
-  fireEvent.click(
-    within(screen.getByRole("group", { name: /Is this your first hackathon/ }))
-      .getByLabelText("Yes"),
-  );
-  selectListboxOption(/How did you hear about HackUTA/, "Discord");
-  setInputValue(/Emergency contact name/, "Jane Test");
-  setInputValue(/Emergency contact phone/, "5559876543");
-  fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
-  fireEvent.click(
-    screen.getByLabelText(
-      /authorize HackUTA to share my registration information/,
-    ),
-  );
 }
 
 describe("SuccessStep", () => {

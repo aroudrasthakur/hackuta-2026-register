@@ -27,7 +27,7 @@ Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 - **Backend:** [Convex](https://convex.dev) — database, file storage, HTTP actions, scheduled jobs
 - **Auth:** [@convex-dev/auth](https://labs.convex.dev/auth) password sign-up/sign-in + 6-digit email OTP verification + forgot-password reset (cPanel SMTP)
 - **Validation:** Zod schemas shared between client and Convex (`shared/`)
-- **Testing:** Vitest (unit), Playwright (e2e + accessibility), 80% Istanbul coverage thresholds
+- **Testing:** Vitest (unit), Playwright (e2e + accessibility), 85% Istanbul coverage thresholds, enforced globally and per functional area
 
 ## Documentation
 
@@ -216,7 +216,7 @@ CI builds with mock mode enabled for Playwright CSP tests. Live Vercel productio
 | `npm run lint`               | ESLint over app, Convex, shared, security, scripts |
 | `npm run typecheck`          | App/test types plus Convex schema                  |
 | `npm run test:unit`          | Vitest                                             |
-| `npm run test:unit:coverage` | Vitest with 80% Istanbul thresholds                |
+| `npm run test:unit:coverage` | Vitest with 85% global + per-area thresholds       |
 | `npm run test:e2e`           | Playwright against dev server or production build  |
 | `npm run convex:dev`         | Convex dev deployment watcher                      |
 | `npm run convex:deploy`      | Push functions and schema to Convex                |
@@ -234,7 +234,7 @@ GitHub Actions on pushes/PRs to `main` and `dev`:
 
 | Job                  | Steps                                                          |
 | -------------------- | -------------------------------------------------------------- |
-| **quality**          | lint → typecheck → unit tests with coverage → production build |
+| **quality**          | lint → typecheck → unit tests + coverage gate → production build |
 | **e2e**              | Playwright against uploaded production build artifact          |
 | **dependency-audit** | `npm audit --omit=dev --audit-level=high`                      |
 | **secrets**          | Gitleaks full-history scan                                     |
