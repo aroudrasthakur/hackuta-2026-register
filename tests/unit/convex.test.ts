@@ -13,9 +13,9 @@ import {
 } from "../../shared/registration/resume";
 
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
-const remove = makeFunctionReference<"mutation">("registrations:deleteResumeUpload");
-const reserve = makeFunctionReference<"mutation">("registrations:reserveResumeUpload");
-const cleanup = makeFunctionReference<"mutation">("registrations:cleanupExpiredResumeUploads");
+const discardUpload = makeFunctionReference<"mutation">("resumeUploads:discardUploadSession");
+const assertRateLimit = makeFunctionReference<"mutation">("resumeUploads:assertUploadRateLimit");
+const cleanup = makeFunctionReference<"mutation">("resumeUploads:cleanupExpiredUploadSessions");
 
 type ConvexTestClient = {
   mutation: (name: string, args: unknown) => Promise<{
@@ -184,20 +184,20 @@ describe("convex registrations", () => {
   it("rate limits by an API-derived client key, independent of applicant PII", async () => {
     const t = createTest();
     for (let index = 0; index < 5; index += 1) {
-      await t.mutation(reserve, { requestKey: "hashed-network-client" });
+      await t.mutation(assertRateLimit, { requestKey: "hashed-network-client" });
     }
-    await expect(t.mutation(reserve, { requestKey: "hashed-network-client" }))
+    await expect(t.mutation(assertRateLimit, { requestKey: "hashed-network-client" }))
       .rejects.toThrow("Too many resume upload attempts");
   });
 
   it("allows another upload once the rate-limit window passes", async () => {
     const t = createTest();
     for (let index = 0; index < 5; index += 1) {
-      await t.mutation(reserve, { requestKey: "hashed-network-client" });
+      await t.mutation(assertRateLimit, { requestKey: "hashed-network-client" });
     }
     const now = Date.now();
     const clock = vi.spyOn(Date, "now").mockReturnValue(now + 11 * 60 * 1000);
-    await expect(t.mutation(reserve, { requestKey: "hashed-network-client" })).resolves.toBeNull();
+    await expect(t.mutation(assertRateLimit, { requestKey: "hashed-network-client" })).resolves.toBeNull();
     clock.mockRestore();
   });
 
@@ -221,11 +221,11 @@ describe("convex registrations", () => {
     }) as unknown as ConvexTestClient;
     await seedAuthUser(t, { email: "applicant@example.com" });
     await expect(
-      t.query("queries:getHackathonBySlug", { slug: "hackuta-2026" }),
+      t.query("hackathons:getHackathonBySlug", { slug: "hackuta-2026" }),
     ).resolves.toBeNull();
     await t.mutation("registrations:register", { data: validRegistrationPayload() });
     await expect(
-      t.query("queries:getHackathonBySlug", { slug: "hackuta-2026" }),
+      t.query("hackathons:getHackathonBySlug", { slug: "hackuta-2026" }),
     ).resolves.toMatchObject({ slug: "hackuta-2026", name: "HackUTA 2026" });
   });
 
@@ -248,10 +248,6 @@ describe("convex registrations", () => {
 
     await t.mutation("registrations:register", { data: validRegistrationPayload() });
 
-    await expect(t.query("queries:getCurrentUser", {})).resolves.toMatchObject({
-      email: "sam@example.com",
-      name: "Sam Test",
-    });
     expect(await t.run((ctx) => ctx.db.query("profiles").collect())).toHaveLength(1);
   });
 
@@ -453,7 +449,7 @@ describe("resume HTTP validation and lifecycle", () => {
     const upload = await verifiedUpload(t);
     const data = { ...validRegistrationPayload(), resumeStorageId: upload.storageId };
     await t.mutation("registrations:register", { data, resumeUploadToken: upload.token });
-    await t.mutation("registrations:deleteResumeUpload", { uploadToken: upload.token });
+    await t.mutation("resumeUploads:discardUploadSession", { uploadToken: upload.token });
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).not.toBeNull();
     await expect(t.mutation("registrations:register", { data })).rejects.toThrow(
       "already submitted",
@@ -491,16 +487,16 @@ describe("resume HTTP validation and lifecycle", () => {
       data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
       resumeUploadToken: upload.token,
     });
-    await expect(t.mutation("registrations:deleteResumeUpload", { uploadToken: upload.token })).resolves.toEqual({ ok: true });
+    await expect(t.mutation("resumeUploads:discardUploadSession", { uploadToken: upload.token })).resolves.toEqual({ ok: true });
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).not.toBeNull();
   });
 
   it("deletes an unconsumed upload only with its capability", async () => {
     const t = createTest();
     const upload = await verifiedUpload(t);
-    await t.mutation(remove, { uploadToken: "guessed-or-wrong-token" });
+    await t.mutation(discardUpload, { uploadToken: "guessed-or-wrong-token" });
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).not.toBeNull();
-    await t.mutation(remove, { uploadToken: upload.token });
+    await t.mutation(discardUpload, { uploadToken: upload.token });
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).toBeNull();
   });
 
@@ -540,7 +536,7 @@ describe("resume HTTP validation and lifecycle", () => {
     });
     const now = Date.now();
     const clock = vi.spyOn(Date, "now").mockReturnValue(now + 31 * 60 * 1000);
-    await t.mutation("registrations:cleanupExpiredResumeUploads", {});
+    await t.mutation("resumeUploads:cleanupExpiredUploadSessions", {});
     expect(await t.run((ctx) => ctx.db.system.get("_storage", orphan.storageId))).toBeNull();
     expect(await t.run((ctx) => ctx.db.system.get("_storage", attached.storageId))).not.toBeNull();
     clock.mockRestore();
@@ -551,10 +547,7 @@ describe("convex queries", () => {
   it("returns null for missing records", async () => {
     const t = createTest() as unknown as ConvexTestClient;
 
-    await expect(t.query("queries:getHackathonBySlug", { slug: "missing" })).resolves.toBeNull();
-    await expect(t.query("queries:getMyApplication", {})).rejects.toThrow(
-      "Authentication required.",
-    );
+    await expect(t.query("hackathons:getHackathonBySlug", { slug: "missing" })).resolves.toBeNull();
   });
 
   it("seeds hackuta-2026 idempotently and finds it by slug", async () => {
@@ -565,7 +558,7 @@ describe("convex queries", () => {
 
     expect(first).toBe(second);
     await expect(
-      t.query("queries:getHackathonBySlug", { slug: "hackuta-2026" }),
+      t.query("hackathons:getHackathonBySlug", { slug: "hackuta-2026" }),
     ).resolves.toMatchObject({ slug: "hackuta-2026", name: "HackUTA 2026" });
   });
 
@@ -589,13 +582,13 @@ describe("convex queries", () => {
     await t.mutation("seed:seedHackathon", {});
 
     await expect(
-      t.query("queries:getHackathonBySlug", { slug: "hackuta-2026" }),
+      t.query("hackathons:getHackathonBySlug", { slug: "hackuta-2026" }),
     ).resolves.toMatchObject({
       registrationOpensAt: Date.parse("2026-09-21T00:00:00-05:00"),
     });
   });
 
-  it("returns null when the authenticated user has no application", async () => {
+  it("returns draft null for authenticated users without a profile", async () => {
     const t = createTest().withIdentity({
       tokenIdentifier: "provider-user",
       email: "sam@example.com",
@@ -603,10 +596,10 @@ describe("convex queries", () => {
     await seedHackathon(t);
     await seedAuthUser(t, { email: "sam@example.com" });
 
-    await expect(t.query("queries:getMyApplication", {})).resolves.toBeNull();
+    await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toBeNull();
   });
 
-  it("returns the current user after registration is submitted", async () => {
+  it("returns submitted profile draft metadata after registration", async () => {
     const t = createTest().withIdentity({
       tokenIdentifier: "provider-user",
       email: "sam@example.com",
@@ -617,45 +610,10 @@ describe("convex queries", () => {
 
     await t.mutation("registrations:register", { data: validRegistrationPayload() });
 
-    await expect(t.query("queries:getCurrentUser", {})).resolves.toMatchObject({
-      email: "sam@example.com",
-      name: "Sam Test",
+    await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toMatchObject({
+      status: "submitted",
+      draft: null,
     });
-  });
-
-  it("rejects unauthenticated current-user reads", async () => {
-    const t = createTest().withIdentity({
-      tokenIdentifier: "unsynchronized-user",
-    }) as unknown as ConvexTestClient;
-    await seedHackathon(t);
-
-    await expect(t.query("queries:getCurrentUser", {})).rejects.toThrow(
-      "Authentication required.",
-    );
-  });
-
-  it("allows owned application reads and hides other users' applications", async () => {
-    const base = createTest();
-    const t = base.withIdentity({
-      tokenIdentifier: "email|sam@example.com",
-      email: "sam@example.com",
-    }) as unknown as ConvexTestClient;
-    await seedHackathon(t);
-    await seedAuthUser(t, { email: "sam@example.com" });
-    await t.mutation("registrations:register", {
-      data: validRegistrationPayload(),
-    });
-
-    await expect(
-      t.query("queries:getMyApplication", {}),
-    ).resolves.toMatchObject({ status: "submitted", hackathonId: "hackuta-2026" });
-
-    const foreignUser = base.withIdentity({
-      tokenIdentifier: "email|foreign@example.com",
-      email: "foreign@example.com",
-    }) as unknown as ConvexTestClient;
-    await seedAuthUser(foreignUser, { email: "foreign@example.com" });
-    await expect(foreignUser.query("queries:getMyApplication", {})).resolves.toBeNull();
   });
 });
 
@@ -665,7 +623,7 @@ describe("convex applicant auth flows", () => {
     await expect(t.query("applicant:getApplicantRoutingState", {})).resolves.toMatchObject({
       authenticated: false,
       verifiedEmail: null,
-      hasRegistration: false,
+      hasSubmittedRegistration: false,
     });
   });
 
@@ -674,7 +632,7 @@ describe("convex applicant auth flows", () => {
     await expect(t.query("applicant:getApplicantRoutingState", {})).resolves.toMatchObject({
       authenticated: true,
       verifiedEmail: "applicant@example.com",
-      hasRegistration: false,
+      hasSubmittedRegistration: false,
     });
   });
 

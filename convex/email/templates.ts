@@ -1,5 +1,3 @@
-import { sanitizeEmailHeaderValue } from "../../shared/lib/sanitizeInput";
-
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -90,49 +88,6 @@ export function buildApplicationConfirmationEmailContent(payload: {
   return {
     subject: "HackUTA 2026 application received",
     text: textLines.join("\n"),
-    html,
-  };
-}
-
-export function buildContactEmailContent(payload: {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  submittedAt: number;
-}) {
-  const subjectLine = payload.subject
-    ? sanitizeEmailHeaderValue(payload.subject, 150)
-    : "HackUTA website contact form";
-  const submitted = new Date(payload.submittedAt).toISOString();
-
-  const text = [
-    "New contact form submission",
-    "",
-    `Name: ${payload.name}`,
-    `Email: ${payload.email}`,
-    `Subject: ${subjectLine}`,
-    `Submitted at: ${submitted}`,
-    "",
-    payload.message,
-  ].join("\n");
-
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<body style="font-family: sans-serif; color: #1a3a52;">
-  <h2>New contact form submission</h2>
-  <p><strong>Name:</strong> ${escapeHtml(payload.name)}</p>
-  <p><strong>Email:</strong> ${escapeHtml(payload.email)}</p>
-  <p><strong>Subject:</strong> ${escapeHtml(subjectLine)}</p>
-  <p><strong>Submitted at:</strong> ${escapeHtml(submitted)}</p>
-  <hr />
-  <p style="white-space: pre-wrap;">${escapeHtml(payload.message)}</p>
-</body>
-</html>`;
-
-  return {
-    subject: subjectLine,
-    text,
     html,
   };
 }

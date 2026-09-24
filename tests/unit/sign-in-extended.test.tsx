@@ -37,9 +37,7 @@ vi.mock("../../src/hooks/useApplicantRouting", () => ({
     isLoading: false,
     isAuthenticated: false,
     verifiedEmail: null,
-    hasRegistration: false,
     hasSubmittedRegistration: false,
-    registrationStatus: null,
   }),
 }));
 

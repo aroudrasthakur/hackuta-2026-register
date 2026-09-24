@@ -6,10 +6,7 @@ export const getApplicantRoutingStateRef = makeFunctionReference<
   {
     authenticated: boolean;
     verifiedEmail: string | null;
-    emailVerified: boolean;
-    hasRegistration: boolean;
-    registrationStatus: string | null;
-    hasSubmittedRegistration?: boolean;
+    hasSubmittedRegistration: boolean;
   }
 >("applicant:getApplicantRoutingState");
 

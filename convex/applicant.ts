@@ -1,11 +1,12 @@
+/**
+ * Applicant bootstrap and routing state.
+ *
+ * Owns profile row creation after sign-in and lightweight routing queries used
+ * by route guards. Draft fields and dashboard payloads live in profiles.ts.
+ */
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { HACKATHON_ID } from "../shared/registration/constants";
-import {
-  HACKATHON_SCHEDULE,
-  resolveHackathonTimelineSource,
-} from "../shared/hackathon/schedule";
-import { buildHackathonTimeline } from "../shared/hackathon/timeline";
 import {
   ensureDraftProfile,
   getAuthUser,
@@ -34,40 +35,18 @@ export const getApplicantRoutingState = query({
       return {
         authenticated: false as const,
         verifiedEmail: null,
-        emailVerified: false,
-        hasRegistration: false,
         hasSubmittedRegistration: false,
-        registrationStatus: null,
       };
     }
 
     const profile = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
-    const verifiedEmail = normalizeEmail(authUser.email);
-    const emailVerified = Boolean(authUser.emailVerificationTime);
-
     const hasSubmittedRegistration =
       profile !== null && profileFormWasSubmitted(profile);
 
     return {
       authenticated: true as const,
-      verifiedEmail,
-      emailVerified,
-      hasRegistration: profile !== null,
+      verifiedEmail: normalizeEmail(authUser.email),
       hasSubmittedRegistration,
-      registrationStatus: profile?.status ?? null,
     };
-  },
-});
-
-export const getMyApplicantTimeline = query({
-  args: {
-    hackathonId: v.optional(v.string()),
-  },
-  handler: async (ctx) => {
-    const authUser = await getAuthUser(ctx);
-    if (!authUser) return null;
-
-    const source = resolveHackathonTimelineSource(HACKATHON_SCHEDULE);
-    return buildHackathonTimeline(source);
   },
 });

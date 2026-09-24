@@ -1,45 +1,19 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import type {
   DataModelFromSchemaDefinition,
   DocumentByName,
   GenericMutationCtx,
-  GenericQueryCtx,
 } from "convex/server";
 import type { GenericId } from "convex/values";
 import { HACKATHON_ID } from "../../shared/registration/constants";
 import { normalizeEmail } from "./normalizeEmail";
+import { getAuthUser, requireAuthUser, type AuthCtx } from "./auth";
 import type schema from "../schema";
+
+export { getAuthUser, requireAuthUser };
 
 type DataModel = DataModelFromSchemaDefinition<typeof schema>;
 type ProfileDoc = DocumentByName<DataModel, "profiles">;
-type QueryCtx = GenericQueryCtx<DataModel>;
 type MutationCtx = GenericMutationCtx<DataModel>;
-type AuthCtx = QueryCtx | MutationCtx;
-
-export async function getAuthUser(ctx: AuthCtx) {
-  const authUserId = await getAuthUserId(ctx);
-  if (authUserId) {
-    const authUser = await ctx.db.get(authUserId);
-    if (authUser) return authUser;
-  }
-
-  const identity = await ctx.auth.getUserIdentity();
-  const email = normalizeEmail(identity?.email);
-  if (!email) return null;
-
-  return ctx.db
-    .query("users")
-    .withIndex("email", (q) => q.eq("email", email))
-    .first();
-}
-
-export async function requireAuthUser(ctx: AuthCtx) {
-  const user = await getAuthUser(ctx);
-  if (!user) {
-    throw new Error("Authentication required.");
-  }
-  return user;
-}
 
 export async function getProfileByUserAndHackathon(
   ctx: AuthCtx,

@@ -3,19 +3,11 @@ import { OTP_SEND_MAX_PER_HOUR } from "../shared/auth/otpRateLimit";
 import { internalMutation, mutation } from "./_generated/server";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import { lookupOtpSendStatus, OTP_SEND_WINDOW_MS } from "./lib/otpSendStatus";
-import {
-  CONTACT_FORM_BUCKET,
-  CONTACT_FORM_EMAIL_BUCKET,
-  OTP_SEND_BUCKET,
-  OTP_STATUS_LOOKUP_BUCKET,
-} from "./lib/rateLimitBuckets";
+import { OTP_SEND_BUCKET, OTP_STATUS_LOOKUP_BUCKET } from "./lib/rateLimitBuckets";
 
 export { OTP_RESEND_COOLDOWN_MS, OTP_SEND_WINDOW_MS } from "./lib/otpSendStatus";
 export { OTP_SEND_MAX_PER_HOUR };
 
-export const CONTACT_FORM_WINDOW_MS = 10 * 60 * 1000;
-export const CONTACT_FORM_MAX_PER_WINDOW = 5;
-export const CONTACT_FORM_EMAIL_MAX_PER_WINDOW = 3;
 export const OTP_STATUS_LOOKUP_MAX_PER_HOUR = 30;
 export const OTP_STATUS_LOOKUP_WINDOW_MS = 60 * 60 * 1000;
 
@@ -132,66 +124,6 @@ export const recordOtpSend = internalMutation({
       if (entry.createdAt < cutoff) {
         await ctx.db.delete(entry._id);
       }
-    }
-  },
-});
-
-export const assertContactSubmissionAllowed = internalMutation({
-  args: {
-    clientKey: v.string(),
-    email: v.optional(v.string()),
-  },
-  handler: async (ctx, { clientKey, email }) => {
-    const now = Date.now();
-    const windowStart = now - CONTACT_FORM_WINDOW_MS;
-
-    const recent = await countRecentRateLimits(
-      ctx,
-      CONTACT_FORM_BUCKET,
-      clientKey,
-      windowStart,
-    );
-
-    if (recent.length >= CONTACT_FORM_MAX_PER_WINDOW) {
-      throw new Error("Too many contact requests. Please try again later.");
-    }
-
-    const normalizedEmail = normalizeEmail(email ?? "");
-    if (normalizedEmail) {
-      const emailRecent = await countRecentRateLimits(
-        ctx,
-        CONTACT_FORM_EMAIL_BUCKET,
-        normalizedEmail,
-        windowStart,
-      );
-
-      if (emailRecent.length >= CONTACT_FORM_EMAIL_MAX_PER_WINDOW) {
-        throw new Error("Too many contact requests. Please try again later.");
-      }
-    }
-  },
-});
-
-export const recordContactSubmission = internalMutation({
-  args: {
-    clientKey: v.string(),
-    email: v.optional(v.string()),
-  },
-  handler: async (ctx, { clientKey, email }) => {
-    const now = Date.now();
-    await ctx.db.insert("rateLimits", {
-      bucket: CONTACT_FORM_BUCKET,
-      key: clientKey,
-      createdAt: now,
-    });
-
-    const normalizedEmail = normalizeEmail(email ?? "");
-    if (normalizedEmail) {
-      await ctx.db.insert("rateLimits", {
-        bucket: CONTACT_FORM_EMAIL_BUCKET,
-        key: normalizedEmail,
-        createdAt: now,
-      });
     }
   },
 });

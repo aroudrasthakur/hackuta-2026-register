@@ -18,9 +18,7 @@ let mockRoutingState = {
   isLoading: false,
   isAuthenticated: false,
   verifiedEmail: null as string | null,
-  hasRegistration: false,
   hasSubmittedRegistration: false,
-  registrationStatus: null as string | null,
 };
 
 vi.mock("../../src/hooks/useApplicantRouting", () => ({
@@ -53,9 +51,7 @@ describe("HomeRedirect", () => {
       isLoading: false,
       isAuthenticated: false,
       verifiedEmail: null,
-      hasRegistration: false,
       hasSubmittedRegistration: false,
-      registrationStatus: null,
     };
   });
 
@@ -73,9 +69,7 @@ describe("HomeRedirect", () => {
   it("redirects to profile when authenticated with submitted registration", () => {
     mockRoutingState.isAuthenticated = true;
     mockRoutingState.verifiedEmail = "test@example.com";
-    mockRoutingState.hasRegistration = true;
     mockRoutingState.hasSubmittedRegistration = true;
-    mockRoutingState.registrationStatus = "submitted";
 
     renderHomeRedirect();
     expect(screen.getByText("Profile Page")).toBeInTheDocument();

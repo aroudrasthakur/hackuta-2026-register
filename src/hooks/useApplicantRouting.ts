@@ -19,9 +19,7 @@ export function useApplicantRouting() {
       isLoading: mockAuth.isLoading,
       isAuthenticated: mockAuth.isAuthenticated,
       verifiedEmail: mockAuth.verifiedEmail,
-      hasRegistration: mockAuth.hasRegistration,
       hasSubmittedRegistration: mockAuth.hasSubmittedRegistration,
-      registrationStatus: mockAuth.registrationStatus,
     };
   }
 
@@ -29,8 +27,6 @@ export function useApplicantRouting() {
     isLoading: authLoading || (isAuthenticated && routingState === undefined),
     isAuthenticated,
     verifiedEmail: routingState?.verifiedEmail ?? null,
-    hasRegistration: routingState?.hasRegistration ?? false,
     hasSubmittedRegistration: routingState?.hasSubmittedRegistration ?? false,
-    registrationStatus: routingState?.registrationStatus ?? null,
   };
 }

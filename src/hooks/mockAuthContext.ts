@@ -6,10 +6,7 @@ export type MockAuthContextValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
   verifiedEmail: string | null;
-  hasRegistration: boolean;
   hasSubmittedRegistration: boolean;
-  registrationStatus: string | null;
-  scenario: MockAuthScenario;
   setScenario: (scenario: MockAuthScenario) => void;
   requestOtp: (email: string) => void;
   verifyOtp: (code: string) => boolean;
@@ -21,10 +18,7 @@ export const defaultMockAuthValue: MockAuthContextValue = {
   isLoading: false,
   isAuthenticated: false,
   verifiedEmail: null,
-  hasRegistration: false,
   hasSubmittedRegistration: false,
-  registrationStatus: null,
-  scenario: "signedOut",
   setScenario: () => undefined,
   requestOtp: () => undefined,
   verifyOtp: () => false,

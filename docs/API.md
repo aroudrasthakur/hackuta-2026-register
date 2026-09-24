@@ -49,14 +49,6 @@ OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Re
 
 ## Public queries
 
-### `queries:getCurrentUser`
-
-**Auth:** required · `{}` — user profile (id, email, displayName, `hasApplication`, …).
-
-### `queries:getMyApplication`
-
-**Auth:** required · `{ hackathonId?: string }` — profile row for the current user (default hackathon: `hackuta-2026`).
-
 ### `profiles:getMyProfileDraft`
 
 **Auth:** required · `{ hackathonId?: string }` — draft profile fields for autosave hydration (null if none).
@@ -65,17 +57,17 @@ OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Re
 
 **Auth:** required · `{ hackathonId?: string, patch: ProfileDraftPatch }` — upserts draft profile; only writable while status is `draft`.
 
-### `queries:getHackathonBySlug`
+### `profiles:getMyApplicantDashboard`
+
+**Auth:** required · `{ hackathonId?: string }` — profile page payload (status, answers, timeline).
+
+### `hackathons:getHackathonBySlug`
 
 **Auth:** none · `{ slug: string }` — public hackathon metadata.
 
 ### `applicant:getApplicantRoutingState`
 
 **Auth:** optional · `{ hackathonId?: string }` — routing for guards and `/` redirect.
-
-### `applicant:getMyApplicantDashboard`
-
-**Auth:** required · `{ hackathonId?: string }` — profile page payload (status, answers, timeline).
 
 ### `rateLimits:getOtpSendCooldown`
 
@@ -115,7 +107,7 @@ First submit creates the applicant record; sign-in alone does not write applicat
 | `This resume is already attached to another application.` | Storage ID reuse |
 | `Authentication required.` | Missing/invalid session |
 
-### `registrations:deleteResumeUpload`
+### `resumeUploads:discardUploadSession`
 
 **Auth:** none (capability token) · `{ uploadToken: string }` — deletes unconsumed session + storage.
 
@@ -236,13 +228,13 @@ Not callable from the public client.
 | `assertOtpSendAllowed` | OTP cooldown / hourly cap |
 | `recordOtpSend` | Bucket `otp_send` |
 | `clearOtpSendLimitsForEmail` | Support/testing reset |
-### Resume pipeline (`registrations`)
+### Resume pipeline (`resumeUploads`)
 
 | Function | Purpose |
 | --- | --- |
-| `reserveResumeUpload` | Pre-storage rate limit |
-| `recordVerifiedResumeUpload` | Create upload session |
-| `cleanupExpiredResumeUploads` | Cron + scheduled cleanup |
+| `assertUploadRateLimit` | Pre-storage rate limit |
+| `createVerifiedUploadSession` | Create upload session |
+| `cleanupExpiredUploadSessions` | Cron + scheduled cleanup |
 
 ### Email (Node actions)
 
@@ -310,7 +302,7 @@ One row per auth user per hackathon. All application form fields are top-level c
 
 | Schedule | Function |
 | --- | --- |
-| Every 15 minutes | `registrations:cleanupExpiredResumeUploads` |
+| Every 15 minutes | `resumeUploads:cleanupExpiredUploadSessions` |
 
 ---
 
@@ -326,7 +318,7 @@ One row per auth user per hackathon. All application form fields are top-level c
 | Draft autosave | `profiles:getMyProfileDraft`, `profiles:saveProfileDraft` |
 | Resume widget | `POST /resume-upload` |
 | Submit form | `registrations:register` |
-| Discard resume | `registrations:deleteResumeUpload` |
+| Discard resume | `resumeUploads:discardUploadSession` |
 
 ---
 
