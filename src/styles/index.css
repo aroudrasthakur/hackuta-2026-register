@@ -856,6 +856,29 @@
       transition: none;
     }
   }
+
+  .odyssey-btn.profile-sign-out-btn {
+    color: var(--light);
+    background: var(--ocean);
+    border: 1px solid transparent;
+    box-shadow: 0 6px 18px rgb(26 58 82 / 0.28);
+  }
+
+  .odyssey-btn.profile-sign-out-btn::before,
+  .odyssey-btn.profile-sign-out-btn::after {
+    display: none;
+  }
+
+  .odyssey-btn.profile-sign-out-btn:hover {
+    color: var(--light);
+    background: var(--ink);
+    box-shadow: 0 10px 24px rgb(26 58 82 / 0.34);
+  }
+
+  .odyssey-btn.profile-sign-out-btn:focus-visible {
+    outline: 2px solid var(--ocean);
+    outline-offset: 3px;
+  }
 }
 
 input[type="checkbox"]:focus-visible,

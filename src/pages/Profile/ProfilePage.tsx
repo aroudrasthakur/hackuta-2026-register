@@ -19,8 +19,11 @@ import {
   profileCompactButton,
   profileOverviewGrid,
   profileOverviewPanel,
+  profilePageBody,
   profilePageSubtitle,
   profilePageTitle,
+  profileSignOutButton,
+  profileSignOutWrap,
 } from "./profileStyles";
 
 const PROFILE_SHELL = {
@@ -129,7 +132,7 @@ export default function ProfilePage() {
 
   return (
     <ProfilePageShell>
-      <div className="flex flex-col gap-6">
+      <div className={profilePageBody}>
         <header>
           <h2 className={profilePageTitle}>
             {submitted ? "Your application is in" : "Your application"}
@@ -153,14 +156,12 @@ export default function ProfilePage() {
             </dl>
 
             {!submitted ? (
-              <div className="flex justify-center">
+              <div className="flex justify-start">
                 <OdysseyButton href="/register" className={profileCompactButton}>
                   {registration ? "Continue application" : "Start application"}
                 </OdysseyButton>
               </div>
             ) : null}
-
-            <SignOutButton buttonClassName={profileCompactButton} />
           </aside>
 
           <div className={profileOverviewPanel}>
@@ -170,6 +171,11 @@ export default function ProfilePage() {
             ) : null}
           </div>
         </div>
+
+        <SignOutButton
+          className={profileSignOutWrap}
+          buttonClassName={profileSignOutButton}
+        />
       </div>
     </ProfilePageShell>
   );

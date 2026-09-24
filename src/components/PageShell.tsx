@@ -26,9 +26,9 @@ export function PageShell({
 }: PageShellProps) {
   const content = (
     <div
-      className={`relative z-10 mx-auto flex min-h-screen w-full flex-col items-center px-6 ${
-        wide ? "max-w-6xl" : "max-w-3xl"
-      } ${compact ? "py-6 sm:py-8" : "py-12 sm:py-16"}`}
+      className={`relative z-10 mx-auto flex min-h-screen w-full flex-col items-center ${
+        wide ? "max-w-[min(96rem,100%)] px-4 sm:px-6 lg:px-10" : "max-w-3xl px-6"
+      } ${compact ? "py-4 sm:py-6" : "py-12 sm:py-16"}`}
     >
       {showHeader ? (
         <div
@@ -79,14 +79,20 @@ export function PageShell({
 
         <div
           className={`relative z-10 overflow-hidden rounded-2xl border-2 border-(--sand) bg-(--light) shadow-[0_10px_40px_rgba(26,58,82,0.12)] ${
-            compact ? "p-6 sm:p-8" : "p-8 sm:p-12"
+            compact
+              ? "flex min-h-[min(78vh,50rem)] flex-col p-6 sm:p-10 lg:p-12"
+              : "p-8 sm:p-12"
           }`}
         >
           <div
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(26,58,82,0.02),transparent_60%)]"
             aria-hidden="true"
           />
-          <div className="relative z-10">{children}</div>
+          <div
+            className={`relative z-10 ${compact ? "flex min-h-0 flex-1 flex-col" : ""}`}
+          >
+            {children}
+          </div>
         </div>
       </div>
 

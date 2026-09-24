@@ -22,8 +22,17 @@ export const profileStatusBadge =
 export const profileMetaText = "text-sm text-(--mist)";
 
 export const profileOverviewGrid =
-  "grid gap-6 lg:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)] lg:items-start lg:gap-10";
+  "grid flex-1 gap-8 lg:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)] lg:items-start lg:gap-14";
 
-export const profileOverviewPanel = "flex flex-col gap-5";
+export const profileOverviewPanel = "flex flex-col gap-6";
 
 export const profileCompactButton = "!min-h-11 !min-w-0 !px-8 !py-2";
+
+/** Fills the compact PageShell card so sign-out can sit at the panel bottom. */
+export const profilePageBody = "flex min-h-0 flex-1 flex-col gap-6";
+
+/** Left-aligned with applicant details; pinned near the panel bottom via mt-auto. */
+export const profileSignOutWrap = "mt-auto self-start pt-4";
+
+export const profileSignOutButton =
+  "profile-sign-out-btn !min-h-11 !min-w-0 !px-8 !py-2";
