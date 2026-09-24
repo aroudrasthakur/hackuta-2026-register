@@ -4,6 +4,7 @@ import { isClearedDraftValue } from "../../shared/registration/applicantFields";
 import {
   formToDraftPatch,
   mergeDraftPatchIntoProfile,
+  profileToDraftForm,
 } from "../../shared/registration/draftMapping";
 
 describe("formToDraftPatch", () => {
@@ -15,14 +16,30 @@ describe("formToDraftPatch", () => {
       age: "",
       raceEthnicity: [],
       firstHackathon: null,
+      stateOfResidence: "",
+      internationalStudent: null,
+      eatsBeef: false,
     });
 
     expect(patch.firstName).toBe("");
     expect(patch.lastName).toBe("Test");
     expect(patch.age).toBeNull();
     expect(patch.raceEthnicity).toEqual([]);
+    expect(patch.stateOfResidence).toBe("");
+    expect(patch.internationalStudent).toBeNull();
+    expect(patch.eatsBeef).toBe(false);
+    expect(isClearedDraftValue(patch.eatsBeef)).toBe(false);
     expect(isClearedDraftValue(patch.firstName)).toBe(true);
     expect(isClearedDraftValue(patch.raceEthnicity)).toBe(true);
+  });
+});
+
+describe("profileToDraftForm", () => {
+  it("loads older drafts without new answers as unanswered", () => {
+    const restored = profileToDraftForm({ firstName: "Returning" });
+    expect(restored.stateOfResidence).toBe("");
+    expect(restored.internationalStudent).toBeNull();
+    expect(restored.eatsBeef).toBeNull();
   });
 });
 

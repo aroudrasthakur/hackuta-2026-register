@@ -33,6 +33,9 @@ async function fillApplicationForm(page: Page) {
   await page.locator("#school").fill("Texas at Arlington");
   await page.getByRole("button", { name: "The University of Texas at Arlington" }).click();
   await page.locator("#countryOfResidence").selectOption("United States of America");
+  await page.locator("#stateOfResidence").selectOption("Texas");
+  await page.getByRole("group", { name: /Are you an international student/ })
+    .getByLabel("No").check({ force: true });
   await page.locator("#levelOfStudy").selectOption("Undergraduate University (3+ year)");
   await page.locator("#major").selectOption(
     "Computer science, computer engineering, or software engineering",
@@ -40,7 +43,10 @@ async function fillApplicationForm(page: Page) {
   await page.getByLabel("Expected graduation year", { exact: false }).fill(String(MIN_GRADUATION_YEAR));
   await page.locator("#gender").selectOption("Man");
   await page.getByLabel("T-shirt size", { exact: false }).selectOption("M");
-  await page.getByLabel("Yes", { exact: true }).check({ force: true });
+  await page.getByRole("group", { name: /Do you eat beef/ })
+    .getByLabel("No").check({ force: true });
+  await page.getByRole("group", { name: /Is this your first hackathon/ })
+    .getByLabel("Yes").check({ force: true });
   await page.getByLabel("How did you hear about HackUTA?", { exact: false }).selectOption("Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");
@@ -98,6 +104,12 @@ test.describe("registration", () => {
     await page.getByRole("button", { name: "Submit application" }).click();
 
     await expect(page.getByText("First name is required.")).toBeVisible();
+    await expect(page.getByText("Please select your state or territory of residence."))
+      .toBeVisible();
+    await expect(page.getByText("Please let us know if you are an international student."))
+      .toBeVisible();
+    await expect(page.getByText("Please let us know if you eat beef."))
+      .toBeVisible();
     await expect(
       page.getByRole("alert").filter({ hasText: /One or more of your answers is invalid/ }),
     ).toBeVisible();
