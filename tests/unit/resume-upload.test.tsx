@@ -25,7 +25,7 @@ describe("ResumeUpload", () => {
     expect(
       screen.getByText("Click to upload or drag and drop"),
     ).toBeInTheDocument();
-    expect(screen.getByText("PDF only, up to 5 MB")).toBeInTheDocument();
+    expect(screen.getByText("PDF only, up to 2 MB")).toBeInTheDocument();
   });
 
   it("shows choose file button", () => {
@@ -37,9 +37,8 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Choose file" }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Choose file")).toBeInTheDocument();
+    expect(screen.getByLabelText("Resume (optional)")).toBeInTheDocument();
   });
 
   it("accepts PDF file upload", async () => {
@@ -136,7 +135,7 @@ describe("ResumeUpload", () => {
   });
 
   it("applies error styling when error is present", () => {
-    const { container } = render(
+    render(
       <ResumeUpload
         file={null}
         error="Invalid file type"
@@ -145,7 +144,7 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    const uploadArea = container.querySelector('[role="button"]');
+    const uploadArea = screen.getByTestId("resume-dropzone");
     expect(uploadArea).toHaveClass("border-red-400");
   });
 
@@ -159,8 +158,8 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    const uploadArea = screen.getByRole("button", { name: "Upload resume" });
-    expect(uploadArea).toHaveAttribute("tabIndex", "-1");
+    const input = screen.getByLabelText("Resume (optional)");
+    expect(input).toBeDisabled();
   });
 
   it("shows help text about file requirements", () => {
@@ -174,7 +173,7 @@ describe("ResumeUpload", () => {
 
     expect(
       screen.getByText(
-        "Upload your resume as a PDF file. Maximum file size is 5 MB.",
+        "Upload your resume as a PDF file. Maximum file size is 2 MB.",
       ),
     ).toBeInTheDocument();
   });
@@ -209,10 +208,10 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    const uploadArea = screen.getByRole("button", { name: "Upload resume" });
-    uploadArea.focus();
+    const input = screen.getByLabelText("Resume (optional)");
+    input.focus();
 
-    expect(uploadArea).toHaveFocus();
+    expect(input).toHaveFocus();
   });
 
   it("accepts drag and drop", () => {
@@ -224,12 +223,11 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    const uploadArea = screen.getByRole("button", { name: "Upload resume" });
-    expect(uploadArea).toBeInTheDocument();
+    expect(screen.getByText("Click to upload or drag and drop")).toBeInTheDocument();
   });
 
   it("prevents default on drag over", async () => {
-    const { container } = render(
+    render(
       <ResumeUpload
         file={null}
         onChange={mockOnChange}
@@ -237,9 +235,7 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    const uploadArea = container.querySelector(
-      '[role="button"]',
-    ) as HTMLElement;
+    const uploadArea = screen.getByTestId("resume-dropzone");
     const dragEvent = new Event("dragover", { bubbles: true });
     uploadArea.dispatchEvent(dragEvent);
 
@@ -309,16 +305,15 @@ describe("ResumeUpload", () => {
     const file = new File(["x"], "large.pdf", {
       type: "application/pdf",
     });
-    Object.defineProperty(file, "size", { value: 5 * 1024 * 1024 + 1 });
+    Object.defineProperty(file, "size", { value: 2 * 1024 * 1024 + 1 });
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(mockOnError).toHaveBeenCalledWith("Your PDF must be 5 MB or smaller.");
+    expect(mockOnError).toHaveBeenCalledWith(
+      "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.",
+    );
   });
 
-  it("opens the file picker from the choose file button", async () => {
-    const user = userEvent.setup();
-    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
-
+  it("associates the dropzone with the file input", () => {
     render(
       <ResumeUpload
         file={null}
@@ -327,15 +322,17 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Choose file" }));
-    expect(clickSpy).toHaveBeenCalled();
-    clickSpy.mockRestore();
+    expect(screen.getByTestId("resume-dropzone")).toHaveAttribute(
+      "for",
+      "resume-upload",
+    );
+    expect(screen.getByLabelText("Resume (optional)")).toHaveAttribute(
+      "id",
+      "resume-upload",
+    );
   });
 
-  it("opens the file picker with keyboard activation", async () => {
-    const user = userEvent.setup();
-    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
-
+  it("keeps the file input keyboard-focusable", async () => {
     render(
       <ResumeUpload
         file={null}
@@ -344,12 +341,9 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    const uploadArea = screen.getByRole("button", { name: "Upload resume" });
-    uploadArea.focus();
-    await user.keyboard("{Enter}");
-
-    expect(clickSpy).toHaveBeenCalled();
-    clickSpy.mockRestore();
+    const input = screen.getByLabelText("Resume (optional)");
+    input.focus();
+    expect(input).toHaveFocus();
   });
 
   it("does not open the file picker while disabled", async () => {
@@ -363,7 +357,7 @@ describe("ResumeUpload", () => {
       />,
     );
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "Choose file" }));
+    await userEvent.setup().click(screen.getByTestId("resume-dropzone"));
     expect(clickSpy).not.toHaveBeenCalled();
     clickSpy.mockRestore();
   });

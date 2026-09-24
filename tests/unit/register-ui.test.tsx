@@ -86,6 +86,12 @@ function fillValidApplicationForm() {
   fireEvent.change(screen.getByLabelText(/Country of residence/), {
     target: { value: VALID_COUNTRY },
   });
+  fireEvent.change(screen.getByLabelText(/State of residence/), {
+    target: { value: "Texas" },
+  });
+  fireEvent.click(
+    within(screen.getByRole("group", { name: /Are you an international student/ })).getByLabelText(/^No$/),
+  );
   fireEvent.change(screen.getByLabelText(/Level of study/), {
     target: { value: VALID_LEVEL_OF_STUDY },
   });
@@ -99,7 +105,12 @@ function fillValidApplicationForm() {
   fireEvent.change(screen.getByLabelText(/T-shirt size/), {
     target: { value: "M" },
   });
-  fireEvent.click(screen.getByLabelText(/^Yes$/));
+  fireEvent.click(
+    within(screen.getByRole("group", { name: /Do you eat beef/ })).getByLabelText(/^Yes$/),
+  );
+  fireEvent.click(
+    within(screen.getByRole("group", { name: /Is this your first hackathon/ })).getByLabelText(/^Yes$/),
+  );
   fireEvent.change(screen.getByLabelText(/How did you hear about HackUTA/), {
     target: { value: "Discord" },
   });
@@ -199,7 +210,9 @@ describe("ApplicationForm", () => {
     setInputValueById("portfolio", "https://example.com/sam");
     setInputValueById("devpost", "https://devpost.com/software/hackuta-project");
     setInputValue(/Accessibility needs/, "Step-free access");
-    fireEvent.click(screen.getByLabelText(/^No$/));
+    fireEvent.click(
+      within(screen.getByRole("group", { name: /Is this your first hackathon/ })).getByLabelText(/^No$/),
+    );
 
     const resume = new File(["%PDF-1.7"], "resume.pdf", {
       type: "application/pdf",

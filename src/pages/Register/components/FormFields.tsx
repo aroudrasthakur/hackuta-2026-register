@@ -3,7 +3,16 @@ import type {
   ReactNode,
   SelectHTMLAttributes,
 } from "react";
-import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
+import { CustomRadio } from "./CustomCheckbox";
+import {
+  checkboxFieldsetClass,
+  fieldClass,
+  fieldsetErrorClass,
+  fieldsetLegendClass,
+  inlineRadioGroupClass,
+  labelClass,
+  legendClass,
+} from "./formFieldStyles";
 
 export function RequiredMark() {
   return (
@@ -11,6 +20,58 @@ export function RequiredMark() {
       {" "}
       <span aria-hidden="true">*</span>
     </>
+  );
+}
+
+export function YesNoField({
+  id,
+  legend,
+  required,
+  value,
+  error,
+  description,
+  onChange,
+}: {
+  id: string;
+  legend: string;
+  required?: boolean;
+  value: boolean | null;
+  error?: string | undefined;
+  description?: string;
+  onChange: (value: boolean) => void;
+}) {
+  const errorId = `${id}-error`;
+
+  return (
+    <fieldset
+      className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!error)}`}
+      aria-describedby={error ? errorId : undefined}
+    >
+      <legend className={fieldsetLegendClass}>
+        {legend}
+        {required ? <RequiredMark /> : null}
+      </legend>
+      {description ? (
+        <p className="text-xs leading-relaxed text-(--mist)">{description}</p>
+      ) : null}
+      <div className={inlineRadioGroupClass}>
+        <CustomRadio
+          id={`${id}-yes`}
+          name={id}
+          label="Yes"
+          checked={value === true}
+          onChange={() => onChange(true)}
+        />
+        <CustomRadio
+          id={`${id}-no`}
+          name={id}
+          label="No"
+          checked={value === false}
+          onChange={() => onChange(false)}
+        />
+      </div>
+      <FieldError id={errorId} message={error} />
+    </fieldset>
   );
 }
 

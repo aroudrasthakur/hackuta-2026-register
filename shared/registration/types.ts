@@ -10,6 +10,7 @@ import type {
   SCHOOL_OTHER_OPTION,
   TSHIRT_SIZES,
 } from "./constants";
+import type { StateOfResidence } from "./usStates";
 import type { MlhSchool } from "./mlhSchools";
 import { createEmptyApplicantFormValues } from "./applicantFields";
 import { registrationPayloadSchema } from "./schema";
@@ -31,6 +32,8 @@ export type ApplicationFormData = {
   school: MlhSchool | typeof SCHOOL_OTHER_OPTION | "";
   otherSchool: string;
   countryOfResidence: CountryOfResidence | "";
+  stateOfResidence: StateOfResidence | "";
+  internationalStudent: boolean | null;
   levelOfStudy: LevelOfStudy | "";
   major: Major | "";
   otherMajor: string;
@@ -40,6 +43,7 @@ export type ApplicationFormData = {
   otherRaceEthnicity: string;
   dietaryRestrictions: DietaryOption[];
   otherDietary: string;
+  eatsBeef: boolean | null;
   tshirtSize: TshirtSize | "";
   firstHackathon: boolean | null;
   hearAbout: HearAboutOption | "";
@@ -69,6 +73,8 @@ export const FIELD_ORDER: FieldName[] = [
   "school",
   "otherSchool",
   "countryOfResidence",
+  "stateOfResidence",
+  "internationalStudent",
   "levelOfStudy",
   "major",
   "otherMajor",
@@ -76,6 +82,7 @@ export const FIELD_ORDER: FieldName[] = [
   "gender",
   "otherRaceEthnicity",
   "otherDietary",
+  "eatsBeef",
   "tshirtSize",
   "firstHackathon",
   "hearAbout",
@@ -99,6 +106,8 @@ export const INITIAL_FORM: ApplicationFormData = {
 /** Maps validation keys to DOM ids used for focus management. */
 export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
   firstHackathon: "firstHackathon-yes",
+  internationalStudent: "internationalStudent-yes",
+  eatsBeef: "eatsBeef-yes",
   resume: "resume-upload",
   codeOfConductAgreed: "codeOfConductAgreed",
   mlhDataSharingConsent: "mlhDataSharingConsent",

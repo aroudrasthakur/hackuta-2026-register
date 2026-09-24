@@ -1,5 +1,8 @@
 import { useRef, useState, type DragEvent } from "react";
-import { validateResume } from "../../../../shared/registration/resume";
+import {
+  MAX_RESUME_SIZE_LABEL,
+  validateResume,
+} from "../../../../shared/registration/resume";
 import { legendClass } from "./formFieldStyles";
 import { FieldError } from "./FormFields";
 
@@ -33,7 +36,7 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
     }
   };
 
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);
 
@@ -43,17 +46,13 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
     handleFile(droppedFile || null);
   };
 
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     if (!disabled) setIsDragging(true);
   };
 
   const handleDragLeave = () => {
     setIsDragging(false);
-  };
-
-  const handleClick = () => {
-    if (!disabled) inputRef.current?.click();
   };
 
   const handleRemove = () => {
@@ -72,43 +71,37 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor="resume-upload" className={legendClass}>
+      <span id="resume-upload-label" className={legendClass}>
         Resume (optional)
-      </label>
+      </span>
 
-      <div
+      <label
+        htmlFor="resume-upload"
+        data-testid="resume-dropzone"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={handleClick}
         className={`
-          relative rounded-lg border-2 border-dashed p-8 text-center transition-all cursor-pointer
-          ${isDragging 
-            ? "border-(--ocean) bg-(--ocean)/5 scale-[1.02]" 
-            : error 
-              ? "border-red-400 bg-red-50" 
+          relative block rounded-lg border-2 border-dashed p-8 text-center transition-all
+          ${isDragging
+            ? "border-(--ocean) bg-(--ocean)/5 scale-[1.02]"
+            : error
+              ? "border-red-400 bg-red-50"
               : "border-(--sand) bg-white hover:border-(--ocean) hover:bg-(--clay)/30"
           }
-          ${disabled ? "opacity-60 cursor-not-allowed" : ""}
+          ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
         `}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        onKeyDown={(e) => {
-          if ((e.key === "Enter" || e.key === " ") && !disabled) {
-            e.preventDefault();
-            handleClick();
-          }
-        }}
-        aria-label="Upload resume"
       >
         <input
           ref={inputRef}
           type="file"
           accept=".pdf,application/pdf"
           disabled={disabled}
-          className="hidden"
+          className="sr-only"
           id="resume-upload"
           onChange={(e) => handleFile(e.target.files?.[0] || null)}
+          aria-labelledby="resume-upload-label"
+          aria-invalid={!!error}
           aria-describedby="resume-help resume-error"
         />
 
@@ -132,17 +125,6 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRemove();
-              }}
-              disabled={disabled}
-              className="text-sm font-medium text-(--ocean) underline decoration-1 underline-offset-2 transition-colors hover:text-(--ink)"
-            >
-              Remove resume
-            </button>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
@@ -159,32 +141,34 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
                 {isDragging ? "Drop your resume here" : "Click to upload or drag and drop"}
               </p>
               <p className="text-xs text-(--mist)">
-                PDF only, up to 5 MB
+                PDF only, up to {MAX_RESUME_SIZE_LABEL}
               </p>
             </div>
 
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-lg bg-(--ocean) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--ink)"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClick();
-              }}
-              disabled={disabled}
-            >
+            <span className="inline-flex items-center gap-2 rounded-lg bg-(--ocean) px-4 py-2 text-sm font-semibold text-white">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               Choose file
-            </button>
+            </span>
           </div>
         )}
-      </div>
+      </label>
+      {file ? (
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={disabled}
+          className="self-start text-sm font-medium text-(--ocean) underline decoration-1 underline-offset-2 transition-colors hover:text-(--ink)"
+        >
+          Remove resume
+        </button>
+      ) : null}
 
       <p id="resume-help" className="text-xs text-(--mist)">
-        Upload your resume as a PDF file. Maximum file size is 5 MB.
+        Upload your resume as a PDF file. Maximum file size is {MAX_RESUME_SIZE_LABEL}.
       </p>
 
       <FieldError id="resume-error" message={error} />

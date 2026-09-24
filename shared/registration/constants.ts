@@ -109,5 +109,7 @@ export const MAX_GRADUATION_YEAR = CURRENT_YEAR + 10;
 
 export const HACKATHON_ID = "hackuta-2026";
 
+export const UNITED_STATES_COUNTRY = "United States of America";
+
 export const MLH_PRIVACY_POLICY_URL = "https://github.com/MLH/mlh-policies/blob/main/privacy-policy.md";
 export const MLH_CODE_OF_CONDUCT_URL = "https://static.mlh.io/docs/mlh-code-of-conduct.pdf";

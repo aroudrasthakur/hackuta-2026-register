@@ -9,16 +9,18 @@ import { getMyApplicantDashboardRef } from "../../convex/api";
 import { getConvexClient } from "../../convex/client";
 import { resolveHackathonTimelineSource } from "../../../shared/hackathon/schedule";
 import { buildHackathonTimeline } from "../../../shared/hackathon/timeline";
+import { getApplicantStatusLabel } from "./applicantStatus";
 import { ApplicantTimeline } from "./ApplicantTimeline";
+import { ProfileAsset } from "./ProfileAsset";
 import { ProfileField } from "./ProfileField";
-import { ProfileSection } from "./ProfileSection";
 import {
-  profileFieldGrid,
   profileFieldStack,
   profileMetaText,
+  profileCompactButton,
+  profileOverviewGrid,
+  profileOverviewPanel,
   profilePageSubtitle,
   profilePageTitle,
-  profileStatusBadge,
 } from "./profileStyles";
 
 const PROFILE_SHELL = {
@@ -29,11 +31,32 @@ const PROFILE_SHELL = {
 function ProfilePageShell({ children }: { children: ReactNode }) {
   return (
     <StormPageFrame>
-      <PageShell {...PROFILE_SHELL} frameless>
+      <ProfileAsset />
+      <PageShell {...PROFILE_SHELL} frameless wide compact>
         {children}
       </PageShell>
     </StormPageFrame>
   );
+}
+
+function applicantName(
+  displayName: string | null | undefined,
+  answers: { firstName?: string | null; lastName?: string | null } | null,
+) {
+  if (displayName?.trim()) return displayName.trim();
+  const first = answers?.firstName?.trim();
+  const last = answers?.lastName?.trim();
+  if (first && last) return `${first} ${last}`;
+  return first || last || "—";
+}
+
+function yearOfStudy(answers: {
+  graduationYear?: number | string | null;
+  levelOfStudy?: string | null;
+} | null) {
+  if (answers?.graduationYear) return String(answers.graduationYear);
+  if (answers?.levelOfStudy?.trim()) return answers.levelOfStudy.trim();
+  return "—";
 }
 
 export default function ProfilePage() {
@@ -73,6 +96,7 @@ export default function ProfilePage() {
                 lastName: "Test",
                 school: "The University of Texas at Arlington",
                 countryOfResidence: "United States of America",
+                stateOfResidence: "Texas",
                 levelOfStudy: "Undergraduate University (3+ year)",
                 graduationYear: 2026,
               },
@@ -93,120 +117,58 @@ export default function ProfilePage() {
   }
 
   const registration = profile.registration;
+  const answers = registration?.answers ?? null;
   const timeline = buildHackathonTimeline(
     resolveHackathonTimelineSource(profile.hackathon),
   );
+  const submitted = Boolean(registration?.submittedAt && registration.status !== "draft");
+  const statusLabel = getApplicantStatusLabel(registration);
+  const name = applicantName(profile.profile.displayName, answers);
+  const school = answers?.school?.trim() || "—";
+  const studyYear = yearOfStudy(answers);
 
   return (
     <ProfilePageShell>
-      <div className="flex flex-col gap-10">
-        <header className="border-b-2 border-(--sand) pb-6">
-          <h2 className={profilePageTitle}>Your application</h2>
+      <div className="flex flex-col gap-6">
+        <header>
+          <h2 className={profilePageTitle}>
+            {submitted ? "Your application is in" : "Your application"}
+          </h2>
           <p className={profilePageSubtitle}>
-            Track your HackUTA 2026 registration status.
+            {submitted
+              ? "Nothing left to do. We'll email you when decisions go out."
+              : "Start or finish your application before the deadline. Your progress is saved automatically."}
           </p>
         </header>
 
-        <ProfileSection title="Profile">
-          <dl className={profileFieldStack}>
-            <ProfileField
-              label="Verified email"
-              value={profile.profile.verifiedEmail ?? "—"}
-            />
-            {profile.profile.displayName ? (
-              <ProfileField label="Name" value={profile.profile.displayName} />
-            ) : null}
-          </dl>
-        </ProfileSection>
+        <div className={profileOverviewGrid}>
+          <aside className={profileOverviewPanel}>
+            <dl className={profileFieldStack}>
+              <ProfileField label="Name" value={name} />
+              <ProfileField label="School" value={school} />
+              <ProfileField label="Year of study" value={studyYear} />
+              {statusLabel ? (
+                <ProfileField label="Status" value={statusLabel} />
+              ) : null}
+            </dl>
 
-        {!registration ? (
-          <section className="rounded-lg border-2 border-dashed border-(--sand) p-6">
-            <p className={profileMetaText}>You haven&apos;t started an application yet.</p>
-            <div className="mt-4 flex justify-center">
-              <OdysseyButton href="/register">Start application</OdysseyButton>
-            </div>
-          </section>
-        ) : (
-          <>
-            <ProfileSection title="Application status">
-              <div className="space-y-4">
-                <p>
-                  <span className={profileStatusBadge}>
-                    {registration.status.replace("-", " ")}
-                  </span>
-                </p>
-                {registration.submittedAt ? (
-                  <dl className={profileFieldStack}>
-                    <ProfileField
-                      label="Submitted"
-                      value={new Date(registration.submittedAt).toLocaleString()}
-                    />
-                    <ProfileField
-                      label="Resume"
-                      value={
-                        registration.resumeStatus === "attached"
-                          ? "Uploaded"
-                          : "Not uploaded"
-                      }
-                    />
-                  </dl>
-                ) : (
-                  <div className="space-y-3">
-                    <p className={profileMetaText}>Your application is incomplete.</p>
-                    <div className="flex justify-center">
-                      <OdysseyButton href="/register">Continue application</OdysseyButton>
-                    </div>
-                  </div>
-                )}
+            {!submitted ? (
+              <div className="flex justify-center">
+                <OdysseyButton href="/register" className={profileCompactButton}>
+                  {registration ? "Continue application" : "Start application"}
+                </OdysseyButton>
               </div>
-            </ProfileSection>
-
-            {registration.answers ? (
-              <ProfileSection title="Submitted details">
-                <dl className={profileFieldGrid}>
-                  {registration.answers.firstName ? (
-                    <ProfileField
-                      label="First name"
-                      value={registration.answers.firstName}
-                    />
-                  ) : null}
-                  {registration.answers.lastName ? (
-                    <ProfileField
-                      label="Last name"
-                      value={registration.answers.lastName}
-                    />
-                  ) : null}
-                  {registration.answers.school ? (
-                    <ProfileField label="School" value={registration.answers.school} />
-                  ) : null}
-                  {registration.answers.countryOfResidence ? (
-                    <ProfileField
-                      label="Country of residence"
-                      value={registration.answers.countryOfResidence}
-                    />
-                  ) : null}
-                  {registration.answers.levelOfStudy ? (
-                    <ProfileField
-                      label="Level of study"
-                      value={registration.answers.levelOfStudy}
-                    />
-                  ) : null}
-                  {registration.answers.graduationYear ? (
-                    <ProfileField
-                      label="Graduation year"
-                      value={registration.answers.graduationYear}
-                    />
-                  ) : null}
-                </dl>
-              </ProfileSection>
             ) : null}
-          </>
-        )}
 
-        <ApplicantTimeline events={timeline} />
+            <SignOutButton buttonClassName={profileCompactButton} />
+          </aside>
 
-        <div className="border-t-2 border-(--sand) pt-6">
-          <SignOutButton />
+          <div className={profileOverviewPanel}>
+            <ApplicantTimeline events={timeline} />
+            {!registration ? (
+              <p className={profileMetaText}>You haven&apos;t started an application yet.</p>
+            ) : null}
+          </div>
         </div>
       </div>
     </ProfilePageShell>

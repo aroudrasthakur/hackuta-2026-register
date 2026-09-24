@@ -33,7 +33,9 @@ describe("submit error mapping", () => {
     );
     expect(mapResumeUploadHttpError(429, { error: "Too many uploads. Please try again later." }))
       .toBe("Too many uploads. Please try again later.");
-    expect(mapResumeUploadHttpError(413, {})).toBe("Your PDF must be 5 MB or smaller.");
+    expect(mapResumeUploadHttpError(413, {})).toBe(
+      "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.",
+    );
     expect(mapResumeUploadHttpError(415, {})).toBe("Please select a PDF file.");
     expect(mapResumeUploadHttpError(403, {})).toBe(
       "Resume upload is unavailable. Please try again later or contact us.",

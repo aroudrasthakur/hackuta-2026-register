@@ -149,27 +149,25 @@ See [docs/API.md](docs/API.md#rate-limits) for server-side enforcement details.
 | `SITE_URL` | Frontend origin for Convex Auth redirects |
 | `REGISTRATION_ALLOWED_ORIGINS` | Comma-separated browser origins allowed for resume upload CORS (also includes `SITE_URL` origin) |
 | `JWT_PRIVATE_KEY`, `JWKS` | Convex Auth signing keys (from `scripts/generateAuthKeys.mjs`) |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | cPanel SMTP |
-| `EMAIL_FROM` | From address for outbound mail |
+| `EMAIL_SERVICE_URL` | HackUTA email service (`https://emailservice.hackuta.org`) |
+| `EMAIL_SERVICE_API_KEY` | Email service API key (server-side only) |
+| `EMAIL_DEV_LOG` | Dev only — log outbound mail when the email service is unset |
 | `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` | Dev only — allow `localhost:5273` resume uploads |
 
-**Do not** set SMTP or JWT values as `VITE_*` — they belong only on the Convex deployment.
+**Do not** set email-service or JWT values as `VITE_*` — they belong only on the Convex deployment.
 
 `REGISTRATION_TOKEN_SECRET` in `.env.example` is unused legacy; safe to ignore.
 
-### cPanel SMTP
+### Email service
 
-Find settings under **Email Accounts → Connect Devices**:
+OTP and application confirmation mail are queued through `https://emailservice.hackuta.org/send-email` from Convex actions. Ask an organizer for `EMAIL_SERVICE_API_KEY`.
 
 ```bash
-npx convex env set SMTP_HOST mail.example.com
-npx convex env set SMTP_PORT 465          # 465 = implicit TLS; 587 = STARTTLS
-npx convex env set SMTP_USER noreply@hackuta.org
-npx convex env set SMTP_PASSWORD your-mailbox-password
-npx convex env set EMAIL_FROM noreply@hackuta.org
+npx convex env set EMAIL_SERVICE_URL https://emailservice.hackuta.org
+npx convex env set EMAIL_SERVICE_API_KEY your-api-key
 ```
 
-Configure SPF and DKIM under cPanel **Email Deliverability**. Test by creating an account and requesting a verification code.
+A returned email ID means the message was queued, not delivered. For personal local work without a key, set `EMAIL_DEV_LOG=true` so codes appear in Convex logs.
 
 ## Mock mode
 

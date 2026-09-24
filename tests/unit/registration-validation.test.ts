@@ -22,7 +22,7 @@ describe("validateApplicationForm", () => {
   it.each([
     new File(["text"], "resume.txt", { type: "text/plain" }),
     new File([], "resume.pdf", { type: "application/pdf" }),
-    new File(["x".repeat(5 * 1024 * 1024 + 1)], "resume.pdf", { type: "application/pdf" }),
+    new File(["x".repeat(2 * 1024 * 1024 + 1)], "resume.pdf", { type: "application/pdf" }),
   ])("blocks submission of invalid resume files", (resume) => {
     const result = validateApplicationForm({ ...validRegistrationForm(), resume });
     expect(result.success).toBe(false);
@@ -206,6 +206,52 @@ describe("validateApplicationForm", () => {
       expect(result.errors.otherRaceEthnicity).toBe(
         "Please specify your race or ethnicity.",
       );
+    }
+  });
+
+  it("requires international student, beef preference, and state of residence", () => {
+    const unanswered = validRegistrationForm();
+    unanswered.internationalStudent = null;
+    unanswered.eatsBeef = null;
+    unanswered.stateOfResidence = "";
+
+    const result = validateApplicationForm(unanswered);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.internationalStudent).toBe(
+        "Please let us know if you are an international student.",
+      );
+      expect(result.errors.eatsBeef).toBe("Please let us know if you eat beef.");
+      expect(result.errors.stateOfResidence).toBe(
+        "Please select your state of residence.",
+      );
+    }
+  });
+
+  it("keeps beef preference independent of dietary restrictions", () => {
+    const form = validRegistrationForm();
+    form.dietaryRestrictions = ["Vegetarian"];
+    form.eatsBeef = true;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.dietaryRestrictions).toEqual(["Vegetarian"]);
+      expect(result.payload.eatsBeef).toBe(true);
+    }
+  });
+
+  it("accepts residence outside the United States", () => {
+    const form = validRegistrationForm();
+    form.stateOfResidence = "Outside the United States";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.stateOfResidence).toBe("Outside the United States");
     }
   });
 

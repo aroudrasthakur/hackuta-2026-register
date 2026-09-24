@@ -19,13 +19,13 @@ import {
   fieldClass,
   fieldsetErrorClass,
   fieldsetLegendClass,
-  inlineRadioGroupClass,
   inputClass,
   labelClass,
   legendClass,
 } from "./components/formFieldStyles";
 import {
   COUNTRIES_OF_RESIDENCE,
+  STATE_OF_RESIDENCE_OPTIONS,
   DIETARY_OPTIONS,
   FIELD_LIMITS,
   GENDERS,
@@ -44,9 +44,9 @@ import {
   RACE_ETHNICITY_OPTIONS,
   TSHIRT_SIZES,
 } from "./constants";
-import { FieldError, SelectField, TextField } from "./components/FormFields";
+import { FieldError, SelectField, TextField, YesNoField } from "./components/FormFields";
 import { SearchableSelect } from "./components/SearchableSelect";
-import { CustomCheckbox, CustomRadio } from "./components/CustomCheckbox";
+import { CustomCheckbox } from "./components/CustomCheckbox";
 import { ResumeUpload } from "./components/ResumeUpload";
 import {
   discardResumeUpload,
@@ -351,6 +351,38 @@ function ApplicationFormContent({
             ))}
           </SelectField>
           <SelectField
+            id="stateOfResidence"
+            label="State of residence"
+            required
+            value={form.stateOfResidence}
+            onChange={(e) =>
+              updateField(
+                "stateOfResidence",
+                e.target.value as ApplicationFormData["stateOfResidence"],
+              )
+            }
+            error={errors.stateOfResidence}
+          >
+            {STATE_OF_RESIDENCE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </SelectField>
+          <p className="-mt-3 text-xs leading-relaxed text-(--mist) sm:col-span-2">
+            Select the state or territory where you currently live.
+          </p>
+          <div className="sm:col-span-2">
+            <YesNoField
+              id="internationalStudent"
+              legend="Are you an international student?"
+              required
+              value={form.internationalStudent}
+              error={errors.internationalStudent}
+              onChange={(value) => updateField("internationalStudent", value)}
+            />
+          </div>
+          <SelectField
             id="levelOfStudy"
             label="Level of study"
             required
@@ -547,6 +579,16 @@ function ApplicationFormContent({
           ) : null}
         </fieldset>
 
+        <YesNoField
+          id="eatsBeef"
+          legend="Do you eat beef?"
+          required
+          description="HackUTA meals may include beef. This is for catering only and is separate from the dietary restrictions above."
+          value={form.eatsBeef}
+          error={errors.eatsBeef}
+          onChange={(value) => updateField("eatsBeef", value)}
+        />
+
         <SelectField
           id="tshirtSize"
           label="T-shirt size"
@@ -567,37 +609,14 @@ function ApplicationFormContent({
           ))}
         </SelectField>
 
-        <fieldset
-          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.firstHackathon)}`}
-          aria-describedby={
-            errors.firstHackathon ? "firstHackathon-error" : undefined
-          }
-        >
-          <legend className={fieldsetLegendClass}>
-            Is this your first hackathon?
-            <span aria-hidden="true"> *</span>
-          </legend>
-          <div className={inlineRadioGroupClass}>
-            <CustomRadio
-              id="firstHackathon-yes"
-              name="firstHackathon"
-              label="Yes"
-              checked={form.firstHackathon === true}
-              onChange={() => updateField("firstHackathon", true)}
-            />
-            <CustomRadio
-              id="firstHackathon-no"
-              name="firstHackathon"
-              label="No"
-              checked={form.firstHackathon === false}
-              onChange={() => updateField("firstHackathon", false)}
-            />
-          </div>
-          <FieldError
-            id="firstHackathon-error"
-            message={errors.firstHackathon}
-          />
-        </fieldset>
+        <YesNoField
+          id="firstHackathon"
+          legend="Is this your first hackathon?"
+          required
+          value={form.firstHackathon}
+          error={errors.firstHackathon}
+          onChange={(value) => updateField("firstHackathon", value)}
+        />
       </section>
 
       <section className="space-y-6">

@@ -36,7 +36,7 @@ Set in project settings (Production + Preview as appropriate):
 npx convex env set --prod SITE_URL https://register.hackuta.com
 npx convex env set --prod REGISTRATION_ALLOWED_ORIGINS https://register.hackuta.com
 npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
-# SMTP, JWT keys, EMAIL_FROM
+# EMAIL_SERVICE_URL, EMAIL_SERVICE_API_KEY, JWT keys
 ```
 
 JWT keys: `node scripts/generateAuthKeys.mjs` — generate **per environment**, never reuse prod keys in dev.

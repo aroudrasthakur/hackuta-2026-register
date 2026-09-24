@@ -16,5 +16,6 @@ export {
   TSHIRT_SIZES,
 } from "../../../shared/registration/constants";
 export { COUNTRIES_OF_RESIDENCE } from "../../../shared/registration/countries";
+export { STATE_OF_RESIDENCE_OPTIONS } from "../../../shared/registration/usStates";
 export { MLH_SCHOOLS } from "../../../shared/registration/mlhSchools";
 export { MLH_TEXAS_SCHOOLS } from "../../../shared/registration/mlhTexasSchools";

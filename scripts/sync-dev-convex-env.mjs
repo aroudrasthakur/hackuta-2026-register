@@ -14,13 +14,10 @@ const convexCli = path.join(
   "main.js",
 );
 
-/** Copied from prod so dev can send OTP, confirmations, and contact mail. */
+/** Copied from prod so dev can send OTP and confirmation mail. */
 const COPY_FROM_PROD = [
-  "SMTP_HOST",
-  "SMTP_PORT",
-  "SMTP_USER",
-  "SMTP_PASSWORD",
-  "EMAIL_FROM",
+  "EMAIL_SERVICE_URL",
+  "EMAIL_SERVICE_API_KEY",
   "CONTACT_EMAIL_TO",
 ];
 

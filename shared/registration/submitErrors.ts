@@ -11,7 +11,8 @@ export const SIGN_IN_REQUIRED_MESSAGE =
 const USER_FACING_SERVER_MESSAGES = new Set([
   SIGN_IN_REQUIRED_MESSAGE,
   "You have already submitted an application.",
-  "Please upload a valid PDF resume of 5 MB or smaller.",
+  "Please upload a valid PDF resume of 2 MB or smaller.",
+  "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.",
   "This resume is already attached to another application.",
   "That email address is already associated with another account. Sign in with that email or contact us for help.",
   "Too many resume upload attempts. Please wait a few minutes and try again.",
@@ -21,10 +22,10 @@ const USER_FACING_SERVER_MESSAGES = new Set([
 const RESUME_FIELD_MESSAGES = new Set([
   "Please select a PDF file.",
   "Your PDF is empty. Please select another file.",
-  "Your PDF must be 5 MB or smaller.",
+  "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.",
   "Please upload a PDF.",
   "The PDF is too large.",
-  "The PDF must be between 1 byte and 5 MB.",
+  "The PDF must be between 1 byte and 2 MB.",
   "The file is not a valid PDF.",
   "The file is not a valid PDF. Please choose another file.",
   "Content-Length header is required.",
@@ -32,7 +33,7 @@ const RESUME_FIELD_MESSAGES = new Set([
   "The PDF has too many pages.",
   "Too many uploads. Please try again later.",
   "Too many resume upload attempts. Please wait a few minutes and try again.",
-  "Please upload a valid PDF resume of 5 MB or smaller.",
+  "Please upload a valid PDF resume of 2 MB or smaller.",
   "This resume is already attached to another application.",
   RESUME_UPLOAD_ERROR_MESSAGE,
   "Resume upload is unavailable. Please try again later or contact us.",
@@ -49,6 +50,11 @@ const UPLOAD_SERVER_MESSAGE_ALIASES: Record<string, string> = {
   "Origin is not allowed.": "Resume upload is unavailable. Please try again later or contact us.",
   "The resume could not be stored.": RESUME_UPLOAD_ERROR_MESSAGE,
   "Please upload a PDF.": "Please select a PDF file.",
+  "The PDF is too large.": "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.",
+  "The PDF must be between 1 byte and 2 MB.":
+    "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.",
+  "Your PDF must be 5 MB or smaller.":
+    "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.",
 };
 
 function normalizeUploadServerMessage(raw: string): string | null {
@@ -101,7 +107,7 @@ export function mapResumeUploadHttpError(
     case 411:
       return "We couldn't upload your resume. Please try again.";
     case 413:
-      return "Your PDF must be 5 MB or smaller.";
+      return "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.";
     case 415:
       return "Please select a PDF file.";
     case 422:

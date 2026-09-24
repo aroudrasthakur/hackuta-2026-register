@@ -3,6 +3,13 @@ import { useMutation } from "convex/react";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import {
+  AUTH_FAILED_MESSAGE,
+  EMAIL_SEND_FAILED_MESSAGE,
+  isAccountExistsError,
+  mapAuthError,
+  OTP_INVALID_MESSAGE,
+} from "../../../shared/auth/authErrors";
+import {
   PASSWORD_REQUIREMENTS_MESSAGE,
   validatePasswordConfirmation,
   validatePasswordRequirements,
@@ -25,24 +32,8 @@ import { getConvexClient } from "../../convex/client";
 import { useApplicantRouting } from "../../hooks/useApplicantRouting";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
 
-const OTP_INVALID_MESSAGE = "The verification code is invalid or expired.";
-const AUTH_FAILED_MESSAGE = "We couldn't sign you in. Check your email and password.";
-
 type AuthMode = "signUp" | "signIn";
 type SignInStep = "credentials" | "verify";
-
-function mapAuthError(error: unknown) {
-  if (error instanceof Error) {
-    if (error.message.includes("Invalid password")) {
-      return PASSWORD_REQUIREMENTS_MESSAGE;
-    }
-    if (error.message.includes("Passwords do not match")) {
-      return "Passwords do not match.";
-    }
-    return error.message;
-  }
-  return AUTH_FAILED_MESSAGE;
-}
 
 type ConvexPasswordSignIn = (
   provider: string,
@@ -186,6 +177,9 @@ function SignInPageContent({
       setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
     } catch (err) {
       setError(mapAuthError(err));
+      if (mode === "signUp" && isAccountExistsError(err)) {
+        setMode("signIn");
+      }
     } finally {
       setPending(false);
     }
@@ -243,19 +237,24 @@ function SignInPageContent({
     if (pending || cooldown.waitSeconds > 0 || cooldown.hourlyLimitReached) return;
 
     const normalized = normalizeEmail(email);
-    if (!normalized || !password) return;
+    if (!normalized) return;
 
     setPending(true);
     setError(null);
 
     try {
+      if (mockAuth.enabled) {
+        mockAuth.requestOtp(normalized);
+        setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
+        return;
+      }
+
       const formData = new FormData();
       formData.set("email", normalized);
-      formData.set("password", password);
-      formData.set("flow", mode);
+      formData.set("flow", "email-verification");
 
       if (!convexSignIn) {
-        throw new Error(AUTH_FAILED_MESSAGE);
+        throw new Error(EMAIL_SEND_FAILED_MESSAGE);
       }
 
       await convexSignIn("password", formData);
@@ -266,7 +265,7 @@ function SignInPageContent({
         setCooldownExpiresAt(startCooldownExpiry(OTP_RESEND_COOLDOWN_SECONDS));
       }
     } catch (err) {
-      setError(mapAuthError(err));
+      setError(mapAuthError(err, "resend"));
     } finally {
       setPending(false);
     }

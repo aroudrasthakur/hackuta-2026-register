@@ -156,6 +156,7 @@ export function projectApplicantAnswers(profile: ProfileDoc) {
     age: profile.age,
     school: profile.school,
     countryOfResidence: profile.countryOfResidence,
+    stateOfResidence: profile.stateOfResidence,
     levelOfStudy: profile.levelOfStudy,
     major: profile.major,
     graduationYear: profile.graduationYear,

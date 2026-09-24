@@ -151,6 +151,14 @@ export function SearchableSelect({
             }
           }}
           onFocus={openList}
+          onBlur={() => {
+            const normalized = query.trim().toLowerCase();
+            if (!normalized) return;
+            const exact = [...options, ...(extraOptions ?? [])].find(
+              (option) => option.toLowerCase() === normalized,
+            );
+            if (exact) selectOption(exact);
+          }}
           onKeyDown={handleKeyDown}
           autoComplete="off"
         />

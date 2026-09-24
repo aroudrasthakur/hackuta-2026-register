@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { containsDangerousMarkup, sanitizePlainText } from "../lib/sanitizeInput";
 import { COUNTRIES_OF_RESIDENCE } from "./countries";
+import { STATE_OF_RESIDENCE_OPTIONS } from "./usStates";
 import {
   DIETARY_OPTIONS,
   FIELD_LIMITS,
@@ -96,6 +97,7 @@ function optionalHttpUrl(label: string) {
 }
 
 const COUNTRIES_SET = new Set<string>(COUNTRIES_OF_RESIDENCE);
+const STATES_SET = new Set<string>(STATE_OF_RESIDENCE_OPTIONS);
 const MAJORS_SET = new Set<string>(MAJORS);
 const HEAR_ABOUT_OPTIONS_SET = new Set<string>(HEAR_ABOUT_OPTIONS);
 
@@ -148,6 +150,13 @@ export const registrationPayloadSchema = z
       max: 100,
       message: "Please select your country of residence.",
     }).refine((value) => COUNTRIES_SET.has(value), "Please select a country from the list."),
+    stateOfResidence: safePlainText({
+      max: 100,
+      message: "Please select your state of residence.",
+    }).refine((value) => STATES_SET.has(value), "Please select a state from the list."),
+    internationalStudent: z.boolean({
+      message: "Please let us know if you are an international student.",
+    }),
     levelOfStudy: levelOfStudySchema,
     major: safePlainText({
       max: FIELD_LIMITS.major,
@@ -171,6 +180,9 @@ export const registrationPayloadSchema = z
     otherDietary: safeOptionalPlainText({
       max: FIELD_LIMITS.otherDietary,
       tooLongMessage: "Dietary details are too long.",
+    }),
+    eatsBeef: z.boolean({
+      message: "Please let us know if you eat beef.",
     }),
     tshirtSize: tshirtSizeSchema,
     firstHackathon: z.boolean({

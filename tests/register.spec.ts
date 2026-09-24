@@ -33,6 +33,8 @@ async function fillApplicationForm(page: Page) {
   await page.locator("#school").fill("Texas at Arlington");
   await page.getByRole("button", { name: "The University of Texas at Arlington" }).click();
   await page.locator("#countryOfResidence").selectOption("United States of America");
+  await page.locator("#stateOfResidence").selectOption("Texas");
+  await page.locator("#internationalStudent-no").check({ force: true });
   await page.locator("#levelOfStudy").selectOption("Undergraduate University (3+ year)");
   await page.locator("#major").selectOption(
     "Computer science, computer engineering, or software engineering",
@@ -40,7 +42,8 @@ async function fillApplicationForm(page: Page) {
   await page.getByLabel("Expected graduation year", { exact: false }).fill(String(MIN_GRADUATION_YEAR));
   await page.locator("#gender").selectOption("Man");
   await page.getByLabel("T-shirt size", { exact: false }).selectOption("M");
-  await page.getByLabel("Yes", { exact: true }).check({ force: true });
+  await page.locator("#eatsBeef-yes").check({ force: true });
+  await page.locator("#firstHackathon-yes").check({ force: true });
   await page.getByLabel("How did you hear about HackUTA?", { exact: false }).selectOption("Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");

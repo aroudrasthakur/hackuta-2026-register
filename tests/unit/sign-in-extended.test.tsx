@@ -7,10 +7,16 @@ import { MOCK_OTP } from "../../src/constants/mockAuth";
 import { SessionAuthProvider } from "../../src/hooks/useSessionAuth";
 import SignInPage from "../../src/pages/SignIn/SignInPage";
 
+const { signInMock } = vi.hoisted(() => ({
+  signInMock: vi.fn(async () => ({ signingIn: false })),
+}));
+
 vi.mock("@convex-dev/auth/react", () => ({
   useAuthActions: () => ({
-    signIn: vi.fn().mockResolvedValue({ signingIn: false }),
+    signIn: signInMock,
+    signOut: vi.fn(async () => {}),
   }),
+  useConvexAuth: () => ({ isLoading: false, isAuthenticated: false }),
 }));
 
 vi.mock("convex/react", async (importOriginal) => {
@@ -165,7 +171,7 @@ describe("SignInPage extended", () => {
     await user.click(screen.getByRole("button", { name: "Verify email" }));
 
     expect(
-      await screen.findByText("The verification code is invalid or expired."),
+      await screen.findByText("This code is invalid or has expired. Request a new code."),
     ).toBeInTheDocument();
   });
 

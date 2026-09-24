@@ -10,6 +10,7 @@ export type HackathonTimelineSource = {
   registrationOpensAt: number;
   registrationClosesAt: number;
   decisionsReleasedAt?: number | null;
+  rsvpDueAt?: number | null;
   startsAt: number;
 };
 

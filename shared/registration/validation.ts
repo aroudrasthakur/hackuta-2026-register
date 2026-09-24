@@ -58,6 +58,8 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     age: form.age.trim() === "" ? Number.NaN : Number(form.age.trim()),
     school: resolveSchool(form),
     countryOfResidence: form.countryOfResidence,
+    stateOfResidence: form.stateOfResidence,
+    internationalStudent: form.internationalStudent ?? undefined,
     levelOfStudy: form.levelOfStudy || undefined,
     major: resolveMajor(form),
     graduationYear:
@@ -69,6 +71,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     otherRaceEthnicity: form.otherRaceEthnicity,
     dietaryRestrictions: form.dietaryRestrictions,
     otherDietary: form.otherDietary,
+    eatsBeef: form.eatsBeef ?? undefined,
     tshirtSize: form.tshirtSize || undefined,
     firstHackathon: form.firstHackathon ?? undefined,
     hearAbout: resolveHearAbout(form) || undefined,

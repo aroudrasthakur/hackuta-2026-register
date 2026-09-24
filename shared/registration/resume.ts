@@ -1,4 +1,7 @@
-export const MAX_RESUME_BYTES = 5 * 1024 * 1024;
+export const MAX_RESUME_BYTES = 2 * 1024 * 1024;
+export const MAX_RESUME_SIZE_LABEL = "2 MB";
+export const RESUME_TOO_LARGE_MESSAGE =
+  "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.";
 export const MAX_RESUME_PAGES = 25;
 export const ALLOWED_RESUME_EXTENSIONS = [".pdf"] as const;
 export const ALLOWED_RESUME_CONTENT_TYPE = "application/pdf";
@@ -63,7 +66,7 @@ export function validateResume(file: Pick<File, "name" | "type" | "size">): stri
     return "Please select a PDF file.";
   }
   if (file.size === 0) return "Your PDF is empty. Please select another file.";
-  if (file.size > MAX_RESUME_BYTES) return "Your PDF must be 5 MB or smaller.";
+  if (file.size > MAX_RESUME_BYTES) return RESUME_TOO_LARGE_MESSAGE;
 }
 
 export function resumeFileKey(file: File) {

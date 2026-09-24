@@ -25,6 +25,7 @@ Password rules (client + server): min 8 characters, at least one uppercase, one 
 | --- | --- | --- |
 | Sign up | `email`, `password`, `flow=signUp` | Creates account; sends 6-digit verification email; `{ signingIn: false }` → OTP step |
 | Verify email | `email`, `code`, `flow=email-verification` | `{ signingIn: true }`; establishes JWT session |
+| Resend code | `email`, `flow=email-verification` (no `code`) | Sends a new OTP; `{ signingIn: false }` |
 | Sign in | `email`, `password`, `flow=signIn` | `{ signingIn: true }` when email already verified |
 
 OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Resend cooldown **30 s**; max **5 sends/hour**; max **5 failed verifications/hour**.
@@ -110,7 +111,7 @@ First submit creates the applicant record; sign-in alone does not write applicat
 | Message | Cause |
 | --- | --- |
 | `You have already submitted an application.` | Duplicate submit |
-| `Please upload a valid PDF resume of 5 MB or smaller.` | Bad/missing resume metadata or token |
+| `Please upload a valid PDF resume of 2 MB or smaller.` | Bad/missing resume metadata or token |
 | `This resume is already attached to another application.` | Storage ID reuse |
 | `Authentication required.` | Missing/invalid session |
 
@@ -139,7 +140,7 @@ Upload a PDF resume before form submission.
 | Header | Required | Value |
 | --- | --- | --- |
 | `Content-Type` | Yes | `application/pdf` |
-| `Content-Length` | Yes | 1 – 5,242,880 (5 MB). Rejected **before** body read if missing or too large |
+| `Content-Length` | Yes | 1 – 2,097,152 (2 MB). Rejected **before** body read if missing or too large |
 | `Origin` | Yes | Must match allowlist |
 | `X-Resume-Filename` | Yes | Must end in `.pdf`; no `/` or `\` |
 
@@ -217,7 +218,7 @@ Client-side Zod errors return per-field messages from `shared/registration/schem
 | Registration server | `shared/registration/validation.ts` | `validateRegistrationPayload()` |
 | Sanitization | `shared/lib/sanitizeInput.ts` | Control chars stripped; markup patterns rejected |
 | Password | `shared/auth/password.ts` | Length, upper/lower/digit |
-| Resume (client) | `shared/registration/resume.ts` | `.pdf` only, ≤ 5 MB |
+| Resume (client) | `shared/registration/resume.ts` | `.pdf` only, ≤ 2 MB |
 | Resume (server) | `convex/pdfValidation.ts` | Magic bytes, parse, ≤ 25 pages |
 
 Full field list: `shared/registration/schema.ts` and `shared/registration/constants.ts`.

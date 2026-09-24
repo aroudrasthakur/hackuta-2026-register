@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageShell } from "../../components/PageShell";
 import { SignOutButton } from "../../components/SignOutButton";
 import { StormPageFrame } from "../../components/StormPageFrame";
+import { useMockAuth } from "../../hooks/useMockAuth";
 import { ApplicationForm } from "./ApplicationForm";
 import { SuccessStep } from "./SuccessStep";
 
@@ -10,6 +11,7 @@ export type RegisterStep = "application" | "success";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const mockAuth = useMockAuth();
   const [step, setStep] = useState<RegisterStep>("application");
 
   return (
@@ -40,6 +42,9 @@ export default function RegisterPage() {
         {step === "application" ? (
           <ApplicationForm
             onSubmitted={() => {
+              if (mockAuth.enabled) {
+                mockAuth.setScenario("signedInReturning");
+              }
               setStep("success");
               window.setTimeout(() => navigate("/profile", { replace: true }), 1500);
             }}

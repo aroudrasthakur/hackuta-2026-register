@@ -59,8 +59,8 @@ describe("registration constants", () => {
       expect(MAX_RESUME_BYTES).toBeLessThanOrEqual(10 * 1024 * 1024);
     });
 
-    it("is 5MB", () => {
-      const expected = 5 * 1024 * 1024;
+    it("is 2MB", () => {
+      const expected = 2 * 1024 * 1024;
       expect(typeof MAX_RESUME_BYTES).toBe("number");
       expect(MAX_RESUME_BYTES).toBe(expected);
     });

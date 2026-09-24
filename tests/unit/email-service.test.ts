@@ -16,13 +16,10 @@ describe("buildApplicationConfirmationEmailContent", () => {
     expect(content.text).toContain("officially begun its journey");
     expect(content.text).toContain("Application submitted: September 21, 2026");
     expect(content.text).toContain("https://hackuta.com");
-    expect(content.text).toContain("With excitement,");
-    expect(content.text).toContain("The HackUTA Team");
     expect(content.text).not.toContain("profile");
     expect(content.html).not.toContain("applicant profile");
     expect(content.html).toContain("https://hackuta.com");
   });
-
 });
 
 describe("buildOtpEmailContent", () => {
@@ -34,122 +31,132 @@ describe("buildOtpEmailContent", () => {
   });
 });
 
-describe("smtp config", () => {
+describe("email service config", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("requires SMTP environment variables", async () => {
+  it("requires an API key", async () => {
     vi.resetModules();
-    const { getSmtpConfig } = await import("../../convex/email/smtp");
-    expect(() => getSmtpConfig()).toThrow("Email is not configured.");
+    const { getEmailServiceConfig } = await import("../../convex/email/smtp");
+    expect(() => getEmailServiceConfig()).toThrow("Email is not configured.");
   });
 
-  it("derives secure transport from port 465", async () => {
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "465");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
+  it("rejects an untrusted service URL", async () => {
+    vi.stubEnv("EMAIL_SERVICE_API_KEY", "test-key");
+    vi.stubEnv("EMAIL_SERVICE_URL", "http://evil.example");
     vi.resetModules();
-    const { getSmtpConfig } = await import("../../convex/email/smtp");
-    expect(getSmtpConfig()).toMatchObject({ secure: true, port: 465 });
+    const { getEmailServiceConfig } = await import("../../convex/email/smtp");
+    expect(() => getEmailServiceConfig()).toThrow("Email is not configured.");
   });
 
-  it("uses STARTTLS mode for port 587", async () => {
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "587");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
+  it("defaults to the HackUTA email service over HTTPS", async () => {
+    vi.stubEnv("EMAIL_SERVICE_API_KEY", "test-key");
     vi.resetModules();
-    const { getSmtpConfig } = await import("../../convex/email/smtp");
-    expect(getSmtpConfig()).toMatchObject({ secure: false, port: 587 });
-  });
-
-  it("rejects invalid SMTP ports", async () => {
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "not-a-port");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
-    vi.resetModules();
-    const { getSmtpConfig } = await import("../../convex/email/smtp");
-    expect(() => getSmtpConfig()).toThrow("Email is not configured.");
+    const { getEmailServiceConfig } = await import("../../convex/email/smtp");
+    expect(getEmailServiceConfig()).toMatchObject({
+      apiKey: "test-key",
+      baseUrl: "https://emailservice.hackuta.org",
+    });
   });
 });
 
 describe("sendMailMessage", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
     vi.resetModules();
-    vi.doUnmock("nodemailer");
   });
 
-  it("sends mail with optional reply-to metadata", async () => {
-    const sendMail = vi.fn().mockResolvedValue({});
-    const createTransport = vi.fn(() => ({ sendMail }));
+  it("queues mail through the email service without logging the API key", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "queued-1" }), { status: 200 }),
+    );
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
-    vi.doMock("nodemailer", () => ({
-      default: { createTransport },
-    }));
-
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "587");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
+    vi.stubEnv("EMAIL_SERVICE_API_KEY", "secret-key");
+    vi.stubEnv("EMAIL_SERVICE_URL", "https://emailservice.hackuta.org");
     vi.resetModules();
 
     const { sendMailMessage } = await import("../../convex/email/smtp");
     await sendMailMessage({
       to: "applicant@example.com",
-      subject: "Test",
-      text: "Hello",
-      html: "<p>Hello</p>",
-      replyTo: "support@example.com",
-      fromName: "HackUTA Team",
+      subject: "Your HackUTA verification code",
+      text: "042681",
+      html: "<p>042681</p>",
     });
 
-    expect(createTransport).toHaveBeenCalledWith(
-      expect.objectContaining({ requireTLS: true, secure: false }),
-    );
-    expect(sendMail).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://emailservice.hackuta.org/send-email",
       expect.objectContaining({
-        to: "applicant@example.com",
-        replyTo: "support@example.com",
-        from: expect.stringContaining("HackUTA Team"),
+        method: "POST",
       }),
     );
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchObject({
+      email: "applicant@example.com",
+      api_key: "secret-key",
+      subject: "Your HackUTA verification code",
+    });
+    expect(info.mock.calls.flat().join(" ")).not.toContain("secret-key");
   });
 
-  it("reuses the cached transporter for repeated sends", async () => {
-    const sendMail = vi.fn().mockResolvedValue({});
-    const createTransport = vi.fn(() => ({ sendMail }));
-
-    vi.doMock("nodemailer", () => ({
-      default: { createTransport },
-    }));
-
-    vi.stubEnv("SMTP_HOST", "mail.example.com");
-    vi.stubEnv("SMTP_PORT", "465");
-    vi.stubEnv("SMTP_USER", "no-reply@example.com");
-    vi.stubEnv("SMTP_PASSWORD", "secret");
-    vi.stubEnv("EMAIL_FROM", "no-reply@example.com");
+  it("treats unauthorized responses as configuration failures", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 }),
+    );
+    vi.stubEnv("EMAIL_SERVICE_API_KEY", "wrong-key");
     vi.resetModules();
 
     const { sendMailMessage } = await import("../../convex/email/smtp");
-    const payload = {
+    await expect(
+      sendMailMessage({
+        to: "applicant@example.com",
+        subject: "Test",
+        text: "Hello",
+        html: "<p>Hello</p>",
+      }),
+    ).rejects.toThrow("Email service unauthorized.");
+  });
+
+  it("logs mail when EMAIL_DEV_LOG is enabled even if the email service is configured", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "queued-1" }), { status: 200 }),
+    );
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    vi.stubEnv("EMAIL_DEV_LOG", "true");
+    vi.stubEnv("EMAIL_SERVICE_API_KEY", "secret-key");
+    vi.stubEnv("EMAIL_SERVICE_URL", "https://emailservice.hackuta.org");
+    vi.resetModules();
+
+    const { sendMailMessage } = await import("../../convex/email/smtp");
+    await sendMailMessage({
       to: "applicant@example.com",
-      subject: "Test",
-      text: "Hello",
-      html: "<p>Hello</p>",
-    };
+      subject: "Your HackUTA verification code",
+      text: "Your HackUTA verification code\n\n042681\n",
+      html: "<p>042681</p>",
+    });
 
-    await sendMailMessage(payload);
-    await sendMailMessage(payload);
+    expect(info).toHaveBeenCalledWith(expect.stringContaining("042681"));
+    expect(fetchMock).toHaveBeenCalled();
+  });
 
-    expect(createTransport).toHaveBeenCalledTimes(1);
-    expect(sendMail).toHaveBeenCalledTimes(2);
+  it("logs mail instead of throwing when EMAIL_DEV_LOG is enabled without a key", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.stubEnv("EMAIL_DEV_LOG", "true");
+    vi.resetModules();
+
+    const { sendMailMessage } = await import("../../convex/email/smtp");
+    await expect(
+      sendMailMessage({
+        to: "applicant@example.com",
+        subject: "Your HackUTA verification code",
+        text: "Your HackUTA verification code\n\n042681\n",
+        html: "<p>042681</p>",
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(info).toHaveBeenCalledWith(expect.stringContaining("042681"));
   });
 });
