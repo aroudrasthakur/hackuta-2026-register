@@ -159,7 +159,7 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
                 {isDragging ? "Drop your resume here" : "Click to upload or drag and drop"}
               </p>
               <p className="text-xs text-(--mist)">
-                PDF only, up to 5 MB
+                PDF only, up to 2 MB
               </p>
             </div>
 
@@ -184,7 +184,7 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
       </div>
 
       <p id="resume-help" className="text-xs text-(--mist)">
-        Upload your resume as a PDF file. Maximum file size is 5 MB.
+        Upload your resume as a PDF file. Maximum file size is 2 MB.
       </p>
 
       <FieldError id="resume-error" message={error} />

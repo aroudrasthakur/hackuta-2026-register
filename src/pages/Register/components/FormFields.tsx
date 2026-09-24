@@ -71,6 +71,7 @@ type SelectFieldProps = {
   label: string;
   required?: boolean;
   error?: string | undefined;
+  helperText?: string;
   placeholder?: string;
   children: ReactNode;
 } & SelectHTMLAttributes<HTMLSelectElement>;
@@ -80,12 +81,17 @@ export function SelectField({
   label,
   required,
   error,
+  helperText,
   placeholder = "Select one",
   children,
   className,
   ...selectProps
 }: SelectFieldProps) {
   const errorId = `${id}-error`;
+  const helperId = `${id}-helper`;
+  const descriptionIds = [helperText ? helperId : null, error ? errorId : null]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <label className={labelClass} htmlFor={id}>
@@ -98,7 +104,7 @@ export function SelectField({
           id={id}
           required={required}
           aria-invalid={!!error}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={descriptionIds || undefined}
           className={`${className ?? fieldClass(error)} appearance-none pr-10 cursor-pointer`}
           {...selectProps}
         >
@@ -122,6 +128,11 @@ export function SelectField({
           </svg>
         </div>
       </div>
+      {helperText ? (
+        <p id={helperId} className="text-xs font-normal text-(--ocean)">
+          {helperText}
+        </p>
+      ) : null}
       <FieldError id={errorId} message={error} />
     </label>
   );

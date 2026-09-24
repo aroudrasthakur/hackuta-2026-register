@@ -5,10 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
 import { RESUME_UPLOAD_BUCKET } from "../../convex/lib/rateLimitBuckets";
 import { formToDraftPatch } from "../../shared/registration/draftPatch";
-import { validRegistrationPayload } from "../fixtures/validRegistrationForm";
+import { validRegistrationForm, validRegistrationPayload } from "../fixtures/validRegistrationForm";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import {
+  RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_FILENAME_HEADER,
+  RESUME_SIZE_ERROR_MESSAGE,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../../shared/registration/resume";
 
@@ -131,6 +133,54 @@ async function verifiedUpload(t: RunnableTest, token: string = crypto.randomUUID
 }
 
 describe("convex registrations", () => {
+  it.each([
+    [true, true], [true, false], [false, true], [false, false],
+  ])("persists independent answers through draft and submission (%s, %s)", async (internationalStudent, eatsBeef) => {
+    const t = await authTest();
+    const answers = {
+      stateOfResidence: "Outside the United States" as const,
+      internationalStudent,
+      eatsBeef,
+      dietaryRestrictions: ["Halal" as const, "Allergies" as const],
+      otherDietary: "Peanuts",
+    };
+    await t.mutation("profiles:saveProfileDraft", {
+      patch: formToDraftPatch({ ...validRegistrationForm(), ...answers }),
+    });
+    await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toMatchObject({
+      draft: answers,
+    });
+    await t.mutation("registrations:submitRegistration", {
+      data: { ...validRegistrationPayload(), ...answers },
+    });
+    expect(await t.run((ctx) => ctx.db.query("profiles").first())).toMatchObject({
+      ...answers, status: "submitted",
+    });
+    const dashboard = await t.query("profiles:getMyApplicantDashboard", {}) as {
+      registration: { answers: Record<string, unknown> };
+    };
+    expect(dashboard.registration.answers.stateOfResidence).toBe(answers.stateOfResidence);
+    expect(dashboard.registration.answers).not.toHaveProperty("internationalStudent");
+    expect(dashboard.registration.answers).not.toHaveProperty("eatsBeef");
+    await drainScheduledFunctions(t);
+  });
+
+  it("clears saved answers without clearing dietary restrictions and reloads them as unanswered", async () => {
+    const t = await authTest();
+    const form = { ...validRegistrationForm(), dietaryRestrictions: ["Halal" as const] };
+    await t.mutation("profiles:saveProfileDraft", { patch: formToDraftPatch(form) });
+    await t.mutation("profiles:saveProfileDraft", {
+      patch: formToDraftPatch({ ...form, stateOfResidence: "", internationalStudent: null, eatsBeef: null }),
+    });
+    const stored = await t.run((ctx) => ctx.db.query("profiles").first());
+    for (const field of ["stateOfResidence", "internationalStudent", "eatsBeef"]) {
+      expect(stored).not.toHaveProperty(field);
+    }
+    await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toMatchObject({
+      draft: { stateOfResidence: "", internationalStudent: null, eatsBeef: null, dietaryRestrictions: ["Halal"] },
+    });
+  });
+
   it("creates and updates registrations", async () => {
     const t = await authTest();
 
@@ -139,6 +189,16 @@ describe("convex registrations", () => {
     });
     expect(first.ok).toBe(true);
     expect(first.isNew).toBe(true);
+    const stored = await t.run((ctx) => ctx.db.query("profiles").first());
+    expect(stored).toMatchObject({
+      stateOfResidence: "Texas",
+      internationalStudent: false,
+      eatsBeef: false,
+      dietaryRestrictions: [],
+    });
+    await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { answers: { stateOfResidence: "Texas" } },
+    });
 
     await drainScheduledFunctions(t);
 
@@ -170,15 +230,15 @@ describe("convex registrations", () => {
   });
 
   it.each([
-    ["application/pdf", ""],
-    ["text/plain", "not a pdf"],
-    ["application/pdf", "x".repeat(5 * 1024 * 1024 + 1)],
-  ])("rejects invalid stored file metadata (%s)", async (type, contents) => {
+    ["application/pdf", "", "valid PDF resume"],
+    ["text/plain", "not a pdf", "valid PDF resume"],
+    ["application/pdf", "x".repeat(2 * 1024 * 1024 + 1), "2 MB limit"],
+  ])("rejects invalid stored file metadata (%s)", async (type, contents, expectedMessage) => {
     const t = await authTest();
     const storageId = await storeFile(t, contents, type);
     await expect(t.mutation("registrations:register", {
       data: { ...validRegistrationPayload(), resumeStorageId: storageId },
-    })).rejects.toThrow("valid PDF resume");
+    })).rejects.toThrow(expectedMessage);
   });
 
   it("rate limits by an API-derived client key, independent of applicant PII", async () => {
@@ -361,20 +421,28 @@ describe("resume HTTP validation and lifecycle", () => {
   it("rejects empty uploads and oversized bodies", async () => {
     const t = createTest();
     const emptyBody = new Uint8Array();
-    expect((await t.fetch("/resume-upload", {
+    const emptyResult = await t.fetch("/resume-upload", {
       method: "POST",
       headers: buildUploadHeaders(emptyBody),
       body: emptyBody,
-    })).status).toBe(413);
+    });
+    expect(emptyResult.status).toBe(413);
+    expect((await emptyResult.json() as { error: string }).error).toBe(
+      RESUME_EMPTY_ERROR_MESSAGE,
+    );
 
-    const oversizedLength = 5 * 1024 * 1024 + 1;
-    expect((await t.fetch("/resume-upload", {
+    const oversizedLength = 2 * 1024 * 1024 + 1;
+    const oversizedResult = await t.fetch("/resume-upload", {
       method: "POST",
       headers: buildUploadHeaders(new Uint8Array(1), {
         [RESUME_TEST_CONTENT_LENGTH_HEADER]: String(oversizedLength),
       }),
       body: new Uint8Array(1),
-    })).status).toBe(413);
+    });
+    expect(oversizedResult.status).toBe(413);
+    expect((await oversizedResult.json() as { error: string }).error).toBe(
+      RESUME_SIZE_ERROR_MESSAGE,
+    );
   });
 
   it("rejects uploads without Content-Length before reading the body", async () => {
@@ -744,6 +812,9 @@ describe("convex applicant auth flows", () => {
         ...INITIAL_FORM,
         firstName: "Draft",
         lastName: "User",
+        stateOfResidence: "Outside the United States",
+        internationalStudent: true,
+        eatsBeef: false,
       }),
     });
     const draft = await t.query("profiles:getMyProfileDraft", {});
@@ -752,7 +823,16 @@ describe("convex applicant auth flows", () => {
       draft: {
         firstName: "Draft",
         lastName: "User",
+        stateOfResidence: "Outside the United States",
+        internationalStudent: true,
+        eatsBeef: false,
       },
+    });
+    const stored = await t.run((ctx) => ctx.db.query("profiles").first());
+    expect(stored).toMatchObject({
+      stateOfResidence: "Outside the United States",
+      internationalStudent: true,
+      eatsBeef: false,
     });
   });
 });
