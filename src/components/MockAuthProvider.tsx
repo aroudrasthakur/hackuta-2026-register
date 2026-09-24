@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   isMockApiEnabled,
   MOCK_OTP,
@@ -84,6 +84,14 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
     setPendingEmail(null);
     setVerifiedEmail(null);
   }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
+    window.__hackutaMockAuth = { setScenario };
+    return () => {
+      delete window.__hackutaMockAuth;
+    };
+  }, [enabled, setScenario]);
 
   const value = useMemo<MockAuthContextValue>(() => {
     if (!enabled) return defaultMockAuthValue;

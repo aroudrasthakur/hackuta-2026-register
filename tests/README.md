@@ -90,7 +90,7 @@ Runs against the dev server or a production build (PLAYWRIGHT_USE_BUILD=true). C
 | register.spec.ts | Password sign-up, mock OTP verify, multi-step registration, dietary options, CSP headers |
 | profile.spec.ts | Profile overview grid, sign-out below details/timeline, mobile and desktop viewports |
 
-Shared Playwright helpers: [fixtures/playwrightAuth.ts](fixtures/playwrightAuth.ts), [fixtures/playwrightRegistration.ts](fixtures/playwrightRegistration.ts), [fixtures/profileLayout.ts](fixtures/profileLayout.ts).
+Shared Playwright helpers: [fixtures/playwrightAuth.ts](fixtures/playwrightAuth.ts) (sign-up, client-side profile navigation, `openProfileAsReturningApplicant` via `window.__hackutaMockAuth`), [fixtures/playwrightRegistration.ts](fixtures/playwrightRegistration.ts), [fixtures/profileLayout.ts](fixtures/profileLayout.ts).
 
 Contact-form e2e lives in the separate [hackuta-2026-registration](https://github.com/aroudrasthakur/hackuta-2026-registration) repo.
 

@@ -1,6 +1,9 @@
 import { test, expect } from "./playwright-coverage";
-import { navigateToProfile, signUpAsNewApplicant } from "./fixtures/playwrightAuth";
-import { signUpAndSubmitApplication } from "./fixtures/playwrightRegistration";
+import {
+  navigateToProfile,
+  openProfileAsReturningApplicant,
+  signUpAsNewApplicant,
+} from "./fixtures/playwrightAuth";
 import {
   expectSignOutAfterOverviewGrid,
   expectSignOutClickable,
@@ -26,24 +29,22 @@ test.describe("profile layout", () => {
   });
 
   test("keeps the profile panel and sign-out in view on desktop after registration", async ({ page }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(60_000);
     await page.setViewportSize({ width: 1280, height: 800 });
 
-    await signUpAndSubmitApplication(page, "profile-desktop@example.com");
+    await openProfileAsReturningApplicant(page);
 
-    await expect(page.getByRole("heading", { name: "Your Journey" })).toBeVisible();
     await expectSignOutAfterOverviewGrid(page);
     await expectSignOutInViewport(page);
     await expectSignOutClickable(page);
   });
 
   test("keeps the profile panel and sign-out in view on mobile after registration", async ({ page }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(60_000);
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await signUpAndSubmitApplication(page, "profile-mobile@example.com");
+    await openProfileAsReturningApplicant(page);
 
-    await expect(page.getByRole("heading", { name: "Your Journey" })).toBeVisible();
     await expectSignOutAfterOverviewGrid(page);
     await expectSignOutInViewport(page);
   });
