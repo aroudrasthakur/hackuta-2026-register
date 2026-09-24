@@ -59,6 +59,20 @@ describe("submit error mapping", () => {
     );
   });
 
+  it.each([
+    "The PDF is too large.",
+    "The PDF must be between 1 byte and 2 MB.",
+    "Please upload a valid PDF resume of 2 MB or smaller.",
+  ])("normalizes legacy oversized upload messages: %s", (legacyMessage) => {
+    expect(mapUploadError(new Error(legacyMessage))).toBe(RESUME_SIZE_ERROR_MESSAGE);
+    expect(mapResumeUploadHttpError(413, { error: legacyMessage })).toBe(
+      RESUME_SIZE_ERROR_MESSAGE,
+    );
+    expect(mapConvexErrorToUserMessage(new Error(legacyMessage))).toBe(
+      RESUME_SIZE_ERROR_MESSAGE,
+    );
+  });
+
   it("ignores malformed error bodies", () => {
     expect(mapResumeUploadHttpError(429, { error: "  " })).toBe(
       "Too many upload attempts. Please wait a few minutes and try again.",

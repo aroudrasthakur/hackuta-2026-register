@@ -25,8 +25,6 @@ const RESUME_FIELD_MESSAGES = new Set([
   "Your PDF is empty. Please select another file.",
   RESUME_SIZE_ERROR_MESSAGE,
   "Please upload a PDF.",
-  "The PDF is too large.",
-  "The PDF must be between 1 byte and 2 MB.",
   "The file is not a valid PDF.",
   "The file is not a valid PDF. Please choose another file.",
   "Content-Length header is required.",
@@ -34,7 +32,6 @@ const RESUME_FIELD_MESSAGES = new Set([
   "The PDF has too many pages.",
   "Too many uploads. Please try again later.",
   "Too many resume upload attempts. Please wait a few minutes and try again.",
-  "Please upload a valid PDF resume of 2 MB or smaller.",
   "This resume is already attached to another application.",
   RESUME_UPLOAD_ERROR_MESSAGE,
   "Resume upload is unavailable. Please try again later or contact us.",
@@ -51,6 +48,9 @@ const UPLOAD_SERVER_MESSAGE_ALIASES: Record<string, string> = {
   "Origin is not allowed.": "Resume upload is unavailable. Please try again later or contact us.",
   "The resume could not be stored.": RESUME_UPLOAD_ERROR_MESSAGE,
   "Please upload a PDF.": "Please select a PDF file.",
+  "The PDF is too large.": RESUME_SIZE_ERROR_MESSAGE,
+  "The PDF must be between 1 byte and 2 MB.": RESUME_SIZE_ERROR_MESSAGE,
+  "Please upload a valid PDF resume of 2 MB or smaller.": RESUME_SIZE_ERROR_MESSAGE,
 };
 
 function normalizeUploadServerMessage(raw: string): string | null {
@@ -75,6 +75,8 @@ export function mapUploadError(error: unknown): string {
 
 export function mapConvexErrorToUserMessage(error: unknown): string {
   const detail = error instanceof Error ? error.message.trim() : "";
+  const normalized = normalizeUploadServerMessage(detail);
+  if (normalized) return normalized;
   if (USER_FACING_SERVER_MESSAGES.has(detail)) {
     return detail;
   }
