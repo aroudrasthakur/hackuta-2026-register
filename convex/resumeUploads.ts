@@ -5,7 +5,7 @@ import { internalMutation, mutation } from "./_generated/server";
 import type schema from "./schema";
 import { MAX_RESUME_BYTES } from "../shared/registration/resume";
 import { requireAuthUser } from "./lib/auth";
-import { findProfileByResume } from "./lib/profiles";
+import { findApplicationByResume } from "./lib/applications";
 import { RESUME_UPLOAD_BUCKET } from "./lib/rateLimitBuckets";
 import { RESUME_UPLOAD_EXPIRY_MS } from "./lib/resumeUpload";
 
@@ -125,7 +125,7 @@ export const discardUploadSession = mutation({
     }
 
     if (session.storageId) {
-      const attachment = await findProfileByResume(ctx, session.storageId);
+      const attachment = await findApplicationByResume(ctx, session.storageId);
       if (!attachment) await ctx.storage.delete(session.storageId);
     }
     await ctx.db.delete(session._id);
@@ -143,7 +143,7 @@ export const cleanupExpiredUploadSessions = internalMutation({
       .take(CLEANUP_PAGE_SIZE);
     for (const session of expiredSessions) {
       if (session.storageId) {
-        const attachment = await findProfileByResume(ctx, session.storageId);
+        const attachment = await findApplicationByResume(ctx, session.storageId);
         if (!attachment) await ctx.storage.delete(session.storageId);
       }
       await ctx.db.delete(session._id);

@@ -15,10 +15,10 @@ const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 
 // Loaded through runtime paths so the web tsconfig does not type-check these Convex sources
 // (they depend on the full auth schema types and are compiled under convex/tsconfig.json).
-const profilesModule = "../../convex/lib/profiles";
+const applicationsModule = "../../convex/lib/applications";
 const resumeUploadModule = "../../convex/lib/resumeUpload";
-const { formatProfileFullName } = (await import(/* @vite-ignore */ profilesModule)) as {
-  formatProfileFullName: (fields: { firstName?: string | null; lastName?: string | null }) => string | null;
+const { formatApplicantFullName } = (await import(/* @vite-ignore */ applicationsModule)) as {
+  formatApplicantFullName: (fields: { firstName?: string | null; lastName?: string | null }) => string | null;
 };
 const { RESUME_UPLOAD_EXPIRY_MS } = (await import(/* @vite-ignore */ resumeUploadModule)) as {
   RESUME_UPLOAD_EXPIRY_MS: number;
@@ -27,17 +27,17 @@ const createTest = () => convexTest(schema, modules);
 type TestInstance = ReturnType<typeof createTest>;
 
 const ref = {
-  ensureApplicantProfile: makeFunctionReference<"mutation">("applicant:ensureApplicantProfile"),
+  ensureApplicantApplication: makeFunctionReference<"mutation">("applicant:ensureApplicantApplication"),
   routingState: makeFunctionReference<"query">("applicant:getApplicantRoutingState"),
-  getDraft: makeFunctionReference<"query">("profiles:getMyProfileDraft"),
-  saveDraft: makeFunctionReference<"mutation">("profiles:saveProfileDraft"),
-  dashboard: makeFunctionReference<"query">("profiles:getMyApplicantDashboard"),
+  getDraft: makeFunctionReference<"query">("applications:getMyApplicationDraft"),
+  saveDraft: makeFunctionReference<"mutation">("applications:saveApplicationDraft"),
+  dashboard: makeFunctionReference<"query">("applications:getMyApplicantDashboard"),
   register: makeFunctionReference<"mutation">("registrations:register"),
   discardUpload: makeFunctionReference<"mutation">("resumeUploads:discardUploadSession"),
   createUploadSession: makeFunctionReference<"mutation">("resumeUploads:createVerifiedUploadSession"),
   cleanupUploads: makeFunctionReference<"mutation">("resumeUploads:cleanupExpiredUploadSessions"),
   resetAllData: makeFunctionReference<"mutation">("maintenance:resetAllData"),
-  stripHackathonIds: makeFunctionReference<"mutation">("migrations:stripLegacyProfileHackathonIds"),
+  stripHackathonIds: makeFunctionReference<"mutation">("migrations:stripLegacyApplicationHackathonIds"),
   publicEventConfig: makeFunctionReference<"query">("eventConfig:getPublicEventConfig"),
   hackathonNameInternal: makeFunctionReference<"query">("eventConfig:getHackathonNameInternal"),
   setHackathonName: makeFunctionReference<"mutation">("eventConfig:setHackathonName"),
@@ -72,13 +72,13 @@ async function storePdf(t: Pick<TestInstance, "run">) {
   return { storageId, bytes };
 }
 
-async function insertProfile(
+async function insertApplication(
   t: Pick<TestInstance, "run">,
   authUserId: GenericId<"users">,
   fields: Record<string, unknown> = {},
 ) {
   return t.run((ctx) =>
-    ctx.db.insert("profiles", {
+    ctx.db.insert("applications", {
       authUserId,
       email: "applicant@example.com",
       status: "draft",
@@ -108,7 +108,7 @@ describe("authorization boundaries", () => {
     await expect(t.mutation(ref.saveDraft, { patch: formToDraftPatch(INITIAL_FORM) })).rejects.toThrow(
       "Authentication required.",
     );
-    await expect(t.mutation(ref.ensureApplicantProfile, {})).rejects.toThrow("Authentication required.");
+    await expect(t.mutation(ref.ensureApplicantApplication, {})).rejects.toThrow("Authentication required.");
   });
 
   it("treats an identity for a deleted user with no email as signed out", async () => {
@@ -134,7 +134,7 @@ describe("authorization boundaries", () => {
   it("requires an email on the auth user before creating a profile", async () => {
     const t = createTest();
     const userId = await seedUser(t, { emailVerificationTime: 1 });
-    await expect(asUser(t, userId).mutation(ref.ensureApplicantProfile, {})).rejects.toThrow(
+    await expect(asUser(t, userId).mutation(ref.ensureApplicantApplication, {})).rejects.toThrow(
       "A verified email is required.",
     );
   });
@@ -173,7 +173,7 @@ describe("authorization boundaries", () => {
     const t = createTest();
     const owner = await seedUser(t);
     const { storageId } = await storePdf(t);
-    await insertProfile(t, owner, { resumeStorageId: storageId });
+    await insertApplication(t, owner, { resumeStorageId: storageId });
     await t.run((ctx) =>
       ctx.db.insert("resumeUploadSessions", {
         token: "attached-token",
@@ -202,25 +202,25 @@ describe("profile lifecycle", () => {
     const t = createTest();
     const userId = await seedUser(t, { email: "late@example.com" });
     const client = asUser(t, userId);
-    await client.mutation(ref.ensureApplicantProfile, {});
-    expect((await t.run((ctx) => ctx.db.query("profiles").first()))?.emailVerificationTime).toBeUndefined();
+    await client.mutation(ref.ensureApplicantApplication, {});
+    expect((await t.run((ctx) => ctx.db.query("applications").first()))?.emailVerificationTime).toBeUndefined();
 
     await t.run((ctx) => ctx.db.patch(userId, { emailVerificationTime: 1234 }));
-    const again = await client.mutation(ref.ensureApplicantProfile, {});
+    const again = await client.mutation(ref.ensureApplicantApplication, {});
     expect(again).toMatchObject({ status: "draft" });
-    const profiles = await t.run((ctx) => ctx.db.query("profiles").collect());
-    expect(profiles).toHaveLength(1);
-    expect(profiles[0]?.emailVerificationTime).toBe(1234);
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications).toHaveLength(1);
+    expect(applications[0]?.emailVerificationTime).toBe(1234);
   });
 
   it("does not rewrite the profile when verification is unchanged", async () => {
     const t = createTest();
     const userId = await seedUser(t);
     const client = asUser(t, userId);
-    await client.mutation(ref.ensureApplicantProfile, {});
-    const before = await t.run((ctx) => ctx.db.query("profiles").first());
-    await client.mutation(ref.ensureApplicantProfile, {});
-    const after = await t.run((ctx) => ctx.db.query("profiles").first());
+    await client.mutation(ref.ensureApplicantApplication, {});
+    const before = await t.run((ctx) => ctx.db.query("applications").first());
+    await client.mutation(ref.ensureApplicantApplication, {});
+    const after = await t.run((ctx) => ctx.db.query("applications").first());
     expect(after?.updatedAt).toBe(before?.updatedAt);
   });
 
@@ -251,7 +251,7 @@ describe("profile lifecycle", () => {
   it("blocks draft edits after the application is submitted", async () => {
     const t = createTest();
     const userId = await seedUser(t);
-    await insertProfile(t, userId, { status: "submitted", formSubmitted: true, submittedAt: 5 });
+    await insertApplication(t, userId, { status: "submitted", formSubmitted: true, submittedAt: 5 });
     await expect(
       asUser(t, userId).mutation(ref.saveDraft, { patch: formToDraftPatch(INITIAL_FORM) }),
     ).rejects.toThrow("Your application has already been submitted.");
@@ -260,7 +260,7 @@ describe("profile lifecycle", () => {
   it("reports submitted routing state from either submission marker", async () => {
     const t = createTest();
     const userId = await seedUser(t);
-    await insertProfile(t, userId, { status: "draft", submittedAt: 5 });
+    await insertApplication(t, userId, { status: "draft", submittedAt: 5 });
     await expect(asUser(t, userId).query(ref.routingState, {})).resolves.toMatchObject({
       hasSubmittedRegistration: true,
     });
@@ -269,7 +269,7 @@ describe("profile lifecycle", () => {
   it("reports a draft profile as not yet submitted", async () => {
     const t = createTest();
     const userId = await seedUser(t);
-    await insertProfile(t, userId);
+    await insertApplication(t, userId);
     await expect(asUser(t, userId).query(ref.routingState, {})).resolves.toMatchObject({
       hasSubmittedRegistration: false,
     });
@@ -286,7 +286,7 @@ describe("profile lifecycle", () => {
     expect(noProfile.profile.displayName).toBe("Account Name");
     expect(noProfile.registration).toBeNull();
 
-    await insertProfile(t, userId, { firstName: "Profile", lastName: "Name" });
+    await insertApplication(t, userId, { firstName: "Profile", lastName: "Name" });
     const withProfile = (await asUser(t, userId).query(ref.dashboard, {})) as {
       profile: { displayName: string | null };
     };
@@ -309,7 +309,7 @@ describe("profile lifecycle", () => {
     [{ firstName: null, lastName: "Test" }, "Test"],
     [{}, null],
   ])("formats full name %j", (fields, expected) => {
-    expect(formatProfileFullName(fields)).toBe(expected);
+    expect(formatApplicantFullName(fields)).toBe(expected);
   });
 });
 
@@ -319,7 +319,7 @@ describe("registration resume replacement", () => {
     const userId = await seedUser(t);
     const oldResume = await storePdf(t);
     const newResume = await storePdf(t);
-    await insertProfile(t, userId, { resumeStorageId: oldResume.storageId });
+    await insertApplication(t, userId, { resumeStorageId: oldResume.storageId });
     await t.run((ctx) =>
       ctx.db.insert("resumeUploadSessions", {
         token: "new-token",
@@ -338,7 +338,7 @@ describe("registration resume replacement", () => {
     ).resolves.toMatchObject({ ok: true, isNew: false });
 
     expect(await t.run((ctx) => ctx.db.system.get("_storage", oldResume.storageId))).toBeNull();
-    expect((await t.run((ctx) => ctx.db.query("profiles").first()))?.resumeStorageId).toBe(newResume.storageId);
+    expect((await t.run((ctx) => ctx.db.query("applications").first()))?.resumeStorageId).toBe(newResume.storageId);
     await t.finishInProgressScheduledFunctions();
   });
 
@@ -485,7 +485,7 @@ describe("maintenance and migrations", () => {
   it("wipes every application and auth table plus stored files, across multiple pages", async () => {
     const t = createTest();
     const userId = await seedUser(t);
-    await insertProfile(t, userId);
+    await insertApplication(t, userId);
     await storePdf(t);
     await t.run(async (ctx) => {
       for (let i = 0; i < 205; i += 1) {
@@ -505,7 +505,7 @@ describe("maintenance and migrations", () => {
 
     await t.run(async (ctx) => {
       for (const table of [
-        "profiles",
+        "applications",
         "rateLimits",
         "users",
         "authSessions",
@@ -518,7 +518,7 @@ describe("maintenance and migrations", () => {
     });
   }, 30_000);
 
-  it("strips legacy hackathonId fields across paginated profiles and leaves others untouched", async () => {
+  it("strips legacy hackathonId fields across applications and leaves others untouched", async () => {
     const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
       schemaValidation: false,
     }) as typeof schema;
@@ -526,7 +526,7 @@ describe("maintenance and migrations", () => {
     const userId = await seedUser(t);
     await t.run(async (ctx) => {
       for (let i = 0; i < 105; i += 1) {
-        await ctx.db.insert("profiles", {
+        await ctx.db.insert("applications", {
           authUserId: userId,
           email: `p${i}@example.com`,
           status: "draft",
@@ -539,10 +539,10 @@ describe("maintenance and migrations", () => {
     });
 
     await expect(t.mutation(ref.stripHackathonIds, {})).resolves.toEqual({ ok: true, updated: 3 });
-    const profiles = await t.run((ctx) => ctx.db.query("profiles").collect());
-    expect(profiles).toHaveLength(105);
-    expect(profiles.some((profile) => "hackathonId" in profile)).toBe(false);
-    expect(profiles.find((profile) => profile.email === "p50@example.com")?.createdAt).toBe(50);
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications).toHaveLength(105);
+    expect(applications.some((application) => "hackathonId" in application)).toBe(false);
+    expect(applications.find((application) => application.email === "p50@example.com")?.createdAt).toBe(50);
 
     await expect(t.mutation(ref.stripHackathonIds, {})).resolves.toEqual({ ok: true, updated: 0 });
   }, 30_000);

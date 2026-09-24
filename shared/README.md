@@ -29,7 +29,7 @@ Isomorphic TypeScript imported by the React client and Convex backend. Keeps val
 | [mlhTexasSchools.ts](registration/mlhTexasSchools.ts) | Texas schools surfaced first in the school picker |
 | [data/schools.csv](registration/data/schools.csv) | Source CSV for generate-mlh-schools.mjs |
 
-Convex profile validators in [convex/profileFields.ts](../convex/profileFields.ts) derive from [applicantFields.ts](registration/applicantFields.ts).
+Convex application validators in [convex/applicationFields.ts](../convex/applicationFields.ts) derive from [applicantFields.ts](registration/applicantFields.ts).
 
 ## Auth (`auth/`)
 
@@ -47,7 +47,7 @@ Convex profile validators in [convex/profileFields.ts](../convex/profileFields.t
 | [schedule.ts](hackathon/schedule.ts) | Registration window and event timestamps |
 | [timeline.ts](hackathon/timeline.ts) | Applicant-facing timeline labels from schedule |
 
-Schedule dates used by profiles:getMyApplicantDashboard. Display name lives in the `eventConfig` table ([convex/eventConfig.ts](../convex/eventConfig.ts)).
+Schedule dates used by applications:getMyApplicantDashboard. Display name lives in the `eventConfig` table ([convex/eventConfig.ts](../convex/eventConfig.ts)).
 
 ## Lib (`lib/`)
 

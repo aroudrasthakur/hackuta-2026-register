@@ -110,12 +110,12 @@ npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
 /sign-in  →  password + email OTP (sign-up)  →  /register (new) or /profile (returning)
          →  forgot password? → reset OTP → new password → back to sign-in
                 ↓
-         draft autosave on /register (profiles table)
+         draft autosave on /register (applications table)
 ```
 
 1. Visitor opens `/sign-in` and creates an account (email, password, confirm) or signs in with existing credentials.
 2. New accounts receive a 6-digit verification code (10-minute expiry) via SMTP.
-3. After verification, Convex Auth establishes a JWT session and ensures a draft `profiles` row exists.
+3. After verification, Convex Auth establishes a JWT session and ensures a draft `applications` row exists.
 4. The app routes to `/register` (not yet submitted) or `/profile` (already submitted).
 5. Forgot password: request a separate reset OTP, verify the code, set a new password (must differ from the current one), then sign in again.
 6. On `/register`, form fields autosave every ~800ms; applicants can leave and resume later.

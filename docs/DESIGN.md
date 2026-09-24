@@ -86,7 +86,7 @@ Authoritative field list and Zod rules: [shared/registration/schema.ts](../share
 
 | Behavior | Detail |
 | --- | --- |
-| Draft autosave | profiles:saveProfileDraft debounced ~800ms while status is draft |
+| Draft autosave | applications:saveApplicationDraft debounced ~800ms while status is draft |
 | Resume upload | POST /resume-upload before submit; capability token redeemed at registrations:register |
 | Validation | Client Zod on submit + blur; server validateRegistrationPayload() is authoritative |
 | Errors | Inline per field; Convex/HTTP errors mapped via shared/registration/submitErrors.ts |

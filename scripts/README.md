@@ -35,7 +35,7 @@ verify-convex-deployment.mjs requires:
 | VITE_CONVEX_URL | Convex WebSocket URL |
 | CONVEX_AUTH_TOKEN | JWT for an authenticated test user |
 
-It queries applicant:getApplicantRoutingState and profiles:getMyApplicantDashboard.
+It queries applicant:getApplicantRoutingState and applications:getMyApplicantDashboard.
 
 ## Data generators
 

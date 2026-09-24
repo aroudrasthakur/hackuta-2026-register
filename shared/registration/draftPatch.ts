@@ -9,8 +9,8 @@ export {
 } from "./applicantFields";
 
 export {
+  applicationToDraftForm,
   formToDraftPatch,
-  mergeDraftPatchIntoProfile,
-  profileToDraftForm,
-  type StoredApplicantProfile,
+  mergeDraftPatchIntoApplication,
+  type StoredApplicantApplication,
 } from "./draftMapping";
