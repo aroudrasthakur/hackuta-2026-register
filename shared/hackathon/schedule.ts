@@ -1,4 +1,4 @@
-/** Single source of truth for HackUTA 2026 dates; stored hackathon rows are synced to it. */
+/** Single source of truth for HackUTA 2026 schedule dates. Name lives in eventConfig. */
 export const HACKATHON_SCHEDULE = {
   registrationOpensAt: Date.parse("2026-09-21T00:00:00-05:00"),
   registrationClosesAt: Date.parse("2026-11-07T23:59:59-06:00"),

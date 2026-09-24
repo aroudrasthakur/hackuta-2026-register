@@ -9,6 +9,7 @@ describe("buildApplicationConfirmationEmailContent", () => {
     const content = buildApplicationConfirmationEmailContent({
       applicantName: "Aroudra Syamantak",
       submittedAt: Date.parse("2026-09-21T22:06:00.000Z"),
+      hackathonName: "HackUTA 2026",
     });
 
     expect(content.subject).toBe("HackUTA 2026 application received");

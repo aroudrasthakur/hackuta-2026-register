@@ -55,7 +55,8 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 
 | Task | Command |
 | --- | --- |
-| Seed hackathon record | `npx convex run seed:seedHackathon` |
+| Update hackathon display name | `npx convex run eventConfig:setHackathonName '{ "name": "HackUTA 2026" }'` |
+| Remove an orphaned table (not in schema) | Convex dashboard → **Data** → table → **⋮** → **Delete table** |
 | Reset all data (**destructive**) | Convex dashboard → internal `maintenance:resetAllData` |
 | Clear OTP rate limit for email | Convex dashboard → internal `rateLimits:clearOtpSendLimitsForEmail` |
 | Unset stale env var | `npx convex env unset VAR_NAME` |

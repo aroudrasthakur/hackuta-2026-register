@@ -6,11 +6,11 @@
  */
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { HACKATHON_ID } from "../shared/registration/constants";
 import {
   HACKATHON_SCHEDULE,
   resolveHackathonTimelineSource,
 } from "../shared/hackathon/schedule";
+import { getHackathonName } from "./lib/eventConfig";
 import { buildHackathonTimeline } from "../shared/hackathon/timeline";
 import { profileDraftPatch } from "./profileFields";
 import { requireAuthIdentity } from "./lib/auth";
@@ -18,7 +18,7 @@ import {
   ensureDraftProfile,
   formatProfileFullName,
   getAuthUser,
-  getProfileByUserAndHackathon,
+  getProfileByUser,
   projectApplicantAnswers,
   syncAuthUserNameFromProfile,
 } from "./lib/profiles";
@@ -31,16 +31,14 @@ import {
 import { profileToDraftForm } from "../shared/registration/draftMapping";
 
 export const getMyProfileDraft = query({
-  args: {
-    hackathonId: v.optional(v.string()),
-  },
-  handler: async (ctx, { hackathonId = HACKATHON_ID }) => {
+  args: {},
+  handler: async (ctx) => {
     const authUser = await getAuthUser(ctx);
     if (!authUser) {
       return null;
     }
 
-    const profile = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
+    const profile = await getProfileByUser(ctx, authUser._id);
     if (!profile || profile.status !== "draft") {
       return profile
         ? {
@@ -60,11 +58,10 @@ export const getMyProfileDraft = query({
 
 export const saveProfileDraft = mutation({
   args: {
-    hackathonId: v.optional(v.string()),
     patch: profileDraftPatch,
   },
-  handler: async (ctx, { hackathonId = HACKATHON_ID, patch }) => {
-    const profile = await ensureDraftProfile(ctx, hackathonId);
+  handler: async (ctx, { patch }) => {
+    const profile = await ensureDraftProfile(ctx);
     if (profile.status !== "draft") {
       throw new Error("Your application has already been submitted.");
     }
@@ -97,26 +94,18 @@ export const saveProfileDraft = mutation({
 });
 
 export const getMyApplicantDashboard = query({
-  args: {
-    hackathonId: v.optional(v.string()),
-  },
-  handler: async (ctx, { hackathonId = HACKATHON_ID }) => {
+  args: {},
+  handler: async (ctx) => {
     const identity = await requireAuthIdentity(ctx);
 
     const authUser = await getAuthUser(ctx);
-    const profile = authUser
-      ? await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId)
-      : null;
-
-    const hackathon = await ctx.db
-      .query("hackathons")
-      .withIndex("by_slug", (q) => q.eq("slug", hackathonId))
-      .first();
+    const profile = authUser ? await getProfileByUser(ctx, authUser._id) : null;
 
     const resumeStatus: "none" | "attached" = profile?.resumeStorageId ? "attached" : "none";
     const applicantAnswers = profile ? projectApplicantAnswers(profile) : null;
-    const timelineSource = resolveHackathonTimelineSource(hackathon);
+    const timelineSource = resolveHackathonTimelineSource(null);
     const timeline = buildHackathonTimeline(timelineSource);
+    const hackathonName = await getHackathonName(ctx);
 
     const displayName =
       (profile ? formatProfileFullName(profile) : null) ??
@@ -141,16 +130,14 @@ export const getMyApplicantDashboard = query({
           }
         : null,
       timeline,
-      hackathon: hackathon
-        ? {
-            name: hackathon.name,
-            startsAt: timelineSource.startsAt,
-            endsAt: HACKATHON_SCHEDULE.endsAt,
-            registrationOpensAt: timelineSource.registrationOpensAt,
-            registrationClosesAt: timelineSource.registrationClosesAt,
-            decisionsReleasedAt: timelineSource.decisionsReleasedAt ?? null,
-          }
-        : null,
+      hackathon: {
+        name: hackathonName,
+        startsAt: timelineSource.startsAt,
+        endsAt: HACKATHON_SCHEDULE.endsAt,
+        registrationOpensAt: timelineSource.registrationOpensAt,
+        registrationClosesAt: timelineSource.registrationClosesAt,
+        decisionsReleasedAt: timelineSource.decisionsReleasedAt ?? null,
+      },
     };
   },
 });

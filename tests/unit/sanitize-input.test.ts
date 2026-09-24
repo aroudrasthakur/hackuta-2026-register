@@ -50,7 +50,6 @@ describe("server-side XSS validation integration", () => {
       age: Number(form.age),
       graduationYear: Number(form.graduationYear),
       major: form.major,
-      hackathonId: "hackuta-2026" as const,
       codeOfConductAgreed: true as const,
       mlhDataSharingConsent: true as const,
     };

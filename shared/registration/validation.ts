@@ -1,6 +1,5 @@
 import type { ZodError } from "zod";
 import {
-  HACKATHON_ID,
   HEAR_ABOUT_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
@@ -71,6 +70,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     otherRaceEthnicity: form.otherRaceEthnicity,
     dietaryRestrictions: form.dietaryRestrictions,
     eatsBeef: form.eatsBeef ?? undefined,
+    eatsPork: form.eatsPork ?? undefined,
     otherDietary: form.otherDietary,
     tshirtSize: form.tshirtSize || undefined,
     firstHackathon: form.firstHackathon ?? undefined,
@@ -85,7 +85,6 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     codeOfConductAgreed: form.codeOfConductAgreed ? true : undefined,
     mlhDataSharingConsent: form.mlhDataSharingConsent ? true : undefined,
     mlhCommunicationsConsent: form.mlhCommunicationsConsent,
-    hackathonId: HACKATHON_ID,
   };
 }
 

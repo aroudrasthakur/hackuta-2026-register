@@ -64,10 +64,6 @@ async function drainScheduledFunctions(client: ConvexTestClient) {
   await (client as unknown as TestInstance).finishInProgressScheduledFunctions();
 }
 
-async function seedHackathon(t: ConvexTestClient) {
-  await t.mutation("seed:seedHackathon", {});
-}
-
 async function seedAuthUser(
   t: ConvexTestClient,
   identity: { email?: string; name?: string } = {},
@@ -95,7 +91,6 @@ async function authTest(identity: {
   name?: string;
 } = { tokenIdentifier: "email|applicant@example.com", email: "applicant@example.com" }) {
   const t = createTest().withIdentity(identity) as unknown as ConvexTestClient;
-  await seedHackathon(t);
   await seedAuthUser(t, identity);
   return t;
 }
@@ -135,12 +130,13 @@ async function verifiedUpload(t: RunnableTest, token: string = crypto.randomUUID
 describe("convex registrations", () => {
   it.each([
     [true, true], [true, false], [false, true], [false, false],
-  ])("persists independent answers through draft and submission (%s, %s)", async (internationalStudent, eatsBeef) => {
+  ])("persists independent beef and pork answers through draft and submission (%s, %s)", async (eatsBeef, eatsPork) => {
     const t = await authTest();
     const answers = {
       stateOfResidence: "Outside the United States" as const,
-      internationalStudent,
+      internationalStudent: false,
       eatsBeef,
+      eatsPork,
       dietaryRestrictions: ["Halal" as const, "Allergies" as const],
       otherDietary: "Peanuts",
     };
@@ -160,8 +156,10 @@ describe("convex registrations", () => {
       registration: { answers: Record<string, unknown> };
     };
     expect(dashboard.registration.answers.stateOfResidence).toBe(answers.stateOfResidence);
+    expect(dashboard.registration.answers.dietaryRestrictions).toEqual(answers.dietaryRestrictions);
     expect(dashboard.registration.answers).not.toHaveProperty("internationalStudent");
     expect(dashboard.registration.answers).not.toHaveProperty("eatsBeef");
+    expect(dashboard.registration.answers).not.toHaveProperty("eatsPork");
     await drainScheduledFunctions(t);
   });
 
@@ -170,14 +168,26 @@ describe("convex registrations", () => {
     const form = { ...validRegistrationForm(), dietaryRestrictions: ["Halal" as const] };
     await t.mutation("profiles:saveProfileDraft", { patch: formToDraftPatch(form) });
     await t.mutation("profiles:saveProfileDraft", {
-      patch: formToDraftPatch({ ...form, stateOfResidence: "", internationalStudent: null, eatsBeef: null }),
+      patch: formToDraftPatch({
+        ...form,
+        stateOfResidence: "",
+        internationalStudent: null,
+        eatsBeef: null,
+        eatsPork: null,
+      }),
     });
     const stored = await t.run((ctx) => ctx.db.query("profiles").first());
-    for (const field of ["stateOfResidence", "internationalStudent", "eatsBeef"]) {
+    for (const field of ["stateOfResidence", "internationalStudent", "eatsBeef", "eatsPork"]) {
       expect(stored).not.toHaveProperty(field);
     }
     await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toMatchObject({
-      draft: { stateOfResidence: "", internationalStudent: null, eatsBeef: null, dietaryRestrictions: ["Halal"] },
+      draft: {
+        stateOfResidence: "",
+        internationalStudent: null,
+        eatsBeef: null,
+        eatsPork: null,
+        dietaryRestrictions: ["Halal"],
+      },
     });
   });
 
@@ -194,6 +204,7 @@ describe("convex registrations", () => {
       stateOfResidence: "Texas",
       internationalStudent: false,
       eatsBeef: false,
+      eatsPork: false,
       dietaryRestrictions: [],
     });
     await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
@@ -274,19 +285,11 @@ describe("convex registrations", () => {
     })).rejects.toThrow("Invalid registration data.");
   });
 
-  it("auto-seeds hackuta-2026 on first registration", async () => {
-    const t = createTest().withIdentity({
-      tokenIdentifier: "email|applicant@example.com",
-      email: "applicant@example.com",
-    }) as unknown as ConvexTestClient;
-    await seedAuthUser(t, { email: "applicant@example.com" });
-    await expect(
-      t.query("hackathons:getHackathonBySlug", { slug: "hackuta-2026" }),
-    ).resolves.toBeNull();
-    await t.mutation("registrations:register", { data: validRegistrationPayload() });
-    await expect(
-      t.query("hackathons:getHackathonBySlug", { slug: "hackuta-2026" }),
-    ).resolves.toMatchObject({ slug: "hackuta-2026", name: "HackUTA 2026" });
+  it("rejects registration payloads with unexpected fields", async () => {
+    const t = await authTest();
+    await expect(t.mutation("registrations:register", {
+      data: { ...validRegistrationPayload(), hackathonId: "hackuta-2026" },
+    })).rejects.toThrow("Invalid registration data.");
   });
 
   it("rejects unauthenticated registration", async () => {
@@ -316,7 +319,6 @@ describe("convex registrations", () => {
       tokenIdentifier: "email|unverified@example.com",
       email: "unverified@example.com",
     }) as unknown as ConvexTestClient;
-    await seedHackathon(t);
     await t.run(async (ctx) => {
       await ctx.db.insert("users", { email: "unverified@example.com" });
     });
@@ -530,7 +532,6 @@ describe("resume HTTP validation and lifecycle", () => {
       tokenIdentifier: "email|owner@example.com",
       email: "owner@example.com",
     }) as unknown as ConvexTestClient;
-    await seedHackathon(owner);
     await seedAuthUser(owner, { email: "owner@example.com" });
     const upload = await verifiedUpload(owner);
     await owner.mutation("registrations:register", {
@@ -612,56 +613,11 @@ describe("resume HTTP validation and lifecycle", () => {
 });
 
 describe("convex queries", () => {
-  it("returns null for missing records", async () => {
-    const t = createTest() as unknown as ConvexTestClient;
-
-    await expect(t.query("hackathons:getHackathonBySlug", { slug: "missing" })).resolves.toBeNull();
-  });
-
-  it("seeds hackuta-2026 idempotently and finds it by slug", async () => {
-    const t = createTest() as unknown as ConvexTestClient;
-
-    const first = await t.mutation("seed:seedHackathon", {});
-    const second = await t.mutation("seed:seedHackathon", {});
-
-    expect(first).toBe(second);
-    await expect(
-      t.query("hackathons:getHackathonBySlug", { slug: "hackuta-2026" }),
-    ).resolves.toMatchObject({ slug: "hackuta-2026", name: "HackUTA 2026" });
-  });
-
-  it("syncs stale hackathon schedule dates when seed runs again", async () => {
-    const t = createTest() as unknown as ConvexTestClient;
-    await t.mutation("seed:seedHackathon", {});
-
-    await (t as unknown as TestInstance).run(async (ctx) => {
-      const hackathon = await ctx.db
-        .query("hackathons")
-        .withIndex("by_slug", (q) => q.eq("slug", "hackuta-2026"))
-        .first();
-      if (!hackathon) {
-        throw new Error("Hackathon seed missing.");
-      }
-      await ctx.db.patch(hackathon._id, {
-        registrationOpensAt: Date.parse("2026-09-01T00:00:00-05:00"),
-      });
-    });
-
-    await t.mutation("seed:seedHackathon", {});
-
-    await expect(
-      t.query("hackathons:getHackathonBySlug", { slug: "hackuta-2026" }),
-    ).resolves.toMatchObject({
-      registrationOpensAt: Date.parse("2026-09-21T00:00:00-05:00"),
-    });
-  });
-
   it("returns draft null for authenticated users without a profile", async () => {
     const t = createTest().withIdentity({
       tokenIdentifier: "provider-user",
       email: "sam@example.com",
     }) as unknown as ConvexTestClient;
-    await seedHackathon(t);
     await seedAuthUser(t, { email: "sam@example.com" });
 
     await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toBeNull();
@@ -673,7 +629,6 @@ describe("convex queries", () => {
       email: "sam@example.com",
       name: "Sam Test",
     }) as unknown as ConvexTestClient;
-    await seedHackathon(t);
     await seedAuthUser(t, { email: "sam@example.com", name: "Sam Test" });
 
     await t.mutation("registrations:register", { data: validRegistrationPayload() });
@@ -681,6 +636,31 @@ describe("convex queries", () => {
     await expect(t.query("profiles:getMyProfileDraft", {})).resolves.toMatchObject({
       status: "submitted",
       draft: null,
+    });
+  });
+});
+
+describe("event config", () => {
+  it("returns the default hackathon name before config is seeded", async () => {
+    const t = createTest() as unknown as ConvexTestClient;
+    await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toEqual({
+      name: "HackUTA 2026",
+    });
+  });
+
+  it("seeds config on first profile bootstrap and allows renaming", async () => {
+    const t = await authTest();
+    await t.mutation("applicant:ensureApplicantProfile", {});
+    await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toEqual({
+      name: "HackUTA 2026",
+    });
+
+    await t.mutation("eventConfig:setHackathonName", { name: "HackUTA XIV" });
+    await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toEqual({
+      name: "HackUTA XIV",
+    });
+    await expect(t.query("profiles:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      hackathon: { name: "HackUTA XIV" },
     });
   });
 });
@@ -728,27 +708,15 @@ describe("convex applicant auth flows", () => {
     });
   });
 
-  it("includes hackathon event timeline when hackathon exists", async () => {
+  it("includes hackathon event timeline from the shared schedule", async () => {
     const t = await authTest();
-    const now = Date.now();
-    await t.run(async (ctx) => {
-      await ctx.db.insert("hackathons", {
-        slug: "hackuta-2026",
-        name: "HackUTA 2026",
-        startsAt: now + 7 * 24 * 60 * 60 * 1000,
-        endsAt: now + 9 * 24 * 60 * 60 * 1000,
-        registrationOpensAt: now - 30 * 24 * 60 * 60 * 1000,
-        registrationClosesAt: now + 1 * 24 * 60 * 60 * 1000,
-        decisionsReleasedAt: now + 3 * 24 * 60 * 60 * 1000,
-      });
-    });
 
     const dashboard = await t.query("profiles:getMyApplicantDashboard", {}) as {
       timeline: Array<{ id: string; label: string }>;
-      hackathon: { name: string } | null;
+      hackathon: { name: string };
     };
 
-    expect(dashboard.hackathon?.name).toBe("HackUTA 2026");
+    expect(dashboard.hackathon.name).toBe("HackUTA 2026");
     expect(dashboard.timeline.map((event) => event.id)).toEqual([
       "applications-open",
       "application-deadline",
@@ -783,19 +751,6 @@ describe("convex applicant auth flows", () => {
 
   it("marks past hackathon milestones complete in the applicant timeline", async () => {
     const t = await authTest();
-    const now = Date.now();
-    await t.run(async (ctx) => {
-      await ctx.db.insert("hackathons", {
-        slug: "hackuta-2026",
-        name: "HackUTA 2026",
-        startsAt: now + 14 * 24 * 60 * 60 * 1000,
-        endsAt: now + 16 * 24 * 60 * 60 * 1000,
-        registrationOpensAt: now - 10 * 24 * 60 * 60 * 1000,
-        registrationClosesAt: now + 2 * 24 * 60 * 60 * 1000,
-        decisionsReleasedAt: now + 7 * 24 * 60 * 60 * 1000,
-      });
-    });
-
     const dashboard = await t.query("profiles:getMyApplicantDashboard", {}) as {
       timeline: Array<{ id: string; complete: boolean }>;
     };
@@ -817,6 +772,7 @@ describe("convex applicant auth flows", () => {
         stateOfResidence: "Outside the United States",
         internationalStudent: true,
         eatsBeef: false,
+        eatsPork: true,
       }),
     });
     const draft = await t.query("profiles:getMyProfileDraft", {});
@@ -828,6 +784,7 @@ describe("convex applicant auth flows", () => {
         stateOfResidence: "Outside the United States",
         internationalStudent: true,
         eatsBeef: false,
+        eatsPork: true,
       },
     });
     const stored = await t.run((ctx) => ctx.db.query("profiles").first());
@@ -835,6 +792,7 @@ describe("convex applicant auth flows", () => {
       stateOfResidence: "Outside the United States",
       internationalStudent: true,
       eatsBeef: false,
+      eatsPork: true,
     });
   });
 });

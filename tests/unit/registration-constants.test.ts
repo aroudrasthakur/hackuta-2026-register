@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   DIETARY_OPTIONS,
   GENDERS,
-  HACKATHON_ID,
   HEAR_ABOUT_OPTIONS,
   LEVELS_OF_STUDY,
   MAX_AGE,
@@ -15,14 +14,6 @@ import {
 import { MAX_RESUME_BYTES } from "../../shared/registration/resume";
 
 describe("registration constants", () => {
-  describe("hackathon identifiers", () => {
-    it("has valid hackathon ID", () => {
-      expect(HACKATHON_ID).toBe("hackuta-2026");
-      expect(typeof HACKATHON_ID).toBe("string");
-      expect(HACKATHON_ID.length).toBeGreaterThan(0);
-    });
-  });
-
   describe("graduation year constraints", () => {
     it("has reasonable min graduation year", () => {
       expect(MIN_GRADUATION_YEAR).toBeGreaterThanOrEqual(2024);

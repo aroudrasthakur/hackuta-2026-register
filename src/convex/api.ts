@@ -1,8 +1,14 @@
 import { makeFunctionReference } from "convex/server";
 
+export const getPublicEventConfigRef = makeFunctionReference<
+  "query",
+  Record<string, never>,
+  { name: string }
+>("eventConfig:getPublicEventConfig");
+
 export const getApplicantRoutingStateRef = makeFunctionReference<
   "query",
-  { hackathonId?: string },
+  Record<string, never>,
   {
     authenticated: boolean;
     verifiedEmail: string | null;
@@ -12,22 +18,22 @@ export const getApplicantRoutingStateRef = makeFunctionReference<
 
 export const getMyApplicantDashboardRef = makeFunctionReference<
   "query",
-  { hackathonId?: string }
+  Record<string, never>
 >("profiles:getMyApplicantDashboard");
 
 export const getMyProfileDraftRef = makeFunctionReference<
   "query",
-  { hackathonId?: string }
+  Record<string, never>
 >("profiles:getMyProfileDraft");
 
 export const saveProfileDraftRef = makeFunctionReference<
   "mutation",
-  { hackathonId?: string; patch: Record<string, unknown> }
+  { patch: Record<string, unknown> }
 >("profiles:saveProfileDraft");
 
 export const ensureApplicantProfileRef = makeFunctionReference<
   "mutation",
-  { hackathonId?: string }
+  Record<string, never>
 >("applicant:ensureApplicantProfile");
 
 export const getOtpSendCooldownRef = makeFunctionReference<

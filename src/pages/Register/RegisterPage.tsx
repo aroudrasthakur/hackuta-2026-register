@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageShell } from "../../components/PageShell";
 import { SignOutButton } from "../../components/SignOutButton";
 import { StormPageFrame } from "../../components/StormPageFrame";
+import { useHackathonName } from "../../hooks/useHackathonName";
 import { ApplicationForm } from "./ApplicationForm";
 import { SuccessStep } from "./SuccessStep";
 
@@ -11,6 +12,7 @@ type RegisterStep = "application" | "success";
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<RegisterStep>("application");
+  const hackathonName = useHackathonName();
 
   return (
     <StormPageFrame>
@@ -19,7 +21,7 @@ export default function RegisterPage() {
         {...(step === "application"
           ? {
               title: "Join the Odyssey",
-              subtitle: "Register for HackUTA 2026",
+              subtitle: `Register for ${hackathonName}`,
             }
           : {})}
         footer={

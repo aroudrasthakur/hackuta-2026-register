@@ -50,23 +50,23 @@ OTP: 6 digits, 10-minute expiry, hashed at rest, never returned in responses. Re
 
 ### `profiles:getMyProfileDraft`
 
-**Auth:** required · `{ hackathonId?: string }` — draft profile fields for autosave hydration (null if none).
+**Auth:** required · no args — draft profile fields for autosave hydration (null if none).
 
 ### `profiles:saveProfileDraft`
 
-**Auth:** required · `{ hackathonId?: string, patch: ProfileDraftPatch }` — upserts draft profile; only writable while status is `draft`.
+**Auth:** required · `{ patch: ProfileDraftPatch }` — upserts draft profile; only writable while status is `draft`.
 
 ### `profiles:getMyApplicantDashboard`
 
-**Auth:** required · `{ hackathonId?: string }` — profile page payload (status, answers, timeline).
+**Auth:** required · no args — profile page payload (status, answers, timeline).
 
-### `hackathons:getHackathonBySlug`
+### `eventConfig:getPublicEventConfig`
 
-**Auth:** none · `{ slug: string }` — public hackathon metadata.
+**Auth:** none · no args — public hackathon display name for the registration UI.
 
 ### `applicant:getApplicantRoutingState`
 
-**Auth:** optional · `{ hackathonId?: string }` — routing for guards and `/` redirect.
+**Auth:** optional · no args — routing for guards and `/` redirect.
 
 ### `rateLimits:getOtpSendCooldown`
 
@@ -245,12 +245,11 @@ Not callable from the public client.
 
 User content in HTML emails is escaped via `escapeHtml()`.
 
-### Maintenance / seed
+### Maintenance
 
 | Function | Purpose |
 | --- | --- |
 | `maintenance:resetAllData` | Internal — wipe all data + storage |
-| `seed:seedHackathon` | Insert `hackuta-2026` if missing |
 
 ---
 
@@ -275,12 +274,11 @@ Convex Auth identity only (email, verification timestamps). Password hashes live
 
 ### `profiles`
 
-One row per auth user per hackathon. All application form fields are top-level columns.
+One row per auth user. All application form fields are top-level columns.
 
 | Field | Notes |
 | --- | --- |
 | `authUserId` | FK to `users` |
-| `hackathonId` | `"hackuta-2026"` |
 | `email` | Copied from verified auth email |
 | `status` | `draft` \| `submitted` \| `accepted` \| `waitlisted` \| `rejected` \| `withdrawn` |
 | `eligibilityStatus` | `unreviewed` \| `eligible` \| `ineligible` |
@@ -291,7 +289,7 @@ One row per auth user per hackathon. All application form fields are top-level c
 
 | Table | Purpose |
 | --- | --- |
-| `hackathons` | Event dates and registration window |
+| `eventConfig` | Server-side hackathon display name (single row) |
 | `rateLimits` | Throttle counters |
 | `resumeUploadSessions` | Upload capability tokens |
 | Auth tables | Managed by `@convex-dev/auth` |

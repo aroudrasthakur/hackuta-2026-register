@@ -9,12 +9,11 @@ import {
   MAX_RESUME_BYTES,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../shared/registration/resume";
-import { ensureHackathon } from "./hackathons";
 import { requireVerifiedAuthUser } from "./lib/auth";
 import {
   ensureDraftProfile,
   findProfileByResume,
-  getProfileByUserAndHackathon,
+  getProfileByUser,
   profileFormWasSubmitted,
   syncAuthUserNameFromProfile,
 } from "./lib/profiles";
@@ -42,11 +41,10 @@ async function upsertRegistration(
     throw new Error("Authentication required.");
   }
 
-  const { hackathonId, resumeStorageId: rawStorageId, ...fields } = data;
-  await ensureHackathon(ctx, hackathonId);
+  const { resumeStorageId: rawStorageId, ...fields } = data;
 
-  const existing = await getProfileByUserAndHackathon(ctx, authUser._id, hackathonId);
-  const draftProfile = existing ?? (await ensureDraftProfile(ctx, hackathonId));
+  const existing = await getProfileByUser(ctx, authUser._id);
+  const draftProfile = existing ?? (await ensureDraftProfile(ctx));
 
   if (profileFormWasSubmitted(draftProfile)) {
     throw new Error("You have already submitted an application.");
@@ -106,7 +104,6 @@ async function upsertRegistration(
     otherHearAbout: draftProfile.otherHearAbout,
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
-    hackathonId,
     status: "submitted",
     formSubmitted: true,
     confirmationStatus: "unconfirmed",

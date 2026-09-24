@@ -36,6 +36,7 @@ const payload: RegistrationPayload = {
   raceEthnicity: [],
   dietaryRestrictions: [],
   eatsBeef: false,
+  eatsPork: false,
   otherDietary: "",
   tshirtSize: "M",
   firstHackathon: true,
@@ -51,7 +52,6 @@ const payload: RegistrationPayload = {
   codeOfConductAgreed: true,
   mlhDataSharingConsent: true,
   mlhCommunicationsConsent: false,
-  hackathonId: "hackuta-2026",
 };
 
 const session = { storageId: "resume-id", uploadToken: "upload-token" };

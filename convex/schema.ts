@@ -7,7 +7,7 @@ import { profileRecord } from "./profileFields";
  * Canonical Convex schema for hackuta-2026-register.
  *
  * Auth identity → `users` (+ Convex Auth tables from authTables).
- * Application data → `profiles` (one row per user per hackathon).
+ * Application data → `profiles` (one row per auth user).
  *
  * Deploy from this repo: npx convex dev | npx convex deploy --prod
  * Field validators: convex/profileFields.ts
@@ -26,22 +26,17 @@ export default defineSchema({
     points: v.optional(v.number()),
   }).index("email", ["email"]),
 
+  eventConfig: defineTable({
+    key: v.literal("current"),
+    name: v.string(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   profiles: defineTable(profileRecord)
     .index("by_auth_user", ["authUserId"])
-    .index("by_auth_user_hackathon", ["authUserId", "hackathonId"])
     .index("by_email", ["email"])
-    .index("by_hackathon_status", ["hackathonId", "status"])
+    .index("by_status", ["status"])
     .index("by_resume", ["resumeStorageId"]),
-
-  hackathons: defineTable({
-    slug: v.string(),
-    name: v.string(),
-    startsAt: v.number(),
-    endsAt: v.number(),
-    registrationOpensAt: v.number(),
-    registrationClosesAt: v.number(),
-    decisionsReleasedAt: v.optional(v.number()),
-  }).index("by_slug", ["slug"]),
 
   rateLimits: defineTable({
     bucket: v.string(),

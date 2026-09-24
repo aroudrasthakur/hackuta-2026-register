@@ -3,8 +3,10 @@ import { OdysseyButton } from "../../components/OdysseyButton";
 import { OliveBranch } from "../../components/art/OliveBranch";
 import { Ship } from "../../components/art/Ship";
 import { LANDING_URL } from "../../constants/site";
+import { useHackathonName } from "../../hooks/useHackathonName";
 
 export function SuccessStep() {
+  const hackathonName = useHackathonName();
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function SuccessStep() {
             You've officially joined the crew.
           </p>
           <p className="text-base leading-relaxed text-(--ink)/80">
-            Thanks for applying to HackUTA 2026. Keep an eye on your inbox —
+            Thanks for applying to {hackathonName}. Keep an eye on your inbox —
             we'll email you with acceptance decisions and next steps as the
             event gets closer.
           </p>

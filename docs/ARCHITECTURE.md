@@ -37,7 +37,6 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 | profiles.ts | Draft save/load and applicant dashboard |
 | registrations.ts | Application submission |
 | resumeUploads.ts | Upload sessions, rate limits, cleanup |
-| hackathons.ts | Seed/sync helpers and public hackathon query |
 | http.ts | Resume upload + Auth OIDC routes |
 | rateLimits.ts | OTP throttling |
 | resumeUploadSecurity.ts | Upload origin allowlist |
@@ -89,13 +88,12 @@ Email in `data` is ignored; server uses verified auth email.
 
 ## Data model
 
-Auth lives on `users` (Convex Auth). Application data lives in **profiles** — one row per auth user per hackathon.
+Auth lives on `users` (Convex Auth). Application data lives in **profiles** — one row per auth user.
 
 | Table | Purpose |
 | --- | --- |
 | users | Convex Auth identity (email, verification time) |
 | profiles | Form fields as columns + status, draft/submitted timestamps |
-| hackathons | Event metadata and registration window |
 | rateLimits | Sliding-window counters (OTP, upload) |
 | resumeUploadSessions | Capability tokens linking upload → registration |
 | _storage | Resume PDF blobs |

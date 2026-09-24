@@ -19,6 +19,7 @@ describe("formToDraftPatch", () => {
       stateOfResidence: "",
       internationalStudent: null,
       eatsBeef: false,
+      eatsPork: true,
     });
 
     expect(patch.firstName).toBe("");
@@ -28,7 +29,9 @@ describe("formToDraftPatch", () => {
     expect(patch.stateOfResidence).toBe("");
     expect(patch.internationalStudent).toBeNull();
     expect(patch.eatsBeef).toBe(false);
+    expect(patch.eatsPork).toBe(true);
     expect(isClearedDraftValue(patch.eatsBeef)).toBe(false);
+    expect(isClearedDraftValue(patch.eatsPork)).toBe(false);
     expect(isClearedDraftValue(patch.firstName)).toBe(true);
     expect(isClearedDraftValue(patch.raceEthnicity)).toBe(true);
   });
@@ -40,6 +43,7 @@ describe("profileToDraftForm", () => {
     expect(restored.stateOfResidence).toBe("");
     expect(restored.internationalStudent).toBeNull();
     expect(restored.eatsBeef).toBeNull();
+    expect(restored.eatsPork).toBeNull();
   });
 });
 
@@ -50,7 +54,6 @@ describe("mergeDraftPatchIntoProfile", () => {
       _creationTime: 1,
       authUserId: "user1",
       email: "test@example.com",
-      hackathonId: "hackuta-2026",
       status: "draft" as const,
       eligibilityStatus: "unreviewed" as const,
       confirmationStatus: "unconfirmed" as const,
