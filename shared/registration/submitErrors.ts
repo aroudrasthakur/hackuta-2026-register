@@ -1,4 +1,4 @@
-import { RESUME_SIZE_ERROR_MESSAGE } from "./resume";
+import { RESUME_EMPTY_ERROR_MESSAGE, RESUME_SIZE_ERROR_MESSAGE } from "./resume";
 
 export const SUBMIT_ERROR_MESSAGE =
   "We couldn't submit your application. Please try again.";
@@ -22,7 +22,7 @@ const USER_FACING_SERVER_MESSAGES = new Set([
 /** Submission failures that should highlight the resume field. */
 const RESUME_FIELD_MESSAGES = new Set([
   "Please select a PDF file.",
-  "Your PDF is empty. Please select another file.",
+  RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
   "Please upload a PDF.",
   "The file is not a valid PDF.",
@@ -51,6 +51,8 @@ const UPLOAD_SERVER_MESSAGE_ALIASES: Record<string, string> = {
   "Please upload a PDF.": "Please select a PDF file.",
   "The PDF is too large.": RESUME_SIZE_ERROR_MESSAGE,
   "The PDF must be between 1 byte and 2 MB.": RESUME_SIZE_ERROR_MESSAGE,
+  "The PDF is empty.": RESUME_EMPTY_ERROR_MESSAGE,
+  "The PDF is empty. Please select another file.": RESUME_EMPTY_ERROR_MESSAGE,
 };
 
 function normalizeUploadServerMessage(raw: string): string | null {

@@ -8,6 +8,9 @@ export const RESUME_TEST_CONTENT_LENGTH_HEADER = "x-test-content-length";
 export const RESUME_SIZE_ERROR_MESSAGE =
   "Your resume exceeds the 2 MB limit. Please upload a smaller PDF.";
 
+export const RESUME_EMPTY_ERROR_MESSAGE =
+  "Your PDF is empty. Please select another file.";
+
 /**
  * Resumes are stored in Convex file storage (_storage), not on the web server
  * filesystem, so uploaded bytes cannot be executed as application code.
@@ -65,7 +68,7 @@ export function validateResume(file: Pick<File, "name" | "type" | "size">): stri
   if (!isAllowedResumeFilename(file.name) || (file.type && file.type !== ALLOWED_RESUME_CONTENT_TYPE)) {
     return "Please select a PDF file.";
   }
-  if (file.size === 0) return "Your PDF is empty. Please select another file.";
+  if (file.size === 0) return RESUME_EMPTY_ERROR_MESSAGE;
   if (file.size > MAX_RESUME_BYTES) return RESUME_SIZE_ERROR_MESSAGE;
 }
 

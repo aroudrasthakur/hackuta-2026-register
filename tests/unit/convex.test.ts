@@ -361,11 +361,15 @@ describe("resume HTTP validation and lifecycle", () => {
   it("rejects empty uploads and oversized bodies", async () => {
     const t = createTest();
     const emptyBody = new Uint8Array();
-    expect((await t.fetch("/resume-upload", {
+    const emptyResult = await t.fetch("/resume-upload", {
       method: "POST",
       headers: buildUploadHeaders(emptyBody),
       body: emptyBody,
-    })).status).toBe(413);
+    });
+    expect(emptyResult.status).toBe(413);
+    expect((await emptyResult.json() as { error: string }).error).toBe(
+      "Your PDF is empty. Please select another file.",
+    );
 
     const oversizedLength = 2 * 1024 * 1024 + 1;
     expect((await t.fetch("/resume-upload", {

@@ -6,7 +6,10 @@ import {
   mapUploadError,
   SUBMIT_ERROR_MESSAGE,
 } from "../../shared/registration/submitErrors";
-import { RESUME_SIZE_ERROR_MESSAGE } from "../../shared/registration/resume";
+import {
+  RESUME_EMPTY_ERROR_MESSAGE,
+  RESUME_SIZE_ERROR_MESSAGE,
+} from "../../shared/registration/resume";
 
 describe("submit error mapping", () => {
   it("passes through known server messages in production mode", () => {
@@ -57,6 +60,19 @@ describe("submit error mapping", () => {
     expect(mapUploadError(new Error("Unexpected server failure"))).toBe(
       "We couldn't upload your resume. Please try again.",
     );
+  });
+
+  it("does not map empty uploads to the size-limit message", () => {
+    expect(mapResumeUploadHttpError(413, { error: RESUME_EMPTY_ERROR_MESSAGE })).toBe(
+      RESUME_EMPTY_ERROR_MESSAGE,
+    );
+    expect(mapResumeUploadHttpError(413, { error: RESUME_EMPTY_ERROR_MESSAGE })).not.toBe(
+      RESUME_SIZE_ERROR_MESSAGE,
+    );
+    expect(mapResumeUploadHttpError(413, { error: "The PDF is empty." })).toBe(
+      RESUME_EMPTY_ERROR_MESSAGE,
+    );
+    expect(mapUploadError(new Error("The PDF is empty."))).toBe(RESUME_EMPTY_ERROR_MESSAGE);
   });
 
   it.each([

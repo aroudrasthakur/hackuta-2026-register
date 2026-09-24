@@ -7,6 +7,7 @@ import {
   MAX_RESUME_BYTES,
   parseResumeContentLength,
   RESUME_FILENAME_HEADER,
+  RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../shared/registration/resume";
@@ -111,7 +112,7 @@ const uploadResume = httpAction(async (ctx, request) => {
       return response(request, { error: RESUME_SIZE_ERROR_MESSAGE }, 413, origin);
     }
     if (contentLength.reason === "empty") {
-      return response(request, { error: "The PDF is empty." }, 413, origin);
+      return response(request, { error: RESUME_EMPTY_ERROR_MESSAGE }, 413, origin);
     }
     return response(request, { error: "Invalid upload request." }, 400, origin);
   }
