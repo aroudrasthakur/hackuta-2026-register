@@ -38,6 +38,9 @@ const ref = {
   cleanupUploads: makeFunctionReference<"mutation">("resumeUploads:cleanupExpiredUploadSessions"),
   resetAllData: makeFunctionReference<"mutation">("maintenance:resetAllData"),
   stripHackathonIds: makeFunctionReference<"mutation">("migrations:stripLegacyApplicationHackathonIds"),
+  stripCheckInAndConfirmedAt: makeFunctionReference<"mutation">(
+    "migrations:stripLegacyApplicationCheckInAndConfirmedAt",
+  ),
   publicEventConfig: makeFunctionReference<"query">("eventConfig:getPublicEventConfig"),
   hackathonNameInternal: makeFunctionReference<"query">("eventConfig:getHackathonNameInternal"),
   setHackathonName: makeFunctionReference<"mutation">("eventConfig:setHackathonName"),
@@ -515,6 +518,51 @@ describe("maintenance and migrations", () => {
         expect(await ctx.db.query(table).collect()).toHaveLength(0);
       }
       expect(await ctx.db.system.query("_storage").collect()).toHaveLength(0);
+    });
+  }, 30_000);
+
+  it("strips legacy checkedInAt and confirmedAt fields from applications", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "legacy-checkin@example.com",
+        status: "accepted",
+        eligibilityStatus: "eligible",
+        createdAt: 1,
+        updatedAt: 1,
+        checkedInAt: 2,
+        confirmedAt: 3,
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "clean@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 4,
+        updatedAt: 4,
+      });
+    });
+
+    await expect(t.mutation(ref.stripCheckInAndConfirmedAt, {})).resolves.toEqual({
+      ok: true,
+      updated: 1,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications.some((application) => "checkedInAt" in application)).toBe(false);
+    expect(applications.some((application) => "confirmedAt" in application)).toBe(false);
+    expect(applications.find((application) => application.email === "clean@example.com")?.status).toBe(
+      "submitted",
+    );
+
+    await expect(t.mutation(ref.stripCheckInAndConfirmedAt, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
     });
   }, 30_000);
 

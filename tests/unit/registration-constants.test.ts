@@ -77,6 +77,16 @@ describe("registration constants", () => {
     it("has dietary restriction options", () => {
       expect(Array.isArray(DIETARY_OPTIONS)).toBe(true);
       expect(DIETARY_OPTIONS.length).toBeGreaterThan(0);
+      expect(DIETARY_OPTIONS).toContain("No Beef");
+      expect(DIETARY_OPTIONS).toContain("No Pork");
+    });
+
+    it("does not register legacy beef or pork answer fields", async () => {
+      const { APPLICANT_ANSWER_FIELD_KEYS } = await import(
+        "../../shared/registration/applicantFields"
+      );
+      expect(APPLICANT_ANSWER_FIELD_KEYS).not.toContain("eatsBeef");
+      expect(APPLICANT_ANSWER_FIELD_KEYS).not.toContain("eatsPork");
     });
 
     it("has race/ethnicity options", () => {

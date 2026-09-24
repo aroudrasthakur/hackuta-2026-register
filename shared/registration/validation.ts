@@ -69,8 +69,6 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     raceEthnicity: form.raceEthnicity,
     otherRaceEthnicity: form.otherRaceEthnicity,
     dietaryRestrictions: form.dietaryRestrictions,
-    eatsBeef: form.eatsBeef ?? undefined,
-    eatsPork: form.eatsPork ?? undefined,
     otherDietary: form.otherDietary,
     tshirtSize: form.tshirtSize || undefined,
     firstHackathon: form.firstHackathon ?? undefined,

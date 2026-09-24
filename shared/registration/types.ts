@@ -46,8 +46,6 @@ export type ApplicationFormData = {
   tshirtSize: TshirtSize | "";
   firstHackathon: boolean | null;
   internationalStudent: boolean | null;
-  eatsBeef: boolean | null;
-  eatsPork: boolean | null;
   hearAbout: HearAboutOption | "";
   otherHearAbout: string;
   resume: File | null;
@@ -84,8 +82,7 @@ export const FIELD_ORDER: FieldName[] = [
   "gender",
   "otherRaceEthnicity",
   "otherDietary",
-  "eatsBeef",
-  "eatsPork",
+  "dietaryRestrictions",
   "tshirtSize",
   "firstHackathon",
   "hearAbout",
@@ -109,8 +106,6 @@ export const INITIAL_FORM: ApplicationFormData = {
 /** Maps validation keys to DOM ids used for focus management. */
 export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
   internationalStudent: "internationalStudent-yes",
-  eatsBeef: "eatsBeef-yes",
-  eatsPork: "eatsPork-yes",
   firstHackathon: "firstHackathon-yes",
   resume: "resume-upload",
   codeOfConductAgreed: "codeOfConductAgreed",

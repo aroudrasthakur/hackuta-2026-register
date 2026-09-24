@@ -35,8 +35,6 @@ const payload: RegistrationPayload = {
   gender: "Man",
   raceEthnicity: [],
   dietaryRestrictions: [],
-  eatsBeef: false,
-  eatsPork: false,
   otherDietary: "",
   tshirtSize: "M",
   firstHackathon: true,

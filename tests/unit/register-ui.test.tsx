@@ -133,10 +133,20 @@ describe("ApplicationForm", () => {
     vi.useFakeTimers();
     const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
     selectListboxOption(/State of residence/, "Outside the United States");
-    for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
-      fireEvent.click(within(screen.getByRole("group", { name })).getByLabelText(answer ? "Yes" : "No"));
-    }
+    fireEvent.click(
+      within(screen.getByRole("group", { name: /Are you an international student/ })).getByLabelText(
+        answer ? "Yes" : "No",
+      ),
+    );
     fireEvent.click(within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("Halal"));
+    if (!answer) {
+      fireEvent.click(
+        within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Beef"),
+      );
+      fireEvent.click(
+        within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Pork"),
+      );
+    }
     await act(async () => { await vi.advanceTimersByTimeAsync(800); });
     expect(draftApi.save).toHaveBeenCalledOnce();
     const savedCall = draftApi.save.mock.calls[0];
@@ -145,9 +155,7 @@ describe("ApplicationForm", () => {
     expect(patch).toMatchObject({
       stateOfResidence: "Outside the United States",
       internationalStudent: answer,
-      eatsBeef: answer,
-      eatsPork: answer,
-      dietaryRestrictions: ["Halal"],
+      dietaryRestrictions: answer ? ["Halal"] : ["Halal", "No Beef", "No Pork"],
     });
 
     view.unmount();
@@ -161,33 +169,48 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText(/State of residence/)).toHaveTextContent(
       "Outside the United States",
     );
-    for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
-      const group = within(screen.getByRole("group", { name }));
-      expect(group.getByLabelText(answer ? "Yes" : "No")).toBeChecked();
-      expect(group.getByLabelText(answer ? "No" : "Yes")).not.toBeChecked();
-    }
+    const international = within(screen.getByRole("group", { name: /Are you an international student/ }));
+    expect(international.getByLabelText(answer ? "Yes" : "No")).toBeChecked();
+    expect(international.getByLabelText(answer ? "No" : "Yes")).not.toBeChecked();
     expect(screen.getByLabelText("Halal")).toBeChecked();
+    if (answer) {
+      expect(screen.getByLabelText("No Beef")).not.toBeChecked();
+      expect(screen.getByLabelText("No Pork")).not.toBeChecked();
+    } else {
+      expect(screen.getByLabelText("No Beef")).toBeChecked();
+      expect(screen.getByLabelText("No Pork")).toBeChecked();
+    }
     refreshed.unmount();
   }, 15_000);
 
-  it("loads a legacy draft with the new questions unanswered", () => {
+  it("loads a sparse legacy draft with dietary restrictions unanswered", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     draftApi.result = { status: "draft", draft: { firstName: "Returning" } };
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     expect(screen.getByLabelText(/First name/)).toHaveValue("Returning");
     expect(screen.getByLabelText(/State of residence/)).toHaveTextContent("Select one");
-    for (const name of [/Are you an international student/, /Do you eat beef/, /Do you eat pork/]) {
-      const group = within(screen.getByRole("group", { name }));
-      expect(group.getByLabelText("Yes")).not.toBeChecked();
-      expect(group.getByLabelText("No")).not.toBeChecked();
-    }
+    const international = within(screen.getByRole("group", { name: /Are you an international student/ }));
+    expect(international.getByLabelText("Yes")).not.toBeChecked();
+    expect(international.getByLabelText("No")).not.toBeChecked();
+    expect(screen.getByLabelText("No Beef")).not.toBeChecked();
+    expect(screen.getByLabelText("No Pork")).not.toBeChecked();
+  });
+
+  it("does not render standalone beef or pork questions", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.queryByRole("group", { name: /Do you eat beef/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /Do you eat pork/i })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Beef"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Pork"),
+    ).toBeInTheDocument();
   });
 
   it.each([
     ["stateOfResidence", "stateOfResidence"],
     ["internationalStudent", "internationalStudent-yes"],
-    ["eatsBeef", "eatsBeef-yes"],
-    ["eatsPork", "eatsPork-yes"],
   ] as const)("focuses unanswered %s on submit", (field, focusId) => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     draftApi.result = { status: "draft", draft: {
@@ -214,14 +237,10 @@ describe("ApplicationForm", () => {
     const international = within(
       screen.getByRole("group", { name: /Are you an international student/ }),
     );
-    const beef = within(screen.getByRole("group", { name: /Do you eat beef/ }));
-    const pork = within(screen.getByRole("group", { name: /Do you eat pork/ }));
     expect(international.getByLabelText("Yes")).not.toBeChecked();
     expect(international.getByLabelText("No")).not.toBeChecked();
-    expect(beef.getByLabelText("Yes")).not.toBeChecked();
-    expect(beef.getByLabelText("No")).not.toBeChecked();
-    expect(pork.getByLabelText("Yes")).not.toBeChecked();
-    expect(pork.getByLabelText("No")).not.toBeChecked();
+    expect(screen.getByLabelText("No Beef")).not.toBeChecked();
+    expect(screen.getByLabelText("No Pork")).not.toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
     expect(state).toHaveAttribute(
@@ -232,10 +251,18 @@ describe("ApplicationForm", () => {
       .toBeInTheDocument();
     expect(screen.getByText("Please let us know if you are an international student."))
       .toBeInTheDocument();
-    expect(screen.getByText("Please let us know if you eat beef."))
-      .toBeInTheDocument();
-    expect(screen.getByText("Please let us know if you eat pork."))
-      .toBeInTheDocument();
+  });
+
+  it("allows independent No Beef and No Pork dietary selections", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("No Beef"));
+    expect(screen.getByLabelText("No Beef")).toBeChecked();
+    expect(screen.getByLabelText("No Pork")).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText("No Pork"));
+    expect(screen.getByLabelText("No Pork")).toBeChecked();
+    fireEvent.click(screen.getByLabelText("No Beef"));
+    expect(screen.getByLabelText("No Beef")).not.toBeChecked();
+    expect(screen.getByLabelText("No Pork")).toBeChecked();
   });
 
   it("corrects validation errors and submits optional details with a PDF only once", async () => {
@@ -315,8 +342,7 @@ describe("ApplicationForm", () => {
         accessibilityNeeds: "Step-free access",
         stateOfResidence: "Texas",
         internationalStudent: false,
-        eatsBeef: false,
-        eatsPork: false,
+        dietaryRestrictions: ["No Beef", "No Pork", "Allergies"],
         firstHackathon: false,
       }),
       { storageId: "resume-id", uploadToken: "upload-token" },
