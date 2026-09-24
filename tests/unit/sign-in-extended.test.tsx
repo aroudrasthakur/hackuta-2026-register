@@ -206,6 +206,9 @@ describe("SignInPage extended", () => {
 
     await user.click(screen.getByRole("button", { name: /Already have an account/i }));
     expect(screen.getByRole("button", { name: "Forgot password?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Forgot password?" })).toHaveClass(
+      "sign-in-btn--secondary",
+    );
   });
 
   it("rejects a short code submitted with the Enter key", async () => {

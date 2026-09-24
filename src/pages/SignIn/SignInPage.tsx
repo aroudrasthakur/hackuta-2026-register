@@ -420,34 +420,35 @@ function SignInPageContent({
                 : "Sign in"}
           </button>
 
-          {mode === "signIn" ? (
+          <div className="sign-in-actions">
+            {mode === "signIn" ? (
+              <button
+                type="button"
+                className="sign-in-btn sign-in-btn--secondary"
+                onClick={() => {
+                  setView("forgotPassword");
+                  setError(null);
+                  setResetSuccessMessage(null);
+                }}
+              >
+                Forgot password?
+              </button>
+            ) : null}
             <button
               type="button"
-              className="sign-in-link"
+              className="sign-in-btn sign-in-btn--secondary"
               onClick={() => {
-                setView("forgotPassword");
+                setMode(mode === "signUp" ? "signIn" : "signUp");
                 setError(null);
+                setConfirmPassword("");
                 setResetSuccessMessage(null);
               }}
             >
-              Forgot password?
+              {mode === "signUp"
+                ? "Already have an account? Sign in"
+                : "Need an account? Create one"}
             </button>
-          ) : null}
-
-          <button
-            type="button"
-            className="sign-in-link"
-            onClick={() => {
-              setMode(mode === "signUp" ? "signIn" : "signUp");
-              setError(null);
-              setConfirmPassword("");
-              setResetSuccessMessage(null);
-            }}
-          >
-            {mode === "signUp"
-              ? "Already have an account? Sign in"
-              : "Need an account? Create one"}
-          </button>
+          </div>
         </form>
       ) : (
         <form onSubmit={handleVerifySubmit} noValidate className="sign-in-form">
@@ -479,7 +480,7 @@ function SignInPageContent({
             </button>
             <button
               type="button"
-              className="sign-in-link"
+              className="sign-in-btn sign-in-btn--secondary"
               onClick={() => {
                 setStep("credentials");
                 setCode("");

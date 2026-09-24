@@ -320,9 +320,15 @@ export function ForgotPasswordFlow({
             {pending ? "Sending code…" : "Send code"}
           </button>
 
-          <button type="button" className="sign-in-link" onClick={onCancel}>
-            Back to sign in
-          </button>
+          <div className="sign-in-actions">
+            <button
+              type="button"
+              className="sign-in-btn sign-in-btn--secondary"
+              onClick={onCancel}
+            >
+              Back to sign in
+            </button>
+          </div>
         </form>
       ) : null}
 
@@ -362,7 +368,7 @@ export function ForgotPasswordFlow({
             </button>
             <button
               type="button"
-              className="sign-in-link"
+              className="sign-in-btn sign-in-btn--secondary"
               onClick={() => {
                 setStep("email");
                 setCode("");
@@ -426,16 +432,18 @@ export function ForgotPasswordFlow({
             {pending ? "Saving password…" : "Save new password"}
           </button>
 
-          <button
-            type="button"
-            className="sign-in-link"
-            onClick={() => {
-              setStep("verify");
-              setError(null);
-            }}
-          >
-            Back to reset code
-          </button>
+          <div className="sign-in-actions">
+            <button
+              type="button"
+              className="sign-in-btn sign-in-btn--secondary"
+              onClick={() => {
+                setStep("verify");
+                setError(null);
+              }}
+            >
+              Back to reset code
+            </button>
+          </div>
         </form>
       ) : null}
     </SignInShell>
