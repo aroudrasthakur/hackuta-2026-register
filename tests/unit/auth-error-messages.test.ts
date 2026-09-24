@@ -3,8 +3,13 @@ import {
   ACCOUNT_CREATION_FAILED_MESSAGE,
   AUTH_FAILED_MESSAGE,
   mapAuthError,
+  mapPasswordResetError,
   OTP_INVALID_MESSAGE,
 } from "../../shared/auth/errorMessages";
+import {
+  PASSWORD_RESET_FAILED_MESSAGE,
+  PASSWORD_REUSE_MESSAGE,
+} from "../../shared/auth/passwordResetMessages";
 
 describe("authentication error mapping", () => {
   it("maps unknown auth errors to the safe fallback", () => {
@@ -30,6 +35,24 @@ describe("authentication error mapping", () => {
   it("maps signUp errors to the correct message", () => {
     expect(mapAuthError(new Error("Some error"), "signUp")).toBe(
       ACCOUNT_CREATION_FAILED_MESSAGE,
+    );
+  });
+
+  it("maps password reset errors without exposing backend details", () => {
+    expect(mapPasswordResetError(new Error(PASSWORD_REUSE_MESSAGE))).toBe(
+      PASSWORD_REUSE_MESSAGE,
+    );
+    expect(
+      mapPasswordResetError({ data: PASSWORD_REUSE_MESSAGE, message: "Server Error" }),
+    ).toBe(PASSWORD_REUSE_MESSAGE);
+    expect(mapPasswordResetError(new Error("Verification code has expired"))).toBe(
+      OTP_INVALID_MESSAGE,
+    );
+    expect(mapPasswordResetError(new Error("Too many reset requests. Please try again later."))).toBe(
+      "Too many reset requests. Please try again later.",
+    );
+    expect(mapPasswordResetError(new Error("[CONVEX A(auth:signIn)] Server Error"))).toBe(
+      PASSWORD_RESET_FAILED_MESSAGE,
     );
   });
 });

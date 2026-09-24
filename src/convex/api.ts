@@ -41,3 +41,14 @@ export const getOtpSendCooldownRef = makeFunctionReference<
   { email: string },
   { waitSeconds: number; hourlyLimitReached: boolean }
 >("rateLimits:getOtpSendCooldown");
+
+export const getPasswordResetSendCooldownRef = makeFunctionReference<
+  "mutation",
+  { email: string },
+  { waitSeconds: number; hourlyLimitReached: boolean }
+>("rateLimits:getPasswordResetSendCooldown");
+
+export const invalidateSessionsAfterPasswordResetRef = makeFunctionReference<
+  "mutation",
+  Record<string, never>
+>("passwordReset:invalidateSessionsAfterPasswordReset");

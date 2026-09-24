@@ -7,7 +7,7 @@ Route-level React views. Shared chrome comes from [src/components/](../component
 | Path | Summary |
 | --- | --- |
 | [HomeRedirect.tsx](HomeRedirect.tsx) | / — sends users to sign-in, register, or profile |
-| [SignIn/](SignIn/README.md) | /sign-in — account creation and sign-in |
+| [SignIn/](SignIn/README.md) | /sign-in — account creation, sign-in, and forgot-password reset |
 | [Register/](Register/README.md) | /register — application form and success step |
 | [Profile/](Profile/README.md) | /profile — applicant dashboard |
 

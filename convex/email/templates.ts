@@ -7,6 +7,35 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+export function buildPasswordResetEmailContent(code: string) {
+  const text = [
+    "Your HackUTA password reset code",
+    "",
+    code,
+    "",
+    "This code expires in 10 minutes.",
+    "Do not share this code with anyone.",
+    "If you did not request a password reset, you can safely ignore this email.",
+  ].join("\n");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<body style="font-family: sans-serif; color: #1a3a52;">
+  <p>Your HackUTA password reset code is:</p>
+  <p style="font-size: 28px; font-weight: bold; letter-spacing: 0.2em;">${escapeHtml(code)}</p>
+  <p>This code expires in <strong>10 minutes</strong>.</p>
+  <p>Do not share this code with anyone.</p>
+  <p>If you did not request a password reset, you can safely ignore this email.</p>
+</body>
+</html>`;
+
+  return {
+    subject: "Your HackUTA password reset code",
+    text,
+    html,
+  };
+}
+
 export function buildOtpEmailContent(code: string) {
   const text = [
     "Your HackUTA verification code",

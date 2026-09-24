@@ -25,13 +25,19 @@ import { isValidEmailSyntax, normalizeEmail } from "../../../shared/lib/normaliz
 import { OtpCodeInput } from "../../components/OtpCodeInput";
 import { SignInShell } from "../../components/SignInShell";
 import { useMockAuth } from "../../hooks/useMockAuth";
-import { ensureApplicantProfileRef, getOtpSendCooldownRef } from "../../convex/api";
+import {
+  ensureApplicantProfileRef,
+  getOtpSendCooldownRef,
+  invalidateSessionsAfterPasswordResetRef,
+} from "../../convex/api";
+import { ForgotPasswordFlow } from "./ForgotPasswordFlow";
 import { getConvexClient } from "../../convex/client";
 import { useApplicantRouting } from "../../hooks/useApplicantRouting";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
 
 type AuthMode = "signUp" | "signIn";
 type SignInStep = "credentials" | "verify";
+type SignInView = "auth" | "forgotPassword";
 
 type ConvexPasswordSignIn = (
   provider: string,
@@ -41,14 +47,20 @@ type ConvexPasswordSignIn = (
 type EnsureProfileMutation = (args: Record<string, never>) => Promise<unknown>;
 type FetchAccessToken = (args: { forceRefreshToken: boolean }) => Promise<string | null>;
 
+type ConvexSignOut = () => Promise<void>;
+
 function SignInPageContent({
   convexSignIn,
+  convexSignOut,
   ensureProfile,
   fetchAccessToken,
+  invalidateSessionsAfterReset,
 }: {
   convexSignIn: ConvexPasswordSignIn | null;
+  convexSignOut?: ConvexSignOut | null;
   ensureProfile: EnsureProfileMutation | null;
   fetchAccessToken?: FetchAccessToken | null;
+  invalidateSessionsAfterReset?: (() => Promise<void>) | null;
 }) {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useSessionAuth();
@@ -56,8 +68,10 @@ function SignInPageContent({
   const routing = useApplicantRouting();
   const client = getConvexClient();
 
+  const [view, setView] = useState<SignInView>("auth");
   const [mode, setMode] = useState<AuthMode>("signUp");
   const [step, setStep] = useState<SignInStep>("credentials");
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -98,11 +112,38 @@ function SignInPageContent({
     }
   }, [isAuthenticated, isLoading, routeAfterSignIn, routing.isAuthenticated, routing.isLoading]);
 
-  if (!isLoading && isAuthenticated && routing.isAuthenticated) {
+  if (
+    view === "auth" &&
+    !isLoading &&
+    isAuthenticated &&
+    routing.isAuthenticated
+  ) {
     return (
       <Navigate
         to={routing.hasSubmittedRegistration ? "/profile" : "/register"}
         replace
+      />
+    );
+  }
+
+  if (view === "forgotPassword") {
+    return (
+      <ForgotPasswordFlow
+        convexSignIn={convexSignIn}
+        convexSignOut={convexSignOut ?? null}
+        invalidateSessions={invalidateSessionsAfterReset ?? null}
+        onComplete={(message) => {
+          setResetSuccessMessage(message);
+          setView("auth");
+          setMode("signIn");
+          setStep("credentials");
+          setError(null);
+        }}
+        onCancel={() => {
+          setView("auth");
+          setMode("signIn");
+          setError(null);
+        }}
       />
     );
   }
@@ -357,6 +398,12 @@ function SignInPageContent({
             <p className="sign-in-message">{PASSWORD_REQUIREMENTS_MESSAGE}</p>
           ) : null}
 
+          {resetSuccessMessage ? (
+            <p className="sign-in-message sign-in-message--info" role="status" aria-live="polite">
+              {resetSuccessMessage}
+            </p>
+          ) : null}
+
           {error ? (
             <p className="sign-in-message sign-in-message--error" role="alert" aria-live="polite">
               {error}
@@ -373,6 +420,20 @@ function SignInPageContent({
                 : "Sign in"}
           </button>
 
+          {mode === "signIn" ? (
+            <button
+              type="button"
+              className="sign-in-link"
+              onClick={() => {
+                setView("forgotPassword");
+                setError(null);
+                setResetSuccessMessage(null);
+              }}
+            >
+              Forgot password?
+            </button>
+          ) : null}
+
           <button
             type="button"
             className="sign-in-link"
@@ -380,6 +441,7 @@ function SignInPageContent({
               setMode(mode === "signUp" ? "signIn" : "signUp");
               setError(null);
               setConfirmPassword("");
+              setResetSuccessMessage(null);
             }}
           >
             {mode === "signUp"
@@ -434,14 +496,19 @@ function SignInPageContent({
 }
 
 function SignInPageWithConvex() {
-  const { signIn } = useAuthActions();
+  const { signIn, signOut } = useAuthActions();
   const { fetchAccessToken } = useConvexAuth();
   const ensureProfile = useMutation(ensureApplicantProfileRef);
+  const invalidateSessionsAfterReset = useMutation(
+    invalidateSessionsAfterPasswordResetRef,
+  );
   return (
     <SignInPageContent
       convexSignIn={signIn}
+      convexSignOut={signOut}
       ensureProfile={ensureProfile}
       fetchAccessToken={fetchAccessToken}
+      invalidateSessionsAfterReset={() => invalidateSessionsAfterReset({})}
     />
   );
 }

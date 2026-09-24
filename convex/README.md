@@ -9,7 +9,8 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | Path | Summary |
 | --- | --- |
 | [schema.ts](schema.ts) | Tables: profiles, eventConfig, rateLimits, resume uploads, auth |
-| [auth.ts](auth.ts) | Convex Auth — password + email OTP verification |
+| [auth.ts](auth.ts) | Convex Auth — password, sign-up OTP, and password-reset OTP |
+| [passwordReset.ts](passwordReset.ts) | Post-reset session invalidation mutation |
 | [auth.config.ts](auth.config.ts) | Auth provider configuration |
 | [http.ts](http.ts) | HTTP router — auth routes + POST /resume-upload |
 | [applicant.ts](applicant.ts) | Profile bootstrap and routing state |
@@ -17,7 +18,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | [profiles.ts](profiles.ts) | Draft load/save and applicant dashboard |
 | [registrations.ts](registrations.ts) | Application submission |
 | [resumeUploads.ts](resumeUploads.ts) | Upload rate limits, sessions, discard, scheduled cleanup |
-| [rateLimits.ts](rateLimits.ts) | OTP send cooldown and internal rate-limit mutations |
+| [rateLimits.ts](rateLimits.ts) | Sign-up and password-reset OTP cooldowns; internal rate-limit mutations |
 | [profileFields.ts](profileFields.ts) | Convex validators built from shared field registry |
 | [resumeUploadSecurity.ts](resumeUploadSecurity.ts) | Resume upload origin allowlist |
 | [pdfValidation.ts](pdfValidation.ts) | PDF magic-byte validation for uploads |
@@ -28,8 +29,10 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 
 ### Module boundaries
 
+- **auth.ts** — Configures HackutaPassword with sign-up OTP (`email-verification`) and password-reset OTP (`password-reset`) email providers.
 - **applicant.ts** — Ensures a draft profile exists after sign-in and exposes routing queries for guards. Does not load or save form field drafts.
 - **profiles.ts** — Draft autosave hydration, draft patches, and the profile-page dashboard query.
+- **passwordReset.ts** — Clears all auth sessions after a successful password reset.
 
 ## Public API (client-facing)
 
@@ -44,6 +47,8 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | registrations:submitRegistration | Required, verified email | Alias of register |
 | resumeUploads:discardUploadSession | Required; session must belong to caller | [registerApi.ts](../src/pages/Register/registerApi.ts) |
 | rateLimits:getOtpSendCooldown | None | [SignInPage](../src/pages/SignIn/SignInPage.tsx) |
+| rateLimits:getPasswordResetSendCooldown | None | [ForgotPasswordFlow](../src/pages/SignIn/ForgotPasswordFlow.tsx) |
+| passwordReset:invalidateSessionsAfterPasswordReset | Required | [ForgotPasswordFlow](../src/pages/SignIn/ForgotPasswordFlow.tsx) |
 HTTP: POST /resume-upload on the Convex site URL (JWT + origin allowlist). See [http.ts](http.ts) and [docs/API.md](../docs/API.md).
 
 ## Configuration and operations

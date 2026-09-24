@@ -6,6 +6,7 @@ export const OTP_HOURLY_LIMIT_MESSAGE =
 
 const RATE_LIMIT_PATTERNS = [
   /too many verification requests/i,
+  /too many reset requests/i,
   /please wait before requesting another code/i,
 ];
 
