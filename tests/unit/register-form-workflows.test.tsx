@@ -136,6 +136,21 @@ describe("ApplicationForm draft loading and autosave", () => {
     expect(consoleError).toHaveBeenCalledWith("Draft save failed:", expect.any(Error));
   });
 
+  it("autosaves student email with the rest of the draft patch", async () => {
+    vi.useFakeTimers();
+    renderValidForm();
+    fireEvent.change(document.getElementById("studentEmail")!, {
+      target: { value: "student@mail.utexas.edu" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    expect(env.saveDraft).toHaveBeenCalledOnce();
+    expect(env.saveDraft.mock.calls[0]?.[0].patch.studentEmail).toBe(
+      "student@mail.utexas.edu",
+    );
+  });
+
   it("autosaves other dietary restrictions with the rest of the draft patch", async () => {
     vi.useFakeTimers();
     renderValidForm();

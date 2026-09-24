@@ -8,6 +8,7 @@ export const TRIMMED_STRING_FIELDS = [
   "firstName",
   "lastName",
   "phone",
+  "studentEmail",
   "otherRaceEthnicity",
   "otherDietary",
   "otherDietaryRestrictions",

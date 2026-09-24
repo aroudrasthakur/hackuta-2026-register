@@ -15,6 +15,7 @@ export async function fillApplicationForm(page: Page) {
   await page.locator("#age").fill("20");
   await page.locator("#school").fill("Texas at Arlington");
   await page.getByRole("button", { name: "The University of Texas at Arlington" }).click();
+  await page.getByLabel(/Student email \(optional\)/).fill("student@mail.utexas.edu");
   await selectListboxOption(page, "countryOfResidence", "United States of America");
   await selectListboxOption(page, "stateOfResidence", "Texas");
   await page.getByRole("group", { name: /Are you an international student/ })

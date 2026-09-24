@@ -53,6 +53,12 @@ test.describe("registration", () => {
     await expect(dietary.getByLabel("No Pork")).toBeVisible();
     await expect(page.getByRole("group", { name: /Do you eat beef/i })).toHaveCount(0);
     await expect(page.getByRole("group", { name: /Do you eat pork/i })).toHaveCount(0);
+    await expect(page.getByLabel(/Student email \(optional\)/)).toBeVisible();
+    await expect(
+      page.getByText(
+        "If you signed up with a personal email, you can provide your school email here.",
+      ),
+    ).toBeVisible();
     await expect(page.getByLabel(/Other dietary restrictions \(optional\)/)).toBeVisible();
     await expect(
       page.getByText("Please describe any dietary restrictions not listed above."),
