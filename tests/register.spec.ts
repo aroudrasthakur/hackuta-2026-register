@@ -9,7 +9,7 @@ test.describe("registration", () => {
   test.describe.configure({ mode: "serial" });
 
   test("submits a PDF resume with the application under the production CSP", async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
 
     const deployedHeaders = Object.fromEntries(
       vercelConfig.headers

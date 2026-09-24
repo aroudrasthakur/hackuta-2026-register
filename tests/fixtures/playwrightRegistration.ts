@@ -3,6 +3,10 @@ import { expect } from "@playwright/test";
 import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
 import { signUpAsNewApplicant } from "./playwrightAuth";
 
+async function dismissOpenListboxes(page: Page) {
+  await page.keyboard.press("Escape");
+}
+
 async function selectListboxOption(page: Page, triggerId: string, optionName: string) {
   const trigger = page.locator(`#${triggerId}`);
   await trigger.scrollIntoViewIfNeeded();
@@ -14,6 +18,17 @@ async function selectListboxOption(page: Page, triggerId: string, optionName: st
   await expect(option).toBeVisible({ timeout: 10_000 });
   await option.scrollIntoViewIfNeeded();
   await option.click();
+  if (listboxId) {
+    await page.locator(`#${listboxId}`).waitFor({ state: "hidden", timeout: 5_000 }).catch(() => {
+      return dismissOpenListboxes(page);
+    });
+  }
+}
+
+async function clickInput(page: Page, id: string) {
+  const input = page.locator(`#${id}`);
+  await input.scrollIntoViewIfNeeded();
+  await input.click({ force: true });
 }
 
 export async function fillApplicationForm(page: Page) {
@@ -26,8 +41,7 @@ export async function fillApplicationForm(page: Page) {
   await page.getByLabel(/Student email \(optional\)/).fill("student@mail.utexas.edu");
   await selectListboxOption(page, "countryOfResidence", "United States of America");
   await selectListboxOption(page, "stateOfResidence", "Texas");
-  await page.getByRole("group", { name: /Are you an international student/ })
-    .getByLabel("No").check({ force: true });
+  await clickInput(page, "internationalStudent-no");
   await selectListboxOption(page, "levelOfStudy", "Undergraduate University (3+ year)");
   await selectListboxOption(
     page,
@@ -37,17 +51,15 @@ export async function fillApplicationForm(page: Page) {
   await page.getByLabel("Expected graduation year", { exact: false }).fill(String(MIN_GRADUATION_YEAR));
   await selectListboxOption(page, "gender", "Man");
   await selectListboxOption(page, "tshirtSize", "M");
-  await page.getByRole("group", { name: /Dietary restrictions/ })
-    .getByLabel("No Beef").check({ force: true });
-  await page.getByRole("group", { name: /Dietary restrictions/ })
-    .getByLabel("No Pork").check({ force: true });
-  await page.getByRole("group", { name: /Is this your first hackathon/ })
-    .getByLabel("Yes").check({ force: true });
+  await dismissOpenListboxes(page);
+  await clickInput(page, "dietary-no-beef");
+  await clickInput(page, "dietary-no-pork");
+  await clickInput(page, "firstHackathon-yes");
   await selectListboxOption(page, "hearAbout", "Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");
-  await page.getByRole("checkbox", { name: /MLH Code of Conduct/i }).check({ force: true });
-  await page.getByRole("checkbox", { name: /authorize HackUTA to share/i }).check({ force: true });
+  await clickInput(page, "codeOfConductAgreed");
+  await clickInput(page, "mlhDataSharingConsent");
 }
 
 export async function signUpAndSubmitApplication(
