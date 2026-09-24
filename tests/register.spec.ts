@@ -65,6 +65,27 @@ test.describe("registration", () => {
     ).toBeVisible();
   });
 
+  test("opens the largest standard dropdown within the interaction budget", async ({ page }, testInfo) => {
+    await signUpAsNewApplicant(page);
+
+    const countryTrigger = page.locator("button[aria-controls]").filter({
+      hasText: "Select one",
+    }).first();
+    const durationMs = await countryTrigger.evaluate(async (trigger) => {
+      const startedAt = performance.now();
+      (trigger as HTMLButtonElement).click();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      return performance.now() - startedAt;
+    });
+    await expect(page.getByRole("listbox").first()).toBeVisible();
+
+    await testInfo.attach("country-dropdown-open-time", {
+      body: JSON.stringify({ durationMs }),
+      contentType: "application/json",
+    });
+    expect(durationMs).toBeLessThan(100);
+  });
+
   test("shows field errors on empty submit and stays on the form", async ({ page }) => {
     await signUpAsNewApplicant(page);
     await page.getByRole("button", { name: "Submit application" }).click();
