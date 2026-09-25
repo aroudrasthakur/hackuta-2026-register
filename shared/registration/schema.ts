@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getCountries, type CountryCode } from "libphonenumber-js/max";
 import { containsDangerousMarkup, sanitizePlainText } from "../lib/sanitizeInput";
 import { COUNTRIES_OF_RESIDENCE } from "./countries";
 import {
@@ -28,9 +29,28 @@ import { isValidEmailSyntax, normalizeEmail } from "../lib/normalizeEmail";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
 import { isUsaCountry, US_STATE_OPTIONS } from "./residence";
 
+export const MAX_PHONE_DIGITS = 15;
+
+export function sanitizePhoneDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(0, MAX_PHONE_DIGITS);
+}
+
 export function isValidPhone(value: string) {
   const digits = value.replace(/\D/g, "");
-  return digits.length >= 7 && digits.length <= 15;
+  return digits.length >= 10 && digits.length <= MAX_PHONE_DIGITS;
+}
+
+export function formatUsPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return `(${digits.slice(0, 3)})-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+export function normalizePhone(value: string, country?: CountryCode) {
+  const digits = value.replace(/\D/g, "");
+  if (!value.trim().startsWith("+") && digits.length === 10 && (!country || country === "US")) {
+    return formatUsPhone(value);
+  }
+  return value.trim().startsWith("+") ? `+${digits}` : value.trim();
 }
 
 const HTTP_URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
@@ -261,7 +281,9 @@ export const registrationPayloadSchema = z
     phone: safePlainText({
       max: FIELD_LIMITS.phone,
       message: "Phone number is required.",
-    }).refine(isValidPhone, "Enter a valid phone number."),
+    })
+      .refine(isValidPhone, "Enter a valid phone number."),
+    phoneCountry: z.enum(getCountries()).optional(),
     age: ageSchema,
     school: safePlainText({
       max: FIELD_LIMITS.school,
@@ -371,7 +393,9 @@ export const registrationPayloadSchema = z
     emergencyContactPhone: safePlainText({
       max: FIELD_LIMITS.phone,
       message: "Emergency contact phone is required.",
-    }).refine(isValidPhone, "Enter a valid phone number."),
+    })
+      .refine(isValidPhone, "Enter a valid phone number."),
+    emergencyContactPhoneCountry: z.enum(getCountries()).optional(),
     mlhCodeOfConductAgreed: z.literal(true, {
       message: "You must agree to the MLH Code of Conduct to continue.",
     }),
@@ -443,6 +467,8 @@ export const registrationPayloadSchema = z
   })
   .transform((data) => ({
     ...data,
+    phone: normalizePhone(data.phone, data.phoneCountry),
+    emergencyContactPhone: normalizePhone(data.emergencyContactPhone, data.emergencyContactPhoneCountry),
     stateOfResidence: isUsaCountry(data.countryOfResidence)
       ? data.stateOfResidence
       : undefined,

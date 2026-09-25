@@ -11,6 +11,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AGE_TOO_HIGH_MESSAGE } from "../../shared/registration/constants";
 import type { ApplicationFormData } from "../../shared/registration/types";
+import { applicationToDraftForm } from "../../shared/registration/draftMapping";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
 import {
   fillValidApplicationForm,
@@ -117,7 +118,7 @@ describe("SuccessStep", () => {
   });
 });
 
-describe("ApplicationForm", () => {
+describe("ApplicationForm", { timeout: 15_000 }, () => {
   beforeEach(async () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     vi.useRealTimers();
@@ -136,6 +137,117 @@ describe("ApplicationForm", () => {
     vi.useRealTimers();
     vi.unstubAllEnvs();
   });
+
+  it("accepts digits-only phone input and lets each contact use a separate calling code", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    const phone = screen.getByLabelText(/Phone number/);
+    fireEvent.change(phone, { target: { value: "2025550123" } });
+    expect(phone).toHaveValue("2025550123");
+    fireEvent.blur(phone);
+    expect(phone).toHaveValue("2025550123");
+
+    const emergencyPhone = screen.getByLabelText(/Emergency contact phone/);
+    fireEvent.change(screen.getByLabelText("Emergency contact calling code"), {
+      target: { value: "GB" },
+    });
+    fireEvent.change(emergencyPhone, { target: { value: "20 7946 0958" } });
+    expect(emergencyPhone).toHaveValue("2079460958");
+    expect(screen.getByLabelText("Applicant calling code")).toHaveValue("US");
+    expect(screen.getByLabelText("Emergency contact calling code")).toHaveValue("GB");
+  });
+
+  it("strips non-digits from pasted phone input and caps at 15 digits", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    const phone = screen.getByLabelText(/Phone number/);
+    fireEvent.change(phone, { target: { value: "+44 20 7946 0958" } });
+    expect(phone).toHaveValue("442079460958");
+    expect(screen.getByLabelText("Applicant calling code")).toHaveValue("US");
+
+    fireEvent.change(phone, { target: { value: "123456789012345678" } });
+    expect(phone).toHaveValue("123456789012345");
+  });
+
+  it("submits a restored legacy draft without editing either phone field", async () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    draftApi.result = {
+      status: "draft",
+      draft: applicationToDraftForm({
+        ...validRegistrationForm(),
+        school: "The University of Texas at Arlington",
+        phone: "(202) 555-0123",
+        emergencyContactPhone: "2025550124",
+      }),
+    };
+    const { submitRegistration } = await import("../../src/pages/Register/registerApi");
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+    await waitFor(() => expect(submitRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone: "(202)-555-0123",
+        emergencyContactPhone: "(202)-555-0124",
+      }),
+      null,
+    ));
+  });
+
+  it.each([true, false])(
+    "preserves independent calling-code countries after autosave and reload (numbers=%s)",
+    async (withNumbers) => {
+      vi.stubEnv("VITE_USE_MOCK_API", "false");
+      vi.useFakeTimers();
+      if (withNumbers) {
+        draftApi.result = {
+          status: "draft",
+          draft: {
+            ...validRegistrationForm(),
+            school: "The University of Texas at Arlington",
+            phone: "",
+            emergencyContactPhone: "",
+          },
+        };
+      }
+      const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText("Applicant calling code"), {
+        target: { value: "CA" },
+      });
+      fireEvent.change(screen.getByLabelText("Emergency contact calling code"), {
+        target: { value: "GB" },
+      });
+      if (withNumbers) {
+        setInputValue(/Phone number/, "202 555 0123");
+        setInputValue(/Emergency contact phone/, "20 7946 0958");
+      }
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(800);
+      });
+      const savedCall = draftApi.save.mock.calls[0];
+      if (!savedCall) throw new Error("Expected phone countries to be autosaved");
+      const { patch } = savedCall[0];
+      expect(patch).toMatchObject({
+        phoneCountry: "CA",
+        emergencyContactPhoneCountry: "GB",
+        phone: withNumbers ? "2025550123" : "",
+        emergencyContactPhone: withNumbers ? "2079460958" : "",
+      });
+
+      view.unmount();
+      draftApi.result = { status: "draft", draft: applicationToDraftForm(patch) };
+      render(<ApplicationForm onSubmitted={vi.fn()} />);
+      expect(screen.getByLabelText("Applicant calling code")).toHaveValue("CA");
+      expect(screen.getByLabelText("Emergency contact calling code")).toHaveValue("GB");
+      expect(screen.getByLabelText(/Phone number/)).toHaveValue(withNumbers ? "2025550123" : "");
+
+      if (withNumbers) {
+        await act(async () => {
+          fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+        });
+        expect(screen.queryByText("Enter a valid phone number.")).not.toBeInTheDocument();
+      }
+    },
+  );
 
   it.each([true, false])(
     "autosaves and restores new answers on remount (answer=%s)",

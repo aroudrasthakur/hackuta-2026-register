@@ -108,6 +108,18 @@ describe("SelectField", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
+  it("rotates the chevron while the listbox is open", async () => {
+    render(<SelectField id="state" label="State" value="" options={OPTIONS} onChange={vi.fn()} />);
+    const trigger = screen.getByRole("combobox", { name: /State/ });
+    const chevron = trigger.parentElement?.querySelector("[aria-hidden='true']");
+
+    expect(chevron?.className).not.toContain("rotate-180");
+    await userEvent.click(trigger);
+    expect(chevron?.className).toContain("rotate-180");
+    await userEvent.click(trigger);
+    expect(chevron?.className).not.toContain("rotate-180");
+  });
+
   it("toggles closed when the trigger is clicked again and ignores unrelated keys", async () => {
     render(<SelectField id="state" label="State" value="" options={OPTIONS} onChange={vi.fn()} />);
     const trigger = screen.getByRole("combobox", { name: /State/ });

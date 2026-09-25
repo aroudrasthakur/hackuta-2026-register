@@ -35,6 +35,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     firstName: form.firstName,
     lastName: form.lastName,
     phone: form.phone,
+    phoneCountry: form.phoneCountry || undefined,
     age: form.age.trim() === "" ? Number.NaN : Number(form.age.trim()),
     school: form.school,
     otherSchool:
@@ -80,6 +81,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     shortDeadlineLearning: form.shortDeadlineLearning,
     emergencyContactName: form.emergencyContactName,
     emergencyContactPhone: form.emergencyContactPhone,
+    emergencyContactPhoneCountry: form.emergencyContactPhoneCountry || undefined,
     mlhCodeOfConductAgreed: form.mlhCodeOfConductAgreed ? true : undefined,
     mlhDataSharingConsent: form.mlhDataSharingConsent ? true : undefined,
     mlhCommunicationsConsent: form.mlhCommunicationsConsent,

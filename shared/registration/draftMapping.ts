@@ -137,7 +137,8 @@ export function applicationToDraftForm(
   const values: Record<string, unknown> = {};
 
   for (const key of TRIMMED_STRING_FIELDS) {
-    values[key] = (application[key] as string | undefined) ?? "";
+    const value = (application[key] as string | undefined) ?? "";
+    values[key] = value;
   }
 
   const legacyOtherDietary = (application as { otherDietary?: string }).otherDietary;

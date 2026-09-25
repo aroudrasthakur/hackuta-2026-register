@@ -31,6 +31,21 @@ describe("formToDraftPatch", () => {
     }
   });
 
+  it("includes phone country fields in draft patches", () => {
+    const patch = formToDraftPatch({
+      ...validRegistrationForm(),
+      phone: "2025550123",
+      phoneCountry: "CA",
+      emergencyContactPhone: "2079460958",
+      emergencyContactPhoneCountry: "GB",
+    });
+
+    expect(patch.phone).toBe("2025550123");
+    expect(patch.phoneCountry).toBe("CA");
+    expect(patch.emergencyContactPhone).toBe("2079460958");
+    expect(patch.emergencyContactPhoneCountry).toBe("GB");
+  });
+
   it("sends empty strings and nulls so the server can clear stored values", () => {
     const patch = formToDraftPatch({
       ...INITIAL_FORM,
@@ -132,6 +147,26 @@ describe("formToDraftPatch conditional fields", () => {
 });
 
 describe("applicationToDraftForm", () => {
+  it.each(["2025550123", "(202) 555-0123", "202-555-0123"])(
+    "preserves legacy domestic phone numbers (%s)",
+    (phone) => {
+      expect(applicationToDraftForm({ phone, emergencyContactPhone: phone })).toMatchObject({
+        phone,
+        emergencyContactPhone: phone,
+      });
+    },
+  );
+
+  it.each(["", "555-0123", "+44 20 7946 0958", "+3545551234", "2025550123 ext 4"])(
+    "preserves nonlegacy phone values for normal validation (%s)",
+    (phone) => {
+      expect(applicationToDraftForm({ phone, emergencyContactPhone: phone })).toMatchObject({
+        phone,
+        emergencyContactPhone: phone,
+      });
+    },
+  );
+
   it("round-trips a fully answered form through the draft patch", () => {
     const form = { ...validRegistrationForm(), sponsorSharingConsent: true };
     const { resume: _resume, ...expected } = form;
@@ -340,7 +375,7 @@ describe("mergeDraftPatchIntoApplication", () => {
       updatedAt: 1,
       firstName: "Old",
       lastName: "Name",
-      phone: "5551234567",
+      phone: "+12025550123",
       school: "Old School",
     };
 

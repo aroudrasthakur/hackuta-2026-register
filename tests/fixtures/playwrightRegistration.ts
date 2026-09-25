@@ -37,7 +37,7 @@ async function clickInput(page: Page, id: string) {
 export async function fillApplicationForm(page: Page) {
   await page.getByLabel("First name", { exact: false }).fill("Sam");
   await page.getByLabel("Last name", { exact: false }).fill("Test");
-  await page.getByLabel("Phone number", { exact: false }).fill("5551234567");
+  await page.getByLabel("Phone number", { exact: false }).fill("2025550123");
   await page.locator("#age").fill("20");
   await page.locator("#school").fill("Texas at Arlington");
   await page.getByRole("button", { name: "The University of Texas at Arlington" }).click();
@@ -67,7 +67,7 @@ export async function fillApplicationForm(page: Page) {
     .fill("Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.");
   await selectListboxOption(page, "hearAbout", "Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
-  await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");
+  await page.getByLabel("Emergency contact phone", { exact: false }).fill("2025550124");
   await clickInput(page, "mlhCodeOfConductAgreed");
   await clickInput(page, "mlhDataSharingConsent");
   await clickInput(page, "foodAllergyWaiverAgreed")

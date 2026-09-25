@@ -225,6 +225,44 @@ async function verifiedUpload(
 }
 
 describe("convex registrations", () => {
+  it("persists each selected phone country through draft reload and submission", async () => {
+    const t = await authTest();
+    const phones = {
+      phone: "20 7946 0958",
+      phoneCountry: "GB" as const,
+      emergencyContactPhone: "+12025550123",
+      emergencyContactPhoneCountry: "US" as const,
+    };
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({ ...validRegistrationForm(), ...phones }),
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: phones,
+    });
+    await t.mutation("registrations:submitRegistration", {
+      data: { ...validRegistrationPayload(), ...phones },
+    });
+    expect(await t.run((ctx) => ctx.db.query("applications").first())).toMatchObject({
+      ...phones,
+      status: "submitted",
+    });
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { answers: phones },
+    });
+    await drainScheduledFunctions(t);
+  });
+
+  it("accepts draft patches from clients without phone country fields", async () => {
+    const t = await authTest();
+    const { phoneCountry, emergencyContactPhoneCountry, ...patch } = formToDraftPatch(validRegistrationForm());
+    void phoneCountry;
+    void emergencyContactPhoneCountry;
+    await t.mutation("applications:saveApplicationDraft", { patch });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: { phone: patch.phone, phoneCountry: "", emergencyContactPhoneCountry: "" },
+    });
+  });
+
   it.each([
     [["No Beef"] as const],
     [["No Pork"] as const],

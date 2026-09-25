@@ -36,6 +36,18 @@ describe("SearchableSelect", () => {
     expect(screen.getByRole("combobox")).toHaveValue("Alpha University");
   });
 
+  it("rotates the chevron while the list is open", async () => {
+    renderSelect();
+    const input = screen.getByRole("combobox");
+    const chevron = input.parentElement?.querySelector("[aria-hidden='true']");
+
+    expect(chevron?.className).not.toContain("rotate-180");
+    await userEvent.click(input);
+    expect(chevron?.className).toContain("rotate-180");
+    await userEvent.keyboard("{Escape}");
+    expect(chevron?.className).not.toContain("rotate-180");
+  });
+
   it("shows featured options when focused with an empty query", async () => {
     renderSelect();
     await userEvent.click(screen.getByRole("combobox"));
