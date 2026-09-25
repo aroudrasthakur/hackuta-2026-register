@@ -296,6 +296,37 @@ describe("convex registrations", () => {
     })).rejects.toThrow("already submitted");
   }, 15_000);
 
+  it("records submitted consent metadata and preserves an optional sponsor decline", async () => {
+    const t = await authTest();
+    const result = await t.mutation("registrations:submitRegistration", {
+      data: { ...validRegistrationPayload(), sponsorSharingConsent: false },
+    });
+    expect(result.ok).toBe(true);
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).toMatchObject({
+      sponsorSharingConsent: false,
+      foodAllergyWaiverAgreed: true,
+      foodAllergyWaiverSubmittedAt: expect.any(Number),
+    });
+    expect(stored).not.toHaveProperty("sponsorSharingConsentSubmittedAt");
+    await drainScheduledFunctions(t);
+  });
+
+  it("records sponsor consent timestamp only when granted", async () => {
+    const t = await authTest();
+    await t.mutation("registrations:submitRegistration", {
+      data: { ...validRegistrationPayload(), sponsorSharingConsent: true },
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).toMatchObject({
+      sponsorSharingConsent: true,
+      sponsorSharingConsentSubmittedAt: expect.any(Number),
+    });
+    await drainScheduledFunctions(t);
+  });
+
   it("stores a parser-verified PDF only when the matching capability is supplied", async () => {
     const t = await authTest();
     const upload = await verifiedUpload(t);

@@ -379,6 +379,22 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("No Pork")).toBeChecked();
   });
 
+  it("keeps both new consents unchecked by default and blocks without the waiver", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    expect(screen.getByLabelText(/HackUTA to share my resume/)).not.toBeChecked();
+    const waiver = screen.getByLabelText(/cannot guarantee that food served at this event/);
+    expect(waiver).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText(/HackUTA to share my resume/));
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+    expect(screen.getByText(/acknowledge the food allergy/)).toBeInTheDocument();
+    fireEvent.click(waiver);
+    expect(screen.getByLabelText(/HackUTA to share my resume/)).toBeChecked();
+    expect(waiver).toBeChecked();
+  });
+
   it("corrects validation errors and submits optional details with a PDF only once", async () => {
     const user = userEvent.setup();
     const onSubmitted = vi.fn();

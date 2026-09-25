@@ -33,6 +33,7 @@ export function validRegistrationForm(): ApplicationFormData {
     emergencyContactPhone: "5559876543",
     codeOfConductAgreed: true,
     mlhDataSharingConsent: true,
+    foodAllergyWaiverAgreed: true,
   };
 }
 

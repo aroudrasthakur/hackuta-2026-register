@@ -89,6 +89,8 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     codeOfConductAgreed: form.codeOfConductAgreed ? true : undefined,
     mlhDataSharingConsent: form.mlhDataSharingConsent ? true : undefined,
     mlhCommunicationsConsent: form.mlhCommunicationsConsent,
+    sponsorSharingConsent: form.sponsorSharingConsent,
+    foodAllergyWaiverAgreed: form.foodAllergyWaiverAgreed ? true : undefined,
   };
 }
 

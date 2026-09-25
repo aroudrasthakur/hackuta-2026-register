@@ -118,7 +118,7 @@ describe("formToDraftPatch conditional fields", () => {
 
 describe("applicationToDraftForm", () => {
   it("round-trips a fully answered form through the draft patch", () => {
-    const form = validRegistrationForm();
+    const form = { ...validRegistrationForm(), sponsorSharingConsent: true };
     const { resume: _resume, ...expected } = form;
     void _resume;
     expect(applicationToDraftForm(formToDraftPatch(form))).toEqual(expected);
@@ -133,6 +133,8 @@ describe("applicationToDraftForm", () => {
     expect(restored.firstHackathon).toBeNull();
     expect(restored.codeOfConductAgreed).toBe(false);
     expect(restored.mlhCommunicationsConsent).toBe(false);
+    expect(restored.sponsorSharingConsent).toBe(false);
+    expect(restored.foodAllergyWaiverAgreed).toBe(false);
   });
 
   it("converts stored numbers to strings and keeps explicit null integers blank", () => {

@@ -255,6 +255,10 @@ export const registrationPayloadSchema = z
       message: "You must authorize sharing your info with MLH to register.",
     }),
     mlhCommunicationsConsent: z.boolean(),
+    sponsorSharingConsent: z.boolean(),
+    foodAllergyWaiverAgreed: z.literal(true, {
+      message: "You must acknowledge the food allergy liability waiver to continue.",
+    }),
   })
   .strict()
   .superRefine((data, ctx) => {

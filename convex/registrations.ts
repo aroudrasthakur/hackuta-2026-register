@@ -110,6 +110,10 @@ async function upsertRegistration(
     formSubmitted: true,
     confirmationStatus: "unconfirmed",
     submittedAt,
+    sponsorSharingConsentSubmittedAt: data.sponsorSharingConsent
+      ? submittedAt
+      : undefined,
+    foodAllergyWaiverSubmittedAt: submittedAt,
     updatedAt: submittedAt,
     resumeStorageId: resumeStorageId ?? undefined,
   });

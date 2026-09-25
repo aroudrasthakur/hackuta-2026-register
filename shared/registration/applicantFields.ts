@@ -53,6 +53,8 @@ export const REQUIRED_BOOLEAN_FIELDS = [
   "codeOfConductAgreed",
   "mlhDataSharingConsent",
   "mlhCommunicationsConsent",
+  "sponsorSharingConsent",
+  "foodAllergyWaiverAgreed",
 ] as const;
 
 /** Applicant answer columns on `applications` and autosave draft patch keys. */

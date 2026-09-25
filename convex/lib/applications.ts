@@ -148,5 +148,9 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     emergencyContactName: application.emergencyContactName,
     emergencyContactPhone: application.emergencyContactPhone,
     mlhCommunicationsConsent: application.mlhCommunicationsConsent,
+    sponsorSharingConsent: application.sponsorSharingConsent === true,
+    foodAllergyWaiverAgreed: application.foodAllergyWaiverAgreed === true,
+    sponsorSharingConsentSubmittedAt: application.sponsorSharingConsentSubmittedAt,
+    foodAllergyWaiverSubmittedAt: application.foodAllergyWaiverSubmittedAt,
   };
 }
