@@ -270,8 +270,16 @@ Not callable from the public client.
 | `email/sendOtpEmail:sendOtpEmail` | Sign-up verification mail |
 | `email/sendPasswordResetEmail:sendPasswordResetEmail` | Password reset mail |
 | `email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail` | Post-submit confirmation |
+| `email/checkEmailStatus:checkEmailStatus` | Operator tool — `GET /email-status` for a tracked `serviceId` |
 
-User content in HTML emails is escaped via `escapeHtml()`.
+All three emails are queued with the HackUTA email service (`POST /send-email`) using the plain-text template, since the service delivers `body` as plain text. HTML templates (with user content escaped via `escapeHtml()`) are kept for future HTML support.
+
+### Email tracking (`emailDeliveries`)
+
+| Function | Purpose |
+| --- | --- |
+| `recordEmailDelivery` | Store the service's queue ID, email kind, normalized recipient, and time (no content or codes) |
+| `listEmailDeliveriesForRecipient` | Support lookup — latest 20 deliveries for an address, newest first |
 
 ### Maintenance
 

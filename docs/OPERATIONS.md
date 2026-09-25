@@ -36,12 +36,14 @@ Set in project settings (Production + Preview as appropriate):
 npx convex env set --prod SITE_URL https://register.hackuta.com
 npx convex env set --prod REGISTRATION_ALLOWED_ORIGINS https://register.hackuta.com
 npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
-# SMTP, JWT keys, EMAIL_FROM
+npx convex env set --prod EMAIL_SERVICE_URL https://emailservice.hackuta.com
+npx convex env set --prod EMAIL_SERVICE_API_KEY <api-key>
+# JWT keys
 ```
 
 JWT keys: `node scripts/generateAuthKeys.mjs` — generate **per environment**, never reuse prod keys in dev.
 
-Dev sync helper: `node scripts/sync-dev-convex-env.mjs` (copies mail settings, sets localhost origins).
+Dev sync helper: `node scripts/sync-dev-convex-env.mjs` (copies email service settings, sets localhost origins).
 
 ## Scheduled maintenance
 
@@ -63,6 +65,8 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | Remove an orphaned table (not in schema) | Convex dashboard → **Data** → table → **⋮** → **Delete table** |
 | Reset all data (**destructive**) | Convex dashboard → internal `maintenance:resetAllData` |
 | Clear sign-up OTP rate limit for email | Convex dashboard → internal `rateLimits:clearOtpSendLimitsForEmail` |
+| Find emails sent to an address | Convex dashboard → internal `emailDeliveries:listEmailDeliveriesForRecipient` |
+| Check whether a queued email was sent | Convex dashboard → internal `email/checkEmailStatus:checkEmailStatus` with the row's `serviceId` |
 | Unset stale env var | `npx convex env unset VAR_NAME` |
 
 ## Monitoring & incidents
@@ -71,14 +75,15 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 
 - **Convex dashboard:** function error rates, HTTP action 4xx/5xx on `/resume-upload`
 - **Vercel:** deployment status, edge 5xx
-- **SMTP:** Sign-up OTP, password-reset OTP, and confirmation email delivery (cPanel mail logs)
+- **Email service:** Sign-up OTP, password-reset OTP, and confirmation email delivery (`emailservice.hackuta.com/health`, `/queue-size`; per-email status via `email/checkEmailStatus`)
+- **Email tracking gaps:** rows in `emailDeliveryRecordingFailures` (Convex dashboard → **Data**) — queued emails whose `emailDeliveries` row failed to save; use `serviceId` with `email/checkEmailStatus`
 - **CI:** GitHub Actions on `main` / `dev`
 
 ### Symptom → likely cause
 
 | Symptom | Check |
 | --- | --- |
-| OTP not received | SMTP env vars, SPF/DKIM, rate limit (5/hour per bucket: `otp_send`, `password_reset_send`) |
+| OTP not received | `EMAIL_SERVICE_URL` / `EMAIL_SERVICE_API_KEY`, email service `/health`, the email's status (`emailDeliveries` or `emailDeliveryRecordingFailures` → `checkEmailStatus`), spam folder, rate limit (5/hour per bucket: `otp_send`, `password_reset_send`) |
 | Resume upload 403 | `REGISTRATION_ALLOWED_ORIGINS` vs actual frontend URL |
 | Resume upload 429 | IP or global upload rate limit; possible abuse |
 | Submit fails “already submitted” | Expected — one submission per user |

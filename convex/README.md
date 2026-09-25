@@ -8,7 +8,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 
 | Path | Summary |
 | --- | --- |
-| [schema.ts](schema.ts) | Tables: applications, eventConfig, rateLimits, resume uploads, auth |
+| [schema.ts](schema.ts) | Tables: applications, eventConfig, rateLimits, resume uploads, emailDeliveries, auth |
 | [auth.ts](auth.ts) | Convex Auth — password, sign-up OTP, and password-reset OTP |
 | [passwordReset.ts](passwordReset.ts) | Post-reset session invalidation mutation |
 | [auth.config.ts](auth.config.ts) | Auth provider configuration |
@@ -19,6 +19,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | [registrations.ts](registrations.ts) | Application submission |
 | [resumeUploads.ts](resumeUploads.ts) | Upload rate limits, sessions, discard, scheduled cleanup |
 | [rateLimits.ts](rateLimits.ts) | Sign-up and password-reset OTP cooldowns; internal rate-limit mutations |
+| [emailDeliveries.ts](emailDeliveries.ts) | Internal queue-ID tracking for sent emails and recipient lookup |
 | [applicationFields.ts](applicationFields.ts) | Convex validators built from shared field registry |
 | [resumeUploadSecurity.ts](resumeUploadSecurity.ts) | Resume upload origin allowlist |
 | [pdfValidation.ts](pdfValidation.ts) | PDF magic-byte validation for uploads |
@@ -26,7 +27,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | [migrations.ts](migrations.ts) | One-time data migrations (including `migrateFirstHackathonToHackathonsAttended`, `migrateOtherDietaryToAllergyDetails`) |
 | [crons.ts](crons.ts) | Scheduled resume-session cleanup |
 | [lib/](lib/README.md) | Shared server helpers |
-| [email/](email/README.md) | SMTP + transactional email actions |
+| [email/](email/README.md) | HackUTA email service client + transactional email actions |
 
 ### Module boundaries
 

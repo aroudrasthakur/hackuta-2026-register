@@ -26,15 +26,11 @@
     "@convex-dev/auth": "^0.0.95",
     "@paper-design/shaders-react": "^0.0.80",
     "convex": "^1.45.0",
-    "nodemailer": "^10.0.10",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
     "zod": "^4.6.5"
-  },
-  "overrides": {
-    "nodemailer": "^10.0.10"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -76,7 +76,7 @@ In CI, the **quality** job fails if any threshold is missed. It then writes a pe
 | App shell + presentation | app-shell.test.tsx, weather-mood.test.tsx, home-redirect.test.tsx |
 | Register dropdowns + textareas | searchable-select.test.tsx, select-field.test.tsx, form-fields.test.tsx |
 
-Unit tests never contact live services: Convex functions run in `convex-test`, and the Convex client, auth hooks, `fetch`, and SMTP are mocked.
+Unit tests never contact live services: Convex functions run in `convex-test`, and the Convex client, auth hooks, and `fetch` (including the email service, via `tests/unit/setup.ts`) are mocked.
 
 Convex tests use `convex-test` with `import.meta.glob` over `convex/**/*.ts`. Local runs copy a server stub via scripts/ensure-convex-server-stub.mjs when `convex/_generated/` is absent.
 
@@ -84,7 +84,7 @@ Convex tests use `convex-test` with `import.meta.glob` over `convex/**/*.ts`. Lo
 
 Playwright covers password sign-up, mock OTP verify, registration UI, profile layout/sign-out, and CSP header assertions (`register.spec.ts`, `profile.spec.ts`). Contact form tests remain in hackuta-2026-registration.
 
-CI builds with `VITE_USE_MOCK_API=true` — no live Convex or SMTP in browser jobs.
+CI builds with `VITE_USE_MOCK_API=true` — no live Convex or email service in browser jobs.
 
 ## CI pipeline
 
