@@ -23,7 +23,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | [resumeUploadSecurity.ts](resumeUploadSecurity.ts) | Resume upload origin allowlist |
 | [pdfValidation.ts](pdfValidation.ts) | PDF magic-byte validation for uploads |
 | [maintenance.ts](maintenance.ts) | Internal resetAllData (**destructive**) |
-| [migrations.ts](migrations.ts) | One-time data migrations |
+| [migrations.ts](migrations.ts) | One-time data migrations (including `migrateFirstHackathonToHackathonsAttended`) |
 | [crons.ts](crons.ts) | Scheduled resume-session cleanup |
 | [lib/](lib/README.md) | Shared server helpers |
 | [email/](email/README.md) | SMTP + transactional email actions |

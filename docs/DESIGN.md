@@ -82,6 +82,16 @@ Component details: [src/components/art/README.md](../src/components/art/README.m
 
 Authoritative field list and Zod rules: [shared/registration/schema.ts](../shared/registration/schema.ts) and [shared/README.md](../shared/README.md).
 
+Notable required applicant fields (2026):
+
+| Field | UI | Validation |
+| --- | --- | --- |
+| `builtOrWantToBuild` | Multiline textarea in **Application Questions** | Required; up to 2,000 characters; newlines allowed |
+| `shortDeadlineLearning` | Multiline textarea in **Application Questions** | Required; up to 2,000 characters; newlines allowed |
+| `hackathonsAttended` | Number input in **Event Preferences** | Required integer 0–100 (“How many hackathons have you attended”) |
+
+Exact question labels live in `APPLICATION_QUESTIONS` ([shared/registration/constants.ts](../shared/registration/constants.ts)). Legacy `firstHackathon` yes/no answers hydrate as counts and are migrated server-side.
+
 ## Form UX (current behavior)
 
 | Behavior | Detail |

@@ -6,7 +6,7 @@ Presentational widgets used only by [ApplicationForm](../ApplicationForm.tsx). N
 
 | File | Summary |
 | --- | --- |
-| [FormFields.tsx](FormFields.tsx) | RequiredMark, FieldError, TextField, SelectField — accessible labeled inputs |
+| [FormFields.tsx](FormFields.tsx) | RequiredMark, FieldError, TextField, TextAreaField, SelectField — accessible labeled inputs |
 | [formFieldStyles.ts](formFieldStyles.ts) | Tailwind tokens: fieldClass(), fieldsetErrorClass() |
 | [SearchableSelect.tsx](SearchableSelect.tsx) | Filterable combobox for school and major lists |
 | [dropdownStyles.ts](dropdownStyles.ts) | Shared listbox panel and option classes for SelectField and SearchableSelect |
@@ -20,10 +20,11 @@ SelectField and SearchableSelect use custom listbox/combobox widgets (not native
 
 | Component | Used in ApplicationForm for |
 | --- | --- |
-| TextField, SelectField, FieldError | Name, email, selects, text areas |
+| TextField, SelectField, FieldError | Name, email, selects, numeric fields (age, graduation year, hackathons attended) |
+| TextAreaField | Mandatory application questions (`builtOrWantToBuild`, `shortDeadlineLearning`); optional accessibility notes |
 | SearchableSelect | School, major |
 | CustomCheckbox | Race/ethnicity, dietary (includes No Beef / No Pork), MLH consents |
-| CustomRadio | First hackathon yes/no |
+| CustomRadio | International student yes/no |
 | ResumeUpload | Resume PDF |
 | formFieldStyles | All of the above + inline fields |
 
@@ -34,6 +35,7 @@ SelectField and SearchableSelect use custom listbox/combobox widgets (not native
 | SearchableSelect.tsx | [searchable-select.test.tsx](../../../../tests/unit/searchable-select.test.tsx) |
 | SelectField (FormFields.tsx) | [select-field.test.tsx](../../../../tests/unit/select-field.test.tsx) |
 | CustomCheckbox.tsx | [custom-checkbox.test.tsx](../../../../tests/unit/custom-checkbox.test.tsx) |
+| FormFields.tsx (TextAreaField) | [form-fields.test.tsx](../../../../tests/unit/form-fields.test.tsx) |
 | ResumeUpload.tsx | [resume-upload.test.tsx](../../../../tests/unit/resume-upload.test.tsx) |
 
 Validation rules: [shared/registration/](../../../../shared/registration/) (e.g. validateResume).

@@ -314,6 +314,8 @@ One row per auth user. All application form fields are top-level columns.
 | `eligibilityStatus` | `unreviewed` \| `eligible` \| `ineligible` |
 | `resumeStorageId` | PDF in `_storage` |
 | Applicant fields | See `shared/registration/schema.ts` and `convex/applicationFields.ts` |
+| `builtOrWantToBuild`, `shortDeadlineLearning` | Required multiline answers (max 2,000 chars each) |
+| `hackathonsAttended` | Required integer 0–100; replaces legacy boolean `firstHackathon` |
 
 ### Other tables
 

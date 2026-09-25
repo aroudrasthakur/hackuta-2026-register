@@ -4,6 +4,7 @@ Shared logic imported by top-level Convex modules. Not exported to the client di
 
 | File | Role |
 | --- | --- |
+| [dataModel.ts](dataModel.ts) | Typed QueryCtx/MutationCtx and document aliases (works around Convex Auth optional-field typing) |
 | [auth.ts](auth.ts) | requireAuthUserId, getAuthUser, verified-user guards |
 | [applications.ts](applications.ts) | Application CRUD helpers, answer projection, draft ensure |
 | [draftPatch.ts](draftPatch.ts) | Applies autosave patches to application rows |

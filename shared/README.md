@@ -19,7 +19,7 @@ Isomorphic TypeScript imported by the React client and Convex backend. Keeps val
 | [schema.ts](registration/schema.ts) | Zod schema for the full application payload |
 | [validation.ts](registration/validation.ts) | Server entry validateRegistrationPayload() |
 | [types.ts](registration/types.ts) | Form state types and initial empty form |
-| [constants.ts](registration/constants.ts) | MLH enums, hackathon id, graduation year bounds |
+| [constants.ts](registration/constants.ts) | MLH enums, `APPLICATION_QUESTIONS` labels, `FIELD_LIMITS`, graduation year and hackathons-attended bounds |
 | [draftPatch.ts](registration/draftPatch.ts) | Draft patch shape and cleared-value sentinel |
 | [draftMapping.ts](registration/draftMapping.ts) | Profile row ↔ autosave form mapping |
 | [resume.ts](registration/resume.ts) | Client resume validation, upload headers, size limits |
@@ -30,6 +30,16 @@ Isomorphic TypeScript imported by the React client and Convex backend. Keeps val
 | [data/schools.csv](registration/data/schools.csv) | Source CSV for generate-mlh-schools.mjs |
 
 Convex application validators in [convex/applicationFields.ts](../convex/applicationFields.ts) derive from [applicantFields.ts](registration/applicantFields.ts).
+
+### Application question fields
+
+| Field | Registry group | Notes |
+| --- | --- | --- |
+| `builtOrWantToBuild` | `TRIMMED_STRING_FIELDS` | Mandatory multiline; trimmed on draft save |
+| `shortDeadlineLearning` | `TRIMMED_STRING_FIELDS` | Mandatory multiline; trimmed on draft save |
+| `hackathonsAttended` | `OPTIONAL_INT_FIELDS` | Mandatory on submit; stored as integer 0–100 |
+
+Draft hydration maps legacy `firstHackathon: true` → `"0"` and `false` → `"1"` when `hackathonsAttended` is absent ([draftMapping.ts](registration/draftMapping.ts)).
 
 ## Auth (`auth/`)
 
