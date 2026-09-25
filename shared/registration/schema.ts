@@ -29,7 +29,7 @@ import { isUsaCountry, US_STATE_OPTIONS } from "./residence";
 
 export function isValidPhone(value: string) {
   const digits = value.replace(/\D/g, "");
-  return digits.length >= 7 && digits.length <= 15;
+  return digits.length >= 10 && digits.length <= 15;
 }
 
 const HTTP_URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;

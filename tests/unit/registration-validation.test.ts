@@ -20,6 +20,20 @@ function validPayloadFromForm() {
 }
 
 describe("validateApplicationForm", () => {
+  it("requires at least 10 digits for both phone fields", () => {
+    for (const field of ["phone", "emergencyContactPhone"] as const) {
+      const result = validateApplicationForm({
+        ...validRegistrationForm(),
+        [field]: "(555) 123-456",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.errors[field]).toBe("Enter a valid phone number.");
+      }
+    }
+  });
+
   it.each([
     new File(["text"], "resume.txt", { type: "text/plain" }),
     new File([], "resume.pdf", { type: "application/pdf" }),
@@ -782,10 +796,10 @@ describe("isValidPhone", () => {
     expect(isValidPhone("123")).toBe(false);
   });
 
-  it("enforces the 7 to 15 digit boundaries after stripping formatting", async () => {
+  it("enforces the 10 to 15 digit boundaries after stripping formatting", async () => {
     const { isValidPhone } = await import("../../shared/registration/schema");
-    expect(isValidPhone("123-4567")).toBe(true);
-    expect(isValidPhone("123-456")).toBe(false);
+    expect(isValidPhone("123-456-7890")).toBe(true);
+    expect(isValidPhone("123-456-789")).toBe(false);
     expect(isValidPhone("+1 (234) 567-8901-234")).toBe(true);
     expect(isValidPhone("1234567890123456")).toBe(false);
   });

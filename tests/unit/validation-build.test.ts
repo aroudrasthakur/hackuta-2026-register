@@ -25,13 +25,13 @@ describe("validateApplicationForm candidate building", () => {
 });
 
 describe("isValidPhone boundaries", () => {
-  it("accepts 7-15 digit numbers", () => {
-    expect(isValidPhone("1234567")).toBe(true);
+  it("accepts 10-15 digit numbers", () => {
+    expect(isValidPhone("1234567890")).toBe(true);
     expect(isValidPhone("123456789012345")).toBe(true);
   });
 
   it("rejects numbers outside the allowed range", () => {
-    expect(isValidPhone("123456")).toBe(false);
+    expect(isValidPhone("123456789")).toBe(false);
     expect(isValidPhone("1234567890123456")).toBe(false);
   });
 });
