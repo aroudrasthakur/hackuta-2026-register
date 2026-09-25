@@ -71,7 +71,7 @@ Sign-in mode skips OTP when the account is already verified. [AuthBootstrap](../
          → return to sign-in with success message
 ```
 
-Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and reset OTPs use separate providers and rate-limit buckets. New passwords must differ from the current password ([assertPasswordNotReused](../convex/lib/assertPasswordNotReused.ts)).
+Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and reset OTPs use separate providers and rate-limit buckets. New passwords must differ from the current password ([assertPasswordNotReused](../convex/lib/assertPasswordNotReused.ts)); the hash comparison happens only after a valid reset OTP, without attempting a password sign-in. A reused password consumes the OTP and the newly created reset session is invalidated; the user must request another code.
 
 ### Application draft
 

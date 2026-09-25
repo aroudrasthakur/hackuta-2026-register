@@ -1,45 +1,23 @@
 import { ConvexError } from "convex/values";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Scrypt } from "lucia";
+import { describe, expect, it } from "vitest";
 import { assertPasswordNotReused } from "../../convex/lib/assertPasswordNotReused";
 import { PASSWORD_REUSE_MESSAGE } from "../../shared/auth/passwordResetMessages";
 
-vi.mock("@convex-dev/auth/server", () => ({
-  retrieveAccount: vi.fn(),
-}));
-
-import { retrieveAccount } from "@convex-dev/auth/server";
-
 describe("assertPasswordNotReused", () => {
-  beforeEach(() => {
-    vi.mocked(retrieveAccount).mockReset();
+  it("rejects the current password using the stored scrypt hash", async () => {
+    const hash = await new Scrypt().hash("OldPass1");
+    await expect(assertPasswordNotReused(hash, "OldPass1")).rejects.toThrow(
+      new ConvexError(PASSWORD_REUSE_MESSAGE),
+    );
   });
 
-  it("throws when the new password matches the current hash", async () => {
-    vi.mocked(retrieveAccount).mockResolvedValue({} as never);
-
-    await expect(
-      assertPasswordNotReused({} as never, "password", "user@example.com", "Hackuta1"),
-    ).rejects.toThrow(new ConvexError(PASSWORD_REUSE_MESSAGE));
-
-    expect(retrieveAccount).toHaveBeenCalledWith({} as never, {
-      provider: "password",
-      account: { id: "user@example.com", secret: "Hackuta1" },
-    });
+  it("allows a different password without a sign-in attempt", async () => {
+    const hash = await new Scrypt().hash("OldPass1");
+    await expect(assertPasswordNotReused(hash, "NewPass1")).resolves.toBeUndefined();
   });
 
-  it("allows reset when the new password differs", async () => {
-    vi.mocked(retrieveAccount).mockResolvedValue(null as never);
-
-    await expect(
-      assertPasswordNotReused({} as never, "password", "user@example.com", "NewPass1"),
-    ).resolves.toBeUndefined();
-  });
-
-  it("skips lookup for invalid email input", async () => {
-    await expect(
-      assertPasswordNotReused({} as never, "password", "   ", "NewPass1"),
-    ).resolves.toBeUndefined();
-
-    expect(retrieveAccount).not.toHaveBeenCalled();
+  it("fails closed when the password account has no stored hash", async () => {
+    await expect(assertPasswordNotReused(undefined, "NewPass1")).rejects.toThrow();
   });
 });

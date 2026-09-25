@@ -10,9 +10,13 @@ import {
   retrieveAccount,
   signInViaProvider,
 } from "@convex-dev/auth/server";
-import type { GenericDataModel } from "convex/server";
+import { makeFunctionReference, type GenericDataModel } from "convex/server";
 import { Scrypt } from "lucia";
 import { assertPasswordNotReused } from "./assertPasswordNotReused";
+
+const invalidateResetSessionRef = makeFunctionReference<"mutation">(
+  "passwordReset:invalidateResetSession",
+);
 
 function validateDefaultPasswordRequirements(password: string) {
   if (!password || password.length < 8) {
@@ -116,8 +120,6 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
         }
 
         const newPassword = params.newPassword as string;
-        await assertPasswordNotReused(ctx, provider, email, newPassword);
-
         const { account: resetAccount } = await retrieveAccount(ctx, {
           provider,
           account: { id: email },
@@ -127,16 +129,24 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
           throw new Error("Invalid code");
         }
         const { userId, sessionId } = result;
-        if (resetAccount.userId !== userId) {
-          throw new Error("Invalid code");
+        try {
+          if (resetAccount.userId !== userId) {
+            throw new Error("Invalid code");
+          }
+          await assertPasswordNotReused(
+            typeof resetAccount.secret === "string" ? resetAccount.secret : undefined,
+            newPassword,
+          );
+          await modifyAccountCredentials(ctx, {
+            provider,
+            account: { id: email, secret: newPassword },
+          });
+          await invalidateSessions(ctx, { userId, except: [sessionId] });
+          return { userId, sessionId };
+        } catch (error) {
+          await ctx.runMutation(invalidateResetSessionRef, { userId, sessionId });
+          throw error;
         }
-
-        await modifyAccountCredentials(ctx, {
-          provider,
-          account: { id: email, secret: newPassword },
-        });
-        await invalidateSessions(ctx, { userId, except: [sessionId] });
-        return { userId, sessionId };
       }
 
       if (flow === "email-verification") {

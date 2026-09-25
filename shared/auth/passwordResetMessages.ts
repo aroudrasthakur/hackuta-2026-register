@@ -11,4 +11,4 @@ export const PASSWORD_RESET_HOURLY_LIMIT_MESSAGE =
   "Too many reset requests. Please try again later.";
 
 export const PASSWORD_REUSE_MESSAGE =
-  "Choose a new password. Your new password can't be the same as your current one.";
+  "Choose a new password. Your new password can't be the same as your current one. Request a new reset code to try again.";

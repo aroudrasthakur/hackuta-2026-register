@@ -45,6 +45,7 @@ describe("authentication error mapping", () => {
     expect(mapPasswordResetError(new Error(PASSWORD_REUSE_MESSAGE))).toBe(
       PASSWORD_REUSE_MESSAGE,
     );
+    expect(PASSWORD_REUSE_MESSAGE).toContain("Request a new reset code");
     expect(
       mapPasswordResetError({ data: PASSWORD_REUSE_MESSAGE, message: "Server Error" }),
     ).toBe(PASSWORD_REUSE_MESSAGE);
@@ -117,6 +118,7 @@ describe("mapPasswordResetError", () => {
     ["Invalid email", "Please enter a valid email address."],
     ["Enter a valid email", "Please enter a valid email address."],
     ["Invalid code", OTP_INVALID_MESSAGE],
+    ["Could not verify code", OTP_INVALID_MESSAGE],
     ["Expired code", OTP_INVALID_MESSAGE],
     ["Reset code not found", OTP_INVALID_MESSAGE],
     ["Incorrect password", PASSWORD_RESET_FAILED_MESSAGE],

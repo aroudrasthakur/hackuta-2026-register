@@ -114,6 +114,7 @@ export function mapPasswordResetError(error: unknown): string {
   if (
     normalized.includes("invalid code") ||
     normalized.includes("expired code") ||
+    normalized.includes("could not verify code") ||
     normalized.includes("verification code") ||
     normalized.includes("reset code")
   ) {
