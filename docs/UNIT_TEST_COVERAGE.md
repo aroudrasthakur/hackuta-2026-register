@@ -60,7 +60,7 @@ We split the app into seven areas. Each one has to pass the 85% bar **by itself*
 - **Resending codes:** the 30-second wait, the hourly limit, and what happens if the server can't be reached.
 - **Password reset, end to end:** request a code, enter it, choose a new password, and sign out of other devices. It also covers bad codes, reusing the old password, and weak passwords.
 - The site doesn't reveal whether an email address has an account.
-- Every fresh page load starts signed out, as intended.
+- Restored JWT sessions survive a page refresh in the same tab; AuthBootstrap only gates the initial auth read and does not sign users out on load.
 - The backend rules behind all of this: account creation, sign-in, reset, and email verification, plus the rate limits on how often codes can be sent.
 
 ### Registration form

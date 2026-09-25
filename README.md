@@ -115,8 +115,8 @@ npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
 
 1. Visitor opens `/sign-in` and creates an account (email, password, confirm) or signs in with existing credentials.
 2. New accounts receive a 6-digit verification code (10-minute expiry) via the HackUTA email service.
-3. After verification, Convex Auth establishes a JWT session and ensures a draft `applications` row exists.
-4. The app routes to `/register` (not yet submitted) or `/profile` (already submitted).
+3. After verification, Convex Auth establishes a JWT session (stored in `sessionStorage` for the tab) and ensures a draft `applications` row exists.
+4. The app routes to `/register` (not yet submitted) or `/profile` (already submitted). Refreshing the page keeps the signed-in session until sign-out or tab close.
 5. Forgot password: request a separate reset OTP, verify the code, set a new password (must differ from the current one), then sign in again.
 6. On `/register`, form fields autosave every ~800ms; applicants can leave and resume later.
 7. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:submitRegistration`. Unneeded uploads can be discarded via `resumeUploads:discardUploadSession`.

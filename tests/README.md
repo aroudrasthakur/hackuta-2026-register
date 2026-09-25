@@ -67,7 +67,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | resume-upload.test.tsx | Resume widget |
 | profile-page.test.tsx | Applicant dashboard |
 | home-redirect.test.tsx | / routing |
-| auth-bootstrap.test.tsx | Session bootstrap |
+| auth-bootstrap.test.tsx | Initial auth loading gate; restored sessions persist without sign-out on load |
 | use-session-auth.test.tsx, use-applicant-routing.test.tsx | Auth hooks |
 | applicant-timeline.test.tsx | Profile timeline UI |
 | searchable-select.test.tsx | School search control |

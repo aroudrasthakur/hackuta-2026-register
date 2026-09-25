@@ -400,7 +400,7 @@ describe("main entry point", () => {
     await expect(import("../../src/main")).rejects.toThrow("Missing #root element");
   });
 
-  it("wraps the app in Convex Auth with session storage in production mode", async () => {
+  it("wraps the app in Convex Auth with tab-scoped session storage in production mode", async () => {
     const app = await bootMain({ mock: false, client: true });
     const { container } = render(app);
     expect(providerChain(container)).toEqual(["convex-auth", "session", "bootstrap"]);

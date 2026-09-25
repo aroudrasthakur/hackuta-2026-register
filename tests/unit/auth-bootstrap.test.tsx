@@ -57,17 +57,12 @@ describe("AuthBootstrap", () => {
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
   });
 
-  it("signs out a session restored from a previous visit before showing the app", async () => {
-    let finishSignOut!: () => void;
-    const pendingSignOut = vi.fn(
-      () => new Promise<undefined>((resolve) => {
-        finishSignOut = () => resolve(undefined);
-      }),
-    );
+  it("preserves a restored session and does not sign out on load", async () => {
+    const noSignOut = vi.fn(async () => undefined);
     vi.mocked(useSessionAuth).mockReturnValue({
       isLoading: false,
       isAuthenticated: true,
-      signOut: pendingSignOut,
+      signOut: noSignOut,
     });
 
     render(
@@ -76,15 +71,11 @@ describe("AuthBootstrap", () => {
       </AuthBootstrap>,
     );
 
-    expect(pendingSignOut).toHaveBeenCalledOnce();
-    expect(screen.getByRole("status")).toBeInTheDocument();
-    expect(screen.queryByText("App content")).not.toBeInTheDocument();
-
-    finishSignOut();
     expect(await screen.findByText("App content")).toBeInTheDocument();
+    expect(noSignOut).not.toHaveBeenCalled();
   });
 
-  it("does not sign out when no session was restored", async () => {
+  it("renders children once auth finishes loading", async () => {
     const noSignOut = vi.fn(async () => undefined);
     vi.mocked(useSessionAuth).mockReturnValue({
       isLoading: false,

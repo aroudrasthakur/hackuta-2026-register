@@ -38,14 +38,14 @@ Server Convex docs: [convex/README.md](../convex/README.md).
 ConvexAuthProvider | MockAuthProvider + ConvexProvider?
   └─ SessionAuthProvider
        └─ BrowserRouter
-            └─ AuthBootstrap (clear session on load)
+            └─ AuthBootstrap (initial auth loading gate)
                  └─ Routes → pages
 ```
 
 | Mode | When |
 | --- | --- |
 | Mock API | VITE_USE_MOCK_API=true — in-memory auth, optional Convex for reads |
-| Live auth | Convex Auth + sessionStorage |
+| Live auth | Convex Auth + sessionStorage (persists across refresh in the same tab) |
 | No VITE_CONVEX_URL | Client null; mock or error paths in register API |
 
 ## Related

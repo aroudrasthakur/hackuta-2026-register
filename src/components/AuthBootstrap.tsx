@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSessionAuth } from "../hooks/useSessionAuth";
 
 function AuthLoadingScreen() {
@@ -11,29 +11,18 @@ function AuthLoadingScreen() {
   );
 }
 
-/** Every full page load starts signed out; sessions do not carry over from prior visits. */
+/** Waits for the initial Convex Auth read before rendering routed pages. */
 export function AuthBootstrap({ children }: { children: ReactNode }) {
-  const { isLoading, isAuthenticated, signOut } = useSessionAuth();
+  const { isLoading } = useSessionAuth();
   const [sessionReady, setSessionReady] = useState(false);
-  const bootstrappingRef = useRef(false);
 
   useEffect(() => {
-    if (sessionReady || bootstrappingRef.current) return;
-    if (isLoading) return;
+    if (sessionReady || isLoading) return;
+    setSessionReady(true);
+  }, [isLoading, sessionReady]);
 
-    bootstrappingRef.current = true;
-    void (async () => {
-      try {
-        if (isAuthenticated) {
-          await signOut();
-        }
-      } finally {
-        setSessionReady(true);
-        bootstrappingRef.current = false;
-      }
-    })();
-  }, [isAuthenticated, isLoading, sessionReady, signOut]);
-
+  // Only block the initial auth read. Do not unmount the tree when isLoading
+  // flips during sign-in actions — that would reset SignInPage step state.
   if (!sessionReady) {
     return <AuthLoadingScreen />;
   }
