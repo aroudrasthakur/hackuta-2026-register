@@ -173,7 +173,7 @@ describe("applicationToDraftForm", () => {
   it("hydrates legacy codeOfConductAgreed into mlhCodeOfConductAgreed", () => {
     const restored = applicationToDraftForm({
       codeOfConductAgreed: true,
-    });
+    } as Parameters<typeof applicationToDraftForm>[0]);
 
     expect(restored.mlhCodeOfConductAgreed).toBe(true);
   });

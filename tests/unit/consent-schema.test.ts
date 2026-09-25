@@ -84,7 +84,7 @@ describe("mlh code of conduct schema registration", () => {
 
     const restored = applicationToDraftForm({
       [LEGACY_CODE_OF_CONDUCT_FIELD]: true,
-    });
+    } as Parameters<typeof applicationToDraftForm>[0]);
 
     expect(restored.mlhCodeOfConductAgreed).toBe(true);
     expect(restored).not.toHaveProperty(LEGACY_CODE_OF_CONDUCT_FIELD);
@@ -99,7 +99,7 @@ describe("mlh code of conduct schema registration", () => {
 
     const restored = applicationToDraftForm({
       [INTERIM_MLH_CODE_OF_CONDUCT_FIELD]: true,
-    });
+    } as Parameters<typeof applicationToDraftForm>[0]);
 
     expect(restored.mlhCodeOfConductAgreed).toBe(true);
   });
