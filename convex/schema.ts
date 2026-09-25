@@ -25,6 +25,11 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_resume", ["resumeStorageId"]),
 
+  applicationSubmissionLogs: defineTable({
+    ...applicationRecord,
+    applicationId: v.id("applications"),
+  }).index("by_application", ["applicationId"]),
+
   rateLimits: defineTable({
     bucket: v.string(),
     key: v.string(),
