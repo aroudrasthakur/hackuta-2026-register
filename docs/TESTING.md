@@ -60,7 +60,7 @@ In CI, the **quality** job fails if any threshold is missed. It then writes a pe
 
 | Area | Example files |
 | --- | --- |
-| Registration Zod + conditional fields | registration-validation.test.ts, draft-patch.test.ts |
+| Registration Zod + conditional fields | registration-validation.test.ts, draft-patch.test.ts, application-questions.test.ts, hackathons-attended.test.ts |
 | Password auth (UI) | sign-in.test.tsx, sign-in-extended.test.tsx, sign-in-convex.test.tsx, forgot-password.test.tsx |
 | Password auth (backend) | hackuta-password.test.ts, convex-auth-config.test.ts, password-reset-backend.test.ts, assert-password-not-reused.test.ts |
 | Auth error + OTP helpers | auth-error-messages.test.ts, otp-rate-limit.test.ts, rate-limits.test.ts |
@@ -74,7 +74,7 @@ In CI, the **quality** job fails if any threshold is missed. It then writes a pe
 | CSP / headers sync | security.test.ts, csp.test.ts |
 | Profile dashboard | profile-page.test.tsx, applicant-timeline.test.tsx |
 | App shell + presentation | app-shell.test.tsx, weather-mood.test.tsx, home-redirect.test.tsx |
-| Register dropdowns | searchable-select.test.tsx, select-field.test.tsx |
+| Register dropdowns + textareas | searchable-select.test.tsx, select-field.test.tsx, form-fields.test.tsx |
 
 Unit tests never contact live services: Convex functions run in `convex-test`, and the Convex client, auth hooks, `fetch`, and SMTP are mocked.
 

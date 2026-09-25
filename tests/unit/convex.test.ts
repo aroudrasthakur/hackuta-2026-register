@@ -249,6 +249,51 @@ describe("convex registrations", () => {
     await drainScheduledFunctions(t);
   });
 
+  it("persists application questions and hackathonsAttended through draft, submission, and dashboard", async () => {
+    const t = await authTest();
+    const answers = {
+      builtOrWantToBuild: "Built a campus events app with React and Convex.",
+      shortDeadlineLearning: "Learned GitHub Actions in one night before a demo.",
+      hackathonsAttended: "2",
+    };
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({ ...validRegistrationForm(), ...answers }),
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: {
+        builtOrWantToBuild: answers.builtOrWantToBuild,
+        shortDeadlineLearning: answers.shortDeadlineLearning,
+        hackathonsAttended: answers.hackathonsAttended,
+      },
+    });
+
+    await t.mutation("registrations:submitRegistration", {
+      data: {
+        ...validRegistrationPayload(),
+        builtOrWantToBuild: answers.builtOrWantToBuild,
+        shortDeadlineLearning: answers.shortDeadlineLearning,
+        hackathonsAttended: 2,
+      },
+    });
+
+    expect(await t.run((ctx) => ctx.db.query("applications").first())).toMatchObject({
+      builtOrWantToBuild: answers.builtOrWantToBuild,
+      shortDeadlineLearning: answers.shortDeadlineLearning,
+      hackathonsAttended: 2,
+      status: "submitted",
+    });
+
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
+      registration: { answers: Record<string, unknown> };
+    };
+    expect(dashboard.registration.answers).toMatchObject({
+      builtOrWantToBuild: answers.builtOrWantToBuild,
+      shortDeadlineLearning: answers.shortDeadlineLearning,
+      hackathonsAttended: 2,
+    });
+    await drainScheduledFunctions(t);
+  });
+
   it("clears saved answers without clearing dietary restrictions and reloads them as unanswered", async () => {
     const t = await authTest();
     const form = { ...validRegistrationForm(), dietaryRestrictions: ["Halal" as const, "No Beef" as const] };

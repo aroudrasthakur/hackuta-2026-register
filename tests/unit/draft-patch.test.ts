@@ -31,7 +31,7 @@ describe("formToDraftPatch", () => {
       lastName: "Test",
       age: "",
       raceEthnicity: [],
-      firstHackathon: null,
+      hackathonsAttended: "",
       stateOfResidence: "",
       internationalStudent: null,
       dietaryRestrictions: ["No Beef", "No Pork"],
@@ -40,6 +40,7 @@ describe("formToDraftPatch", () => {
     expect(patch.firstName).toBe("");
     expect(patch.lastName).toBe("Test");
     expect(patch.age).toBeNull();
+    expect(patch.hackathonsAttended).toBeNull();
     expect(patch.raceEthnicity).toEqual([]);
     expect(patch.stateOfResidence).toBe("");
     expect(patch.internationalStudent).toBeNull();
@@ -131,7 +132,7 @@ describe("applicationToDraftForm", () => {
     expect(restored.otherSchool).toBe("");
     expect(restored.age).toBe("");
     expect(restored.raceEthnicity).toEqual([]);
-    expect(restored.firstHackathon).toBeNull();
+    expect(restored.hackathonsAttended).toBe("");
     expect(restored.codeOfConductAgreed).toBe(false);
     expect(restored.mlhCommunicationsConsent).toBe(false);
     expect(restored.sponsorSharingConsent).toBe(false);
@@ -142,6 +143,17 @@ describe("applicationToDraftForm", () => {
     const restored = applicationToDraftForm({ age: 0, graduationYear: null });
     expect(restored.age).toBe("0");
     expect(restored.graduationYear).toBe("");
+  });
+
+  it("maps legacy firstHackathon answers to hackathonsAttended counts", () => {
+    const legacy = (value: Record<string, unknown>) =>
+      applicationToDraftForm(value as Parameters<typeof applicationToDraftForm>[0]);
+
+    expect(legacy({ firstHackathon: true }).hackathonsAttended).toBe("0");
+    expect(legacy({ firstHackathon: false }).hackathonsAttended).toBe("1");
+    expect(legacy({ firstHackathon: false, hackathonsAttended: 4 }).hackathonsAttended).toBe(
+      "4",
+    );
   });
 
   it("loads older drafts without new answers as unanswered", () => {

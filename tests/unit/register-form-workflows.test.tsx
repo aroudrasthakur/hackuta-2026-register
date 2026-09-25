@@ -1,8 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  APPLICATION_QUESTIONS,
   HEAR_ABOUT_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
+  MAX_HACKATHONS_ATTENDED,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
 import {
@@ -555,6 +557,76 @@ describe("ApplicationForm conditional answers", () => {
     fireEvent.change(screen.getByLabelText(/First name/), { target: { value: "Sam" } });
     expect(screen.queryByText("First name is required.")).not.toBeInTheDocument();
     expect(screen.queryByText(/One or more of your answers is invalid/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ApplicationForm application questions and hackathon count", () => {
+  it("renders the mandatory application question textareas with character limits", () => {
+    renderValidForm();
+
+    expect(screen.getByRole("heading", { name: "Application Questions" })).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(APPLICATION_QUESTIONS.builtOrWantToBuild, { exact: false }),
+    ).toHaveAttribute("maxlength", "2000");
+    expect(
+      screen.getByLabelText(APPLICATION_QUESTIONS.shortDeadlineLearning, { exact: false }),
+    ).toHaveAttribute("maxlength", "2000");
+    expect(screen.getAllByText(/Up to 2,000 characters\./)).toHaveLength(2);
+    expect(
+      screen.getByLabelText(/How many hackathons have you attended/, { exact: false }),
+    ).toHaveAttribute("max", String(MAX_HACKATHONS_ATTENDED));
+  });
+
+  it("hydrates saved application questions and hackathonsAttended from the draft", async () => {
+    env.draft = undefined;
+    const { rerender } = render(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    env.draft = {
+      status: "draft",
+      draft: {
+        ...validRegistrationForm(),
+        builtOrWantToBuild: "Built a campus map app.",
+        shortDeadlineLearning: "Learned Convex in one weekend.",
+        hackathonsAttended: "3",
+      },
+    };
+    rerender(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    expect(
+      await screen.findByDisplayValue("Built a campus map app."),
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Learned Convex in one weekend.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/How many hackathons have you attended/)).toHaveValue(3);
+  });
+
+  it("blocks submit until both application questions are answered", async () => {
+    renderValidForm();
+    fireEvent.change(
+      screen.getByLabelText(APPLICATION_QUESTIONS.builtOrWantToBuild, { exact: false }),
+      { target: { value: "" } },
+    );
+
+    await submit();
+    expect(
+      screen.getByText(`${APPLICATION_QUESTIONS.builtOrWantToBuild}.`),
+    ).toBeInTheDocument();
+    expect(submitRegistration).not.toHaveBeenCalled();
+  });
+
+  it("includes application questions and hackathonsAttended in the submitted payload", async () => {
+    const onSubmitted = vi.fn();
+    renderValidForm(onSubmitted);
+    await submit();
+
+    await waitFor(() => expect(submitRegistration).toHaveBeenCalledOnce());
+    expect(submitRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        builtOrWantToBuild: expect.stringContaining("campus events app"),
+        shortDeadlineLearning: expect.stringContaining("GitHub Actions"),
+        hackathonsAttended: 1,
+      }),
+      null,
+    );
   });
 });
 

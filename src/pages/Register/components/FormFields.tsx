@@ -6,6 +6,7 @@ import {
   useState,
   type InputHTMLAttributes,
   type KeyboardEvent,
+  type TextareaHTMLAttributes,
 } from "react";
 import { dropdownOptionClass, dropdownPanelClass } from "./dropdownStyles";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
@@ -72,6 +73,53 @@ export function TextField({
         aria-describedby={descriptionIds || undefined}
         className={className ?? fieldClass(error)}
         {...inputProps}
+      />
+      {helperText ? (
+        <p id={helperId} className="text-xs font-normal text-(--ocean)">
+          {helperText}
+        </p>
+      ) : null}
+      <FieldError id={errorId} message={error} />
+    </label>
+  );
+}
+
+type TextAreaFieldProps = {
+  id: string;
+  label: string;
+  required?: boolean;
+  error?: string | undefined;
+  helperText?: string;
+} & TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+export function TextAreaField({
+  id,
+  label,
+  required,
+  error,
+  helperText,
+  className,
+  ...textareaProps
+}: TextAreaFieldProps) {
+  const errorId = `${id}-error`;
+  const helperId = `${id}-helper`;
+  const descriptionIds = [helperText ? helperId : null, error ? errorId : null]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <label className={labelClass} htmlFor={id}>
+      <span className={legendClass}>
+        {label}
+        {required ? <RequiredMark /> : null}
+      </span>
+      <textarea
+        id={id}
+        required={required}
+        aria-invalid={!!error}
+        aria-describedby={descriptionIds || undefined}
+        className={className ?? `${fieldClass(error)} resize-y min-h-[6rem]`}
+        {...textareaProps}
       />
       {helperText ? (
         <p id={helperId} className="text-xs font-normal text-(--ocean)">

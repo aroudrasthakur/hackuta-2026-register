@@ -110,6 +110,35 @@ describe("validateApplicationForm", () => {
     expect(result.success).toBe(false);
   });
 
+  it("requires hackathons attended as a whole number within range", () => {
+    const missing = validateApplicationForm({
+      ...validRegistrationForm(),
+      hackathonsAttended: "",
+    });
+    expect(missing.success).toBe(false);
+    if (!missing.success) {
+      expect(missing.errors.hackathonsAttended).toBe("Hackathons attended is required.");
+    }
+
+    const tooHigh = validateApplicationForm({
+      ...validRegistrationForm(),
+      hackathonsAttended: "101",
+    });
+    expect(tooHigh.success).toBe(false);
+    if (!tooHigh.success) {
+      expect(tooHigh.errors.hackathonsAttended).toContain("100");
+    }
+
+    const valid = validateApplicationForm({
+      ...validRegistrationForm(),
+      hackathonsAttended: "0",
+    });
+    expect(valid.success).toBe(true);
+    if (valid.success) {
+      expect(valid.payload.hackathonsAttended).toBe(0);
+    }
+  });
+
   it("requires country of residence with a friendly message", () => {
     const form = validRegistrationForm();
     form.countryOfResidence = "";

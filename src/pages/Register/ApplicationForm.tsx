@@ -9,7 +9,10 @@ import {
 } from "react";
 import type { SavedResumeDraft } from "../../../shared/registration/applicantFields";
 import { formToDraftPatch } from "../../../shared/registration/draftPatch";
-import { getMyApplicationDraftRef, saveApplicationDraftRef } from "../../convex/api";
+import {
+  getMyApplicationDraftRef,
+  saveApplicationDraftRef,
+} from "../../convex/api";
 import { isMockApiEnabled } from "../../constants/mockAuth";
 import { getConvexClient } from "../../convex/client";
 import { useSessionAuth } from "../../hooks/useSessionAuth";
@@ -27,6 +30,7 @@ import {
   legendClass,
 } from "./components/formFieldStyles";
 import {
+  APPLICATION_QUESTIONS,
   COUNTRIES_OF_RESIDENCE,
   DIETARY_OPTIONS,
   FIELD_LIMITS,
@@ -40,7 +44,9 @@ import {
   SCHOOL_OTHER_OPTION,
   SPONSOR_SHARING_CONSENT_TEXT,
   MAX_GRADUATION_YEAR,
+  MAX_HACKATHONS_ATTENDED,
   MIN_GRADUATION_YEAR,
+  MIN_HACKATHONS_ATTENDED,
   MLH_CODE_OF_CONDUCT_URL,
   MLH_PRIVACY_POLICY_URL,
   MLH_SCHOOLS,
@@ -48,7 +54,12 @@ import {
   RACE_ETHNICITY_OPTIONS,
   TSHIRT_SIZES,
 } from "./constants";
-import { FieldError, SelectField, TextField } from "./components/FormFields";
+import {
+  FieldError,
+  SelectField,
+  TextAreaField,
+  TextField,
+} from "./components/FormFields";
 import { SearchableSelect } from "./components/SearchableSelect";
 import { CustomCheckbox, CustomRadio } from "./components/CustomCheckbox";
 import { ResumeUpload } from "./components/ResumeUpload";
@@ -110,7 +121,11 @@ function ApplicationFormContent({
 }: {
   onSubmitted: () => void;
   savedDraft: SavedDraft;
-  saveDraft: ((args: { patch: ReturnType<typeof formToDraftPatch> }) => Promise<unknown>) | null;
+  saveDraft:
+    | ((args: {
+        patch: ReturnType<typeof formToDraftPatch>;
+      }) => Promise<unknown>)
+    | null;
   hasConvexClient: boolean;
   initialForm?: ApplicationFormData;
   initialSavedResume?: SavedResumeDraft | null;
@@ -118,8 +133,12 @@ function ApplicationFormContent({
   getUploadAuthToken?: () => Promise<string | null | undefined>;
 }) {
   const [form, setForm] = useState<ApplicationFormData>(initialForm);
-  const [savedResume, setSavedResume] = useState<SavedResumeDraft | null>(initialSavedResume);
-  const [resumeStatus, setResumeStatus] = useState<"idle" | "uploading" | "removing">("idle");
+  const [savedResume, setSavedResume] = useState<SavedResumeDraft | null>(
+    initialSavedResume,
+  );
+  const [resumeStatus, setResumeStatus] = useState<
+    "idle" | "uploading" | "removing"
+  >("idle");
   const [errors, setErrors] = useState<FieldErrors>(() =>
     savedDraft?.resumeMissing ? { resume: RESUME_MISSING_MESSAGE } : {},
   );
@@ -160,7 +179,12 @@ function ApplicationFormContent({
   }, [form]);
 
   useEffect(() => {
-    if (!hasConvexClient || !saveDraft || !routing.isAuthenticated || !draftHydrated) {
+    if (
+      !hasConvexClient ||
+      !saveDraft ||
+      !routing.isAuthenticated ||
+      !draftHydrated
+    ) {
       return;
     }
     if (savedDraftStatus && savedDraftStatus !== "draft") return;
@@ -252,7 +276,9 @@ function ApplicationFormContent({
 
         if (saveDraft && canSaveDraft) {
           try {
-            await saveDraft({ patch: formToDraftPatch(formRef.current, nextSavedResume) });
+            await saveDraft({
+              patch: formToDraftPatch(formRef.current, nextSavedResume),
+            });
           } catch (error) {
             await discardResumeUpload(uploadedSession.uploadToken);
             uploadedSession = null;
@@ -261,14 +287,21 @@ function ApplicationFormContent({
               console.error("Saving resume to draft failed:", error);
             }
             const mapped = mapConvexErrorToUserMessage(error);
-            showResumeError(isResumeFieldMessage(mapped) ? mapped : RESUME_UPLOAD_ERROR_MESSAGE);
+            showResumeError(
+              isResumeFieldMessage(mapped)
+                ? mapped
+                : RESUME_UPLOAD_ERROR_MESSAGE,
+            );
             return;
           }
           setDraftError(null);
           await discardResumeUpload(uploadedSession.uploadToken);
           uploadedSession = null;
         } else {
-          setResumeUpload({ fileKey: resumeFileKey(file), session: uploadedSession });
+          setResumeUpload({
+            fileKey: resumeFileKey(file),
+            session: uploadedSession,
+          });
         }
         setSavedResume(nextSavedResume);
         setForm((prev) => ({ ...prev, resume: null }));
@@ -286,7 +319,13 @@ function ApplicationFormContent({
         setResumeStatus("idle");
       }
     },
-    [canSaveDraft, discardUnsavedUpload, getUploadAuthToken, saveDraft, savedResume],
+    [
+      canSaveDraft,
+      discardUnsavedUpload,
+      getUploadAuthToken,
+      saveDraft,
+      savedResume,
+    ],
   );
 
   const updateField = useCallback(
@@ -311,7 +350,9 @@ function ApplicationFormContent({
         normalizeResidenceFormFields({
           ...prev,
           countryOfResidence: country,
-          stateOfResidence: requiresUsState(country) ? prev.stateOfResidence : "",
+          stateOfResidence: requiresUsState(country)
+            ? prev.stateOfResidence
+            : "",
         }),
       );
       setErrors((prev) => {
@@ -359,7 +400,9 @@ function ApplicationFormContent({
       let session: ResumeUploadSession | null = resumeUpload?.session ?? null;
       if (!session && form.resume) {
         try {
-          const authToken = getUploadAuthToken ? await getUploadAuthToken() : null;
+          const authToken = getUploadAuthToken
+            ? await getUploadAuthToken()
+            : null;
           session = await uploadResume(form.resume, authToken);
           setResumeUpload({ fileKey: resumeFileKey(form.resume), session });
         } catch (err) {
@@ -541,7 +584,9 @@ function ApplicationFormContent({
           <fieldset
             className={`sm:col-span-2 ${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.internationalStudent)}`}
             aria-describedby={
-              errors.internationalStudent ? "internationalStudent-error" : undefined
+              errors.internationalStudent
+                ? "internationalStudent-error"
+                : undefined
             }
           >
             <legend className={fieldsetLegendClass}>
@@ -590,10 +635,7 @@ function ApplicationFormContent({
             value={form.major}
             options={MAJORS}
             onChange={(value) =>
-              updateField(
-                "major",
-                value as ApplicationFormData["major"],
-              )
+              updateField("major", value as ApplicationFormData["major"])
             }
             error={errors.major}
           />
@@ -641,10 +683,7 @@ function ApplicationFormContent({
           value={form.gender}
           options={GENDERS}
           onChange={(value) =>
-            updateField(
-              "gender",
-              value as ApplicationFormData["gender"],
-            )
+            updateField("gender", value as ApplicationFormData["gender"])
           }
           error={errors.gender}
         />
@@ -736,7 +775,9 @@ function ApplicationFormContent({
             label="Other dietary restrictions (optional)"
             helperText="Please describe any dietary restrictions not listed above."
             value={form.otherDietaryRestrictions}
-            onChange={(e) => updateField("otherDietaryRestrictions", e.target.value)}
+            onChange={(e) =>
+              updateField("otherDietaryRestrictions", e.target.value)
+            }
             maxLength={FIELD_LIMITS.otherDietaryRestrictions}
             error={errors.otherDietaryRestrictions}
           />
@@ -798,37 +839,57 @@ function ApplicationFormContent({
           error={errors.tshirtSize}
         />
 
-        <fieldset
-          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.firstHackathon)}`}
-          aria-describedby={
-            errors.firstHackathon ? "firstHackathon-error" : undefined
-          }
-        >
-          <legend className={fieldsetLegendClass}>
-            Is this your first hackathon?
-            <span aria-hidden="true"> *</span>
-          </legend>
-          <div className={inlineRadioGroupClass}>
-            <CustomRadio
-              id="firstHackathon-yes"
-              name="firstHackathon"
-              label="Yes"
-              checked={form.firstHackathon === true}
-              onChange={() => updateField("firstHackathon", true)}
-            />
-            <CustomRadio
-              id="firstHackathon-no"
-              name="firstHackathon"
-              label="No"
-              checked={form.firstHackathon === false}
-              onChange={() => updateField("firstHackathon", false)}
-            />
-          </div>
-          <FieldError
-            id="firstHackathon-error"
-            message={errors.firstHackathon}
+        <TextField
+          id="hackathonsAttended"
+          label="How many hackathons have you attended"
+          required
+          type="number"
+          inputMode="numeric"
+          min={MIN_HACKATHONS_ATTENDED}
+          max={MAX_HACKATHONS_ATTENDED}
+          step={1}
+          value={form.hackathonsAttended}
+          onChange={(e) => updateField("hackathonsAttended", e.target.value)}
+          autoComplete="off"
+          error={errors.hackathonsAttended}
+        />
+      </section>
+
+      <section className="space-y-6">
+        <h3 className="flex items-center gap-2 text-base font-semibold text-(--ocean)">
+          <span
+            className="inline-block h-1 w-8 bg-(--ocean)"
+            aria-hidden="true"
+          ></span>
+          Application Questions
+        </h3>
+
+        <div className="space-y-5">
+          <TextAreaField
+            id="builtOrWantToBuild"
+            label={APPLICATION_QUESTIONS.builtOrWantToBuild}
+            required
+            rows={4}
+            value={form.builtOrWantToBuild}
+            onChange={(e) => updateField("builtOrWantToBuild", e.target.value)}
+            maxLength={FIELD_LIMITS.builtOrWantToBuild}
+            helperText={`Up to ${FIELD_LIMITS.builtOrWantToBuild.toLocaleString()} characters.`}
+            error={errors.builtOrWantToBuild}
           />
-        </fieldset>
+          <TextAreaField
+            id="shortDeadlineLearning"
+            label={APPLICATION_QUESTIONS.shortDeadlineLearning}
+            required
+            rows={4}
+            value={form.shortDeadlineLearning}
+            onChange={(e) =>
+              updateField("shortDeadlineLearning", e.target.value)
+            }
+            maxLength={FIELD_LIMITS.shortDeadlineLearning}
+            helperText={`Up to ${FIELD_LIMITS.shortDeadlineLearning.toLocaleString()} characters.`}
+            error={errors.shortDeadlineLearning}
+          />
+        </div>
       </section>
 
       <section className="space-y-6">
@@ -1137,7 +1198,10 @@ function ApplicationFormContent({
       )}
 
       <div className="flex justify-center pt-2">
-        <OdysseyButton type="submit" disabled={submitting || resumeStatus !== "idle"}>
+        <OdysseyButton
+          type="submit"
+          disabled={submitting || resumeStatus !== "idle"}
+        >
           {submitting ? "Submitting your application…" : "Submit application"}
         </OdysseyButton>
       </div>
@@ -1160,7 +1224,11 @@ function ApplicationFormWithUploadAuth(
   );
 }
 
-function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => void }) {
+function ApplicationFormWithConvexDraft({
+  onSubmitted,
+}: {
+  onSubmitted: () => void;
+}) {
   const client = getConvexClient();
   const routing = useApplicantRouting();
   const savedDraft = useQuery(
@@ -1186,7 +1254,9 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
         role="status"
         aria-live="polite"
       >
-        <p className="text-sm text-(--ocean)">Loading your saved application…</p>
+        <p className="text-sm text-(--ocean)">
+          Loading your saved application…
+        </p>
       </main>
     );
   }

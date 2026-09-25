@@ -17,6 +17,8 @@ export const TRIMMED_STRING_FIELDS = [
   "portfolio",
   "devpost",
   "accessibilityNeeds",
+  "builtOrWantToBuild",
+  "shortDeadlineLearning",
   "emergencyContactName",
   "emergencyContactPhone",
 ] as const;
@@ -40,14 +42,11 @@ export const CONDITIONAL_STRING_FIELDS = [
   "otherHearAbout",
 ] as const;
 
-export const OPTIONAL_INT_FIELDS = ["age", "graduationYear"] as const;
+export const OPTIONAL_INT_FIELDS = ["age", "graduationYear", "hackathonsAttended"] as const;
 
 export const STRING_ARRAY_FIELDS = ["raceEthnicity", "dietaryRestrictions"] as const;
 
-export const NULLABLE_BOOLEAN_FIELDS = [
-  "firstHackathon",
-  "internationalStudent",
-] as const;
+export const NULLABLE_BOOLEAN_FIELDS = ["internationalStudent"] as const;
 
 export const REQUIRED_BOOLEAN_FIELDS = [
   "codeOfConductAgreed",

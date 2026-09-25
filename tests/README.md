@@ -24,6 +24,8 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | registration-validation.test.ts | Zod registration schema |
 | registration-constants.test.ts | Shared enums and bounds |
 | draft-patch.test.ts | Draft patch merge rules |
+| application-questions.test.ts | Mandatory multiline application questions (validation, draft round-trip, legacy hydration) |
+| hackathons-attended.test.ts | `hackathonsAttended` integer field and legacy `firstHackathon` mapping |
 | sanitize-input.test.ts | Input sanitization |
 | normalize-email.test.ts | Email normalization |
 | password.test.ts | Password rules |
@@ -60,7 +62,8 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | sign-in-convex.test.tsx | Sign-in, OTP resend, and password reset against mocked Convex auth |
 | auth-components.test.tsx | OTP input, route guard, sign-out, mock auth provider |
 | register-ui.test.tsx, register-api.test.ts | Application form and API client |
-| register-form-workflows.test.tsx | Autosave retry, upload/submit failure recovery, resume reuse and cleanup |
+| register-form-workflows.test.tsx | Autosave retry, upload/submit failure recovery, resume reuse and cleanup, application questions UI |
+| form-fields.test.tsx | TextAreaField helper text and validation display |
 | resume-upload.test.tsx | Resume widget |
 | profile-page.test.tsx | Applicant dashboard |
 | home-redirect.test.tsx | / routing |
@@ -89,7 +92,7 @@ Runs against the dev server or a production build (PLAYWRIGHT_USE_BUILD=true). C
 
 | Spec | Covers |
 | --- | --- |
-| register.spec.ts | Password sign-up, mock OTP verify, multi-step registration, dietary options, CSP headers |
+| register.spec.ts | Password sign-up, mock OTP verify, multi-step registration (including application questions and hackathons attended), dietary options, CSP headers |
 | profile.spec.ts | Profile overview grid, sign-out below details/timeline, mobile and desktop viewports |
 
 Shared Playwright helpers: [fixtures/playwrightAuth.ts](fixtures/playwrightAuth.ts) (sign-up, client-side profile navigation, `openProfileAsReturningApplicant` via `window.__hackutaMockAuth`), [fixtures/playwrightRegistration.ts](fixtures/playwrightRegistration.ts), [fixtures/profileLayout.ts](fixtures/profileLayout.ts).

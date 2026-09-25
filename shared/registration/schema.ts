@@ -3,6 +3,7 @@ import { containsDangerousMarkup, sanitizePlainText } from "../lib/sanitizeInput
 import { COUNTRIES_OF_RESIDENCE } from "./countries";
 import {
   AGE_TOO_HIGH_MESSAGE,
+  APPLICATION_QUESTIONS,
   DIETARY_OPTIONS,
   FIELD_LIMITS,
   GENDERS,
@@ -13,8 +14,10 @@ import {
   MAJORS,
   MAX_AGE,
   MAX_GRADUATION_YEAR,
+  MAX_HACKATHONS_ATTENDED,
   MIN_AGE,
   MIN_GRADUATION_YEAR,
+  MIN_HACKATHONS_ATTENDED,
   RACE_ETHNICITY_OPTIONS,
   SCHOOL_OTHER_OPTION,
   TSHIRT_SIZES,
@@ -41,9 +44,16 @@ function safePlainText(options: {
   max: number;
   min?: number;
   message?: string;
+  tooLongMessage?: string;
   allowNewlines?: boolean;
 }) {
-  const { max, min = 1, message = "Invalid input.", allowNewlines = false } = options;
+  const {
+    max,
+    min = 1,
+    message = "Invalid input.",
+    tooLongMessage = `Must be at most ${max.toLocaleString()} characters.`,
+    allowNewlines = false,
+  } = options;
   return z
     .string()
     .transform((value) => sanitizePlainText(value, { allowNewlines }))
@@ -51,7 +61,7 @@ function safePlainText(options: {
       z
         .string()
         .min(min, message)
-        .max(max)
+        .max(max, tooLongMessage)
         .refine(
           (value) => !containsDangerousMarkup(value),
           "Please remove HTML or script content.",
@@ -218,9 +228,11 @@ export const registrationPayloadSchema = z
       tooLongMessage: "Other dietary restrictions are too long.",
     }),
     tshirtSize: tshirtSizeSchema,
-    firstHackathon: z.boolean({
-      message: "Please let us know if this is your first hackathon.",
-    }),
+    hackathonsAttended: requiredInteger(
+      "Hackathons attended",
+      MIN_HACKATHONS_ATTENDED,
+      MAX_HACKATHONS_ATTENDED,
+    ),
     hearAbout: safePlainText({
       max: FIELD_LIMITS.hearAbout,
       message: "Please select how you heard about HackUTA.",
@@ -239,6 +251,18 @@ export const registrationPayloadSchema = z
       max: FIELD_LIMITS.accessibilityNeeds,
       allowNewlines: true,
       tooLongMessage: "Accessibility details are too long.",
+    }),
+    builtOrWantToBuild: safePlainText({
+      max: FIELD_LIMITS.builtOrWantToBuild,
+      allowNewlines: true,
+      message: `${APPLICATION_QUESTIONS.builtOrWantToBuild}.`,
+      tooLongMessage: `Response is too long (maximum ${FIELD_LIMITS.builtOrWantToBuild.toLocaleString()} characters).`,
+    }),
+    shortDeadlineLearning: safePlainText({
+      max: FIELD_LIMITS.shortDeadlineLearning,
+      allowNewlines: true,
+      message: `${APPLICATION_QUESTIONS.shortDeadlineLearning}.`,
+      tooLongMessage: `Response is too long (maximum ${FIELD_LIMITS.shortDeadlineLearning.toLocaleString()} characters).`,
     }),
     emergencyContactName: safePlainText({
       max: FIELD_LIMITS.name,

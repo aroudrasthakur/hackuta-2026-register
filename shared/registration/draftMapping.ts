@@ -137,6 +137,15 @@ export function applicationToDraftForm(
     values[key] = stored !== undefined && stored !== null ? String(stored) : "";
   }
 
+  if (!values.hackathonsAttended && "firstHackathon" in application) {
+    const legacy = application as { firstHackathon?: boolean | null };
+    if (legacy.firstHackathon === true) {
+      values.hackathonsAttended = "0";
+    } else if (legacy.firstHackathon === false) {
+      values.hackathonsAttended = "1";
+    }
+  }
+
   for (const key of STRING_ARRAY_FIELDS) {
     values[key] = [...((application[key] as string[] | undefined) ?? [])];
   }

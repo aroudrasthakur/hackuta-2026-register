@@ -46,7 +46,7 @@ export type ApplicationFormData = {
   otherDietary: string;
   otherDietaryRestrictions: string;
   tshirtSize: TshirtSize | "";
-  firstHackathon: boolean | null;
+  hackathonsAttended: string;
   internationalStudent: boolean | null;
   hearAbout: HearAboutOption | "";
   otherHearAbout: string;
@@ -56,6 +56,8 @@ export type ApplicationFormData = {
   github: string;
   portfolio: string;
   accessibilityNeeds: string;
+  builtOrWantToBuild: string;
+  shortDeadlineLearning: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
   codeOfConductAgreed: boolean;
@@ -90,7 +92,9 @@ export const FIELD_ORDER: FieldName[] = [
   "otherDietaryRestrictions",
   "dietaryRestrictions",
   "tshirtSize",
-  "firstHackathon",
+  "hackathonsAttended",
+  "builtOrWantToBuild",
+  "shortDeadlineLearning",
   "hearAbout",
   "otherHearAbout",
   "resume",
@@ -114,7 +118,7 @@ export const INITIAL_FORM: ApplicationFormData = {
 export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
   studentEmail: "studentEmail",
   internationalStudent: "internationalStudent-yes",
-  firstHackathon: "firstHackathon-yes",
+  hackathonsAttended: "hackathonsAttended",
   resume: "resume-upload",
   codeOfConductAgreed: "codeOfConductAgreed",
   mlhDataSharingConsent: "mlhDataSharingConsent",

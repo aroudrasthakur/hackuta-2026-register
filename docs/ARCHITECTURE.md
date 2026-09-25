@@ -79,7 +79,7 @@ Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and 
               → applications:getMyApplicationDraft on load (hydrate fields)
 ```
 
-Draft rows use `status: "draft"`. Users can leave and resume until submit.
+Draft rows use `status: "draft"`. Users can leave and resume until submit. Autosave sends a full form snapshot (including application questions and `hackathonsAttended`) except resume blob fields, which update only on explicit upload/remove.
 
 ### Application submit
 

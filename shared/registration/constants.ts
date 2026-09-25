@@ -147,6 +147,14 @@ export const HEAR_ABOUT_OPTIONS = [
 
 export const HEAR_ABOUT_OTHER_OPTION = "Other" as const;
 
+/** Mandatory multiline application questions (exact form labels). */
+export const APPLICATION_QUESTIONS = {
+  builtOrWantToBuild:
+    "Tell us about something you have built or something you want to build",
+  shortDeadlineLearning:
+    "Describe a time you had to learn a tool or skill on a short deadline",
+} as const;
+
 export const FIELD_LIMITS = {
   name: 100,
   phone: 30,
@@ -156,6 +164,8 @@ export const FIELD_LIMITS = {
   hearAbout: 200,
   url: 2048,
   accessibilityNeeds: 2000,
+  builtOrWantToBuild: 2000,
+  shortDeadlineLearning: 2000,
   otherDietary: 500,
   otherDietaryRestrictions: 500,
   otherMajor: 200,
@@ -165,6 +175,9 @@ export const FIELD_LIMITS = {
 } as const;
 
 const CURRENT_YEAR = new Date().getFullYear();
+
+export const MIN_HACKATHONS_ATTENDED = 0;
+export const MAX_HACKATHONS_ATTENDED = 100;
 
 export const MIN_AGE = 18;
 /** Highest valid applicant age; values at or above 120 are rejected. */
