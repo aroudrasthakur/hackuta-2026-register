@@ -176,8 +176,6 @@ export const MLH_CODE_OF_CONDUCT_URL = "https://static.mlh.io/docs/mlh-code-of-c
 
 export const SPONSOR_SHARING_CONSENT_TEXT =
   "I authorize HackUTA to share my resume and application information with HackUTA's sponsors for recruiting purposes. Sponsors may choose to contact me about internships and full-time position opportunities. (optional)";
-export const SPONSOR_SHARING_CONSENT_VERSION = "9-25-2026";
 
 export const FOOD_ALLERGY_WAIVER_TEXT =
   "I understand that HackUTA cannot guarantee that food served at this event is free of any particular allergen, and I accept responsibility for what I choose to eat.";
-export const FOOD_ALLERGY_WAIVER_VERSION = "9-25-2026";

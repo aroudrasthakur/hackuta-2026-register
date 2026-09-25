@@ -150,9 +150,7 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     mlhCommunicationsConsent: application.mlhCommunicationsConsent,
     sponsorSharingConsent: application.sponsorSharingConsent === true,
     foodAllergyWaiverAgreed: application.foodAllergyWaiverAgreed === true,
-    sponsorSharingConsentVersion: application.sponsorSharingConsentVersion,
     sponsorSharingConsentSubmittedAt: application.sponsorSharingConsentSubmittedAt,
-    foodAllergyWaiverVersion: application.foodAllergyWaiverVersion,
     foodAllergyWaiverSubmittedAt: application.foodAllergyWaiverSubmittedAt,
   };
 }

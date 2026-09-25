@@ -307,15 +307,13 @@ describe("convex registrations", () => {
     expect(stored).toMatchObject({
       sponsorSharingConsent: false,
       foodAllergyWaiverAgreed: true,
-      foodAllergyWaiverVersion: "9-25-2026",
       foodAllergyWaiverSubmittedAt: expect.any(Number),
     });
-    expect(stored).not.toHaveProperty("sponsorSharingConsentVersion");
     expect(stored).not.toHaveProperty("sponsorSharingConsentSubmittedAt");
     await drainScheduledFunctions(t);
   });
 
-  it("records sponsor consent version and timestamp only when granted", async () => {
+  it("records sponsor consent timestamp only when granted", async () => {
     const t = await authTest();
     await t.mutation("registrations:submitRegistration", {
       data: { ...validRegistrationPayload(), sponsorSharingConsent: true },
@@ -324,7 +322,6 @@ describe("convex registrations", () => {
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
     expect(stored).toMatchObject({
       sponsorSharingConsent: true,
-      sponsorSharingConsentVersion: "9-25-2026",
       sponsorSharingConsentSubmittedAt: expect.any(Number),
     });
     await drainScheduledFunctions(t);

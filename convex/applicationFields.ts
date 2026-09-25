@@ -85,9 +85,7 @@ export const applicationRecord = {
   /** Set to true when the registration form is successfully submitted; never cleared. */
   formSubmitted: v.optional(v.boolean()),
   submittedAt: v.optional(v.number()),
-  sponsorSharingConsentVersion: v.optional(v.string()),
   sponsorSharingConsentSubmittedAt: v.optional(v.number()),
-  foodAllergyWaiverVersion: v.optional(v.string()),
   foodAllergyWaiverSubmittedAt: v.optional(v.number()),
   reviewedAt: v.optional(v.number()),
   reviewedBy: v.optional(v.string()),
