@@ -106,13 +106,6 @@ export const applicationRecord = {
   mlhCommunicationsConsentAt: v.optional(v.number()),
   sponsorSharingConsentAt: v.optional(v.number()),
   foodAllergyWaiverAgreedAt: v.optional(v.number()),
-  /**
-   * Legacy agreement timestamp columns (pre-`*At` rename).
-   * Keep optional until `migrateLegacyAgreementSubmittedAtFields` has run in
-   * every deployment, then remove and redeploy.
-   */
-  sponsorSharingConsentSubmittedAt: v.optional(v.number()),
-  foodAllergyWaiverSubmittedAt: v.optional(v.number()),
   reviewedAt: v.optional(v.number()),
   reviewedBy: v.optional(v.string()),
   confirmationStatus: v.optional(confirmationStatus),
@@ -120,12 +113,6 @@ export const applicationRecord = {
   resumeStorageId: v.optional(v.id("_storage")),
   resumeFilename: v.optional(v.string()),
   ...applicantAnswerFields,
-  /**
-   * Legacy allergy text column (pre-`allergyDetails` rename).
-   * Keep optional until `migrateOtherDietaryToAllergyDetails` has run in every
-   * deployment, then remove this field and redeploy.
-   */
-  otherDietary: v.optional(v.string()),
 };
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */
