@@ -149,6 +149,21 @@ describe("applicationToDraftForm", () => {
     expect(restored.otherDietaryRestrictions).toBe("");
   });
 
+  it("clears state in draft patches and restored forms when the country is not the United States", () => {
+    const patch = formToDraftPatch({
+      ...INITIAL_FORM,
+      countryOfResidence: "Canada",
+      stateOfResidence: "Texas",
+    });
+    expect(patch.stateOfResidence).toBe("");
+
+    const restored = applicationToDraftForm({
+      countryOfResidence: "Canada",
+      stateOfResidence: "Outside the United States",
+    });
+    expect(restored.stateOfResidence).toBe("");
+  });
+
   it("restores stored other dietary restrictions", () => {
     const restored = applicationToDraftForm({
       otherDietaryRestrictions: "No shellfish",

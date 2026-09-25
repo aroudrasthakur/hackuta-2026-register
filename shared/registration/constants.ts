@@ -167,7 +167,10 @@ export const FIELD_LIMITS = {
 const CURRENT_YEAR = new Date().getFullYear();
 
 export const MIN_AGE = 18;
-export const MAX_AGE = 120;
+/** Highest valid applicant age; values at or above 120 are rejected. */
+export const MAX_AGE = 119;
+export const AGE_UPPER_LIMIT_EXCLUSIVE = 120;
+export const AGE_TOO_HIGH_MESSAGE = "Age must be less than 120.";
 export const MIN_GRADUATION_YEAR = CURRENT_YEAR;
 export const MAX_GRADUATION_YEAR = CURRENT_YEAR + 10;
 

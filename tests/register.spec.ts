@@ -2,7 +2,7 @@ import { test, expect } from "./playwright-coverage";
 import { contentSecurityPolicy } from "../security/csp";
 import { permissionsPolicy, referrerPolicy } from "../security/headers";
 import { signUpAsNewApplicant } from "./fixtures/playwrightAuth";
-import { fillApplicationForm } from "./fixtures/playwrightRegistration";
+import { fillApplicationForm, selectListboxOption } from "./fixtures/playwrightRegistration";
 import vercelConfig from "../vercel.json" with { type: "json" };
 
 test.describe("registration", () => {
@@ -67,11 +67,13 @@ test.describe("registration", () => {
 
   test("shows field errors on empty submit and stays on the form", async ({ page }) => {
     await signUpAsNewApplicant(page);
+    await expect(page.locator("#stateOfResidence")).toBeDisabled();
     await page.getByRole("button", { name: "Submit application" }).click();
 
     await expect(page.getByText("First name is required.")).toBeVisible();
-    await expect(page.getByText("Please select your state or territory of residence."))
-      .toBeVisible();
+    await expect(
+      page.getByText("Please select your state or territory of residence."),
+    ).toHaveCount(0);
     await expect(page.getByText("Please let us know if you are an international student."))
       .toBeVisible();
     await expect(
@@ -79,6 +81,12 @@ test.describe("registration", () => {
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "Your Journey Begins!" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Tell us about yourself" })).toBeVisible();
+
+    await selectListboxOption(page, "countryOfResidence", "United States of America");
+    await expect(page.locator("#stateOfResidence")).toBeEnabled();
+    await page.getByRole("button", { name: "Submit application" }).click();
+    await expect(page.getByText("Please select your state or territory of residence."))
+      .toBeVisible();
   });
 
   test("marks invalid fields with aria-invalid", async ({ page }) => {
