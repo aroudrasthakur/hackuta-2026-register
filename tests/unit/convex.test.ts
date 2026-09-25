@@ -16,6 +16,7 @@ import {
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../../shared/registration/resume";
 import { RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE } from "../../shared/registration/submitErrors";
+import { HACKATHON_SCHEDULE } from "../../shared/hackathon/schedule";
 
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 const assertRateLimit = makeFunctionReference<"mutation">("resumeUploads:assertUploadRateLimit");
@@ -956,11 +957,12 @@ describe("convex applicant auth flows", () => {
       timeline: Array<{ id: string; complete: boolean }>;
     };
 
+    const now = Date.now();
     const applicationsOpen = dashboard.timeline.find((event) => event.id === "applications-open");
     const hackathonBegins = dashboard.timeline.find((event) => event.id === "hackathon-begins");
 
-    expect(applicationsOpen?.complete).toBe(false);
-    expect(hackathonBegins?.complete).toBe(false);
+    expect(applicationsOpen?.complete).toBe(now >= HACKATHON_SCHEDULE.registrationOpensAt);
+    expect(hackathonBegins?.complete).toBe(now >= HACKATHON_SCHEDULE.startsAt);
   });
 
   it("saves draft profile fields before submission", async () => {
