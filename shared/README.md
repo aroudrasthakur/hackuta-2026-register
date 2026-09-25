@@ -25,6 +25,7 @@ Isomorphic TypeScript imported by the React client and Convex backend. Keeps val
 | [allergyMigration.ts](registration/allergyMigration.ts) | Legacy `otherDietary` → `allergyDetails` merge helper |
 | [otherOptionMigration.ts](registration/otherOptionMigration.ts) | Split merged Other/self-describe answers into parent sentinel + `other*` columns |
 | [consentFieldMigration.ts](registration/consentFieldMigration.ts) | Legacy `codeOfConductAgreed` / `MLHcodeOfConductAgreed` → `mlhCodeOfConductAgreed` |
+| [consentTimestamps.ts](registration/consentTimestamps.ts) | Server-managed agreement timestamps (MLH consents, sponsor sharing, food waiver) |
 | [resume.ts](registration/resume.ts) | Client resume validation, upload headers, size limits |
 | [submitErrors.ts](registration/submitErrors.ts) | User-facing error mapping for Convex and HTTP upload |
 | [countries.ts](registration/countries.ts) | Generated country list (United States first) |
@@ -46,6 +47,7 @@ Convex application validators in [convex/applicationFields.ts](../convex/applica
 | `otherDietaryRestrictions` | `TRIMMED_STRING_FIELDS` | Optional free-text dietary notes |
 | `otherSchool`, `otherMajor`, `otherHearAbout`, `otherGender` | `CONDITIONAL_STRING_FIELDS` | Free text when parent select is an Other/self-describe sentinel |
 | `mlhCodeOfConductAgreed` | `REQUIRED_BOOLEAN_FIELDS` | Required MLH Code of Conduct consent on submit |
+| `mlhCodeOfConductAgreedAt`, `mlhDataSharingConsentAt`, `mlhCommunicationsConsentAt`, `sponsorSharingConsentAt`, `foodAllergyWaiverAgreedAt` | Server-only (`applicationRecord`) | Set/cleared by backend when the matching agreement toggles; not in draft patches |
 
 Draft hydration maps legacy `firstHackathon: true` → `"0"` and `false` → `"1"` when `hackathonsAttended` is absent, legacy `otherDietary` → `allergyDetails` when needed ([draftMapping.ts](registration/draftMapping.ts)), merged Other answers → sentinel + `other*` columns ([otherOptionMigration.ts](registration/otherOptionMigration.ts)), and legacy code-of-conduct columns → `mlhCodeOfConductAgreed` ([consentFieldMigration.ts](registration/consentFieldMigration.ts)).
 

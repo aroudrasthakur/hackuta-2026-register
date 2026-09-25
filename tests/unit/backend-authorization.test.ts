@@ -60,6 +60,9 @@ const ref = {
   migrateLegacyCodeOfConductFields: makeFunctionReference<"mutation">(
     "migrations:migrateLegacyCodeOfConductFields",
   ),
+  migrateLegacyAgreementSubmittedAtFields: makeFunctionReference<"mutation">(
+    "migrations:migrateLegacyAgreementSubmittedAtFields",
+  ),
   publicEventConfig: makeFunctionReference<"query">("eventConfig:getPublicEventConfig"),
   hackathonNameInternal: makeFunctionReference<"query">("eventConfig:getHackathonNameInternal"),
   setHackathonName: makeFunctionReference<"mutation">("eventConfig:setHackathonName"),
@@ -806,6 +809,78 @@ describe("maintenance and migrations", () => {
     expect(legacySentinel?.otherSchool).toBe("Homeschool Co-op");
 
     await expect(t.mutation(ref.migrateMergedOtherFields, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
+    });
+  }, 30_000);
+
+  it("renames legacy agreement SubmittedAt columns to the At convention", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "legacy-sponsor@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 1,
+        updatedAt: 1,
+        sponsorSharingConsentSubmittedAt: 100,
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "legacy-waiver@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 2,
+        updatedAt: 2,
+        foodAllergyWaiverSubmittedAt: 200,
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "already-migrated@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 3,
+        updatedAt: 3,
+        sponsorSharingConsentAt: 300,
+        foodAllergyWaiverAgreedAt: 400,
+      });
+    });
+
+    await expect(t.mutation(ref.migrateLegacyAgreementSubmittedAtFields, {})).resolves.toEqual({
+      ok: true,
+      updated: 2,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications.some((application) => "sponsorSharingConsentSubmittedAt" in application)).toBe(
+      false,
+    );
+    expect(applications.some((application) => "foodAllergyWaiverSubmittedAt" in application)).toBe(
+      false,
+    );
+    expect(
+      applications.find((application) => application.email === "legacy-sponsor@example.com")
+        ?.sponsorSharingConsentAt,
+    ).toBe(100);
+    expect(
+      applications.find((application) => application.email === "legacy-waiver@example.com")
+        ?.foodAllergyWaiverAgreedAt,
+    ).toBe(200);
+    expect(
+      applications.find((application) => application.email === "already-migrated@example.com")
+        ?.sponsorSharingConsentAt,
+    ).toBe(300);
+    expect(
+      applications.find((application) => application.email === "already-migrated@example.com")
+        ?.foodAllergyWaiverAgreedAt,
+    ).toBe(400);
+
+    await expect(t.mutation(ref.migrateLegacyAgreementSubmittedAtFields, {})).resolves.toEqual({
       ok: true,
       updated: 0,
     });

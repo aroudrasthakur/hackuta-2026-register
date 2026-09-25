@@ -43,6 +43,40 @@ describe("mlh code of conduct schema registration", () => {
     expect(registrationPayloadSchema.safeParse(payload).success).toBe(false);
   });
 
+  it("registers agreement timestamp columns on applications but not draft patches", () => {
+    for (const at of [
+      "mlhCodeOfConductAgreedAt",
+      "mlhDataSharingConsentAt",
+      "mlhCommunicationsConsentAt",
+      "sponsorSharingConsentAt",
+      "foodAllergyWaiverAgreedAt",
+    ] as const) {
+      expect(applicationRecord).toHaveProperty(at);
+      expect(APPLICANT_DRAFT_PATCH_FIELD_KEYS).not.toContain(at);
+    }
+  });
+
+  it("rejects client-supplied agreement timestamps in strict registration payloads", () => {
+    expect(
+      registrationPayloadSchema.safeParse({
+        ...validRegistrationPayload(),
+        mlhCodeOfConductAgreedAt: Date.now(),
+      }).success,
+    ).toBe(false);
+    expect(
+      registrationPayloadSchema.safeParse({
+        ...validRegistrationPayload(),
+        sponsorSharingConsentAt: Date.now(),
+      }).success,
+    ).toBe(false);
+    expect(
+      registrationPayloadSchema.safeParse({
+        ...validRegistrationPayload(),
+        foodAllergyWaiverAgreedAt: Date.now(),
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects legacy codeOfConductAgreed in strict registration payloads", () => {
     const payload = {
       ...validRegistrationPayload(),

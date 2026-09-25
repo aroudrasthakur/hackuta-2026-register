@@ -1,3 +1,4 @@
+import { applyAgreementTimestampUpdates } from "../../shared/registration/consentTimestamps";
 import {
   mergeDraftPatchIntoApplication,
   type DraftPatchPayload,
@@ -22,6 +23,7 @@ export async function replaceApplicationWithDraftPatch(
   const resumeCleanup = await prepareResumeDraftPatch(ctx, application, patch, authUser._id);
 
   const replacement = mergeDraftPatchIntoApplication(application, patch, meta);
+  applyAgreementTimestampUpdates(replacement, application, patch, meta.updatedAt);
   await ctx.db.replace(application._id, replacement);
 
   if (resumeCleanup.deleteStorageId) {

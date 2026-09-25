@@ -96,6 +96,16 @@ export const applicationRecord = {
   /** Set to true when the registration form is successfully submitted; never cleared. */
   formSubmitted: v.optional(v.boolean()),
   submittedAt: v.optional(v.number()),
+  mlhCodeOfConductAgreedAt: v.optional(v.number()),
+  mlhDataSharingConsentAt: v.optional(v.number()),
+  mlhCommunicationsConsentAt: v.optional(v.number()),
+  sponsorSharingConsentAt: v.optional(v.number()),
+  foodAllergyWaiverAgreedAt: v.optional(v.number()),
+  /**
+   * Legacy agreement timestamp columns (pre-`*At` rename).
+   * Keep optional until `migrateLegacyAgreementSubmittedAtFields` has run in
+   * every deployment, then remove and redeploy.
+   */
   sponsorSharingConsentSubmittedAt: v.optional(v.number()),
   foodAllergyWaiverSubmittedAt: v.optional(v.number()),
   reviewedAt: v.optional(v.number()),
