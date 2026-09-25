@@ -32,7 +32,7 @@ export function isValidPhone(value: string) {
   return digits.length >= 10 && digits.length <= 15;
 }
 
-function formatPhone(value: string) {
+export function formatPhone(value: string) {
   const digits = value.replace(/\D/g, "");
   if (digits.length !== 10) return value;
   return `(${digits.slice(0, 3)})-${digits.slice(3, 6)}-${digits.slice(6)}`;

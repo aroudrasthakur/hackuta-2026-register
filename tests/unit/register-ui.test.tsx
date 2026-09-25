@@ -136,6 +136,21 @@ describe("ApplicationForm", () => {
     vi.unstubAllEnvs();
   });
 
+  it("formats both phone fields when the user leaves them", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    const phone = screen.getByLabelText(/Phone number/);
+    fireEvent.change(phone, { target: { value: "5551234567" } });
+    expect(phone).toHaveValue("5551234567");
+    fireEvent.blur(phone);
+    expect(phone).toHaveValue("(555)-123-4567");
+
+    const emergencyPhone = screen.getByLabelText(/Emergency contact phone/);
+    fireEvent.change(emergencyPhone, { target: { value: "555 987 6543" } });
+    fireEvent.blur(emergencyPhone);
+    expect(emergencyPhone).toHaveValue("(555)-987-6543");
+  });
+
   it.each([true, false])(
     "autosaves and restores new answers on remount (answer=%s)",
     async (answer) => {

@@ -80,6 +80,7 @@ import {
   US_STATE_OPTIONS,
 } from "../../../shared/registration/residence";
 import { INITIAL_FORM } from "../../../shared/registration/types";
+import { formatPhone } from "../../../shared/registration/schema";
 import {
   RESUME_MISSING_MESSAGE,
   resumeFileKey,
@@ -500,6 +501,7 @@ function ApplicationFormContent({
             inputMode="tel"
             value={form.phone}
             onChange={(e) => updateField("phone", e.target.value)}
+            onBlur={(e) => updateField("phone", formatPhone(e.target.value))}
             autoComplete="tel"
             maxLength={FIELD_LIMITS.phone}
             error={errors.phone}
@@ -1072,6 +1074,9 @@ function ApplicationFormContent({
             value={form.emergencyContactPhone}
             onChange={(e) =>
               updateField("emergencyContactPhone", e.target.value)
+            }
+            onBlur={(e) =>
+              updateField("emergencyContactPhone", formatPhone(e.target.value))
             }
             maxLength={FIELD_LIMITS.phone}
             error={errors.emergencyContactPhone}
