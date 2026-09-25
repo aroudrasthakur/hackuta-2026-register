@@ -147,6 +147,8 @@ describe("stripAgreementTimestamps", () => {
         mlhCommunicationsConsentAt: 789,
         sponsorSharingConsentAt: 111,
         foodAllergyWaiverAgreedAt: 222,
+        sponsorSharingConsentSubmittedAt: 333,
+        foodAllergyWaiverSubmittedAt: 444,
         firstName: "Sam",
       }),
     ).toEqual({

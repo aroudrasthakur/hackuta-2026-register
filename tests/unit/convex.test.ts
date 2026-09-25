@@ -528,6 +528,32 @@ describe("convex registrations", () => {
     ).rejects.toThrow(/mlhCodeOfConductAgreedAt/);
   });
 
+  it("rejects client-supplied legacy agreement SubmittedAt timestamps on draft save", async () => {
+    const t = await authTest();
+    await expect(
+      t.mutation("applications:saveApplicationDraft", {
+        patch: {
+          ...formToDraftPatch({
+            ...validRegistrationForm(),
+            sponsorSharingConsent: true,
+          }),
+          sponsorSharingConsentSubmittedAt: 123,
+        },
+      }),
+    ).rejects.toThrow(/sponsorSharingConsentSubmittedAt/);
+    await expect(
+      t.mutation("applications:saveApplicationDraft", {
+        patch: {
+          ...formToDraftPatch({
+            ...validRegistrationForm(),
+            foodAllergyWaiverAgreed: true,
+          }),
+          foodAllergyWaiverSubmittedAt: 456,
+        },
+      }),
+    ).rejects.toThrow(/foodAllergyWaiverSubmittedAt/);
+  });
+
   it("sets sponsor and food waiver timestamps on draft save with the same transition rules", async () => {
     const t = await authTest();
     await t.mutation("applications:saveApplicationDraft", {

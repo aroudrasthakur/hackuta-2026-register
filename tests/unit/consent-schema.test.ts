@@ -77,6 +77,31 @@ describe("mlh code of conduct schema registration", () => {
     ).toBe(false);
   });
 
+  it("rejects legacy agreement SubmittedAt timestamps in strict registration payloads", () => {
+    expect(
+      registrationPayloadSchema.safeParse({
+        ...validRegistrationPayload(),
+        sponsorSharingConsentSubmittedAt: Date.now(),
+      }).success,
+    ).toBe(false);
+    expect(
+      registrationPayloadSchema.safeParse({
+        ...validRegistrationPayload(),
+        foodAllergyWaiverSubmittedAt: Date.now(),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("registers legacy agreement SubmittedAt columns on applications but not draft patches", () => {
+    for (const legacy of [
+      "sponsorSharingConsentSubmittedAt",
+      "foodAllergyWaiverSubmittedAt",
+    ] as const) {
+      expect(applicationRecord).toHaveProperty(legacy);
+      expect(APPLICANT_DRAFT_PATCH_FIELD_KEYS).not.toContain(legacy);
+    }
+  });
+
   it("rejects legacy codeOfConductAgreed in strict registration payloads", () => {
     const payload = {
       ...validRegistrationPayload(),
