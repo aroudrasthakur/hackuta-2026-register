@@ -6,10 +6,17 @@ import {
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
 import {
+  RESUME_MISSING_MESSAGE,
+  RESUME_UPLOAD_EXPIRED_MESSAGE,
+} from "../../shared/registration/resume";
+import {
   DRAFT_SAVE_ERROR_MESSAGE,
+  RESUME_REMOVE_ERROR_MESSAGE,
+  RESUME_UPLOAD_ERROR_MESSAGE,
   SIGN_IN_REQUIRED_MESSAGE,
   SUBMIT_ERROR_MESSAGE,
 } from "../../shared/registration/submitErrors";
+import type { SavedResumeDraft } from "../../shared/registration/applicantFields";
 import type { ApplicationFormData } from "../../shared/registration/types";
 import { ApplicationForm } from "../../src/pages/Register/ApplicationForm";
 import {
@@ -23,7 +30,15 @@ import { validRegistrationForm } from "../fixtures/validRegistrationForm";
 const env = vi.hoisted(() => ({
   authenticated: true,
   hasClient: true,
-  draft: undefined as { status: string; draft: Partial<ApplicationFormData> } | null | undefined,
+  draft: undefined as
+    | {
+        status: string;
+        draft: Partial<ApplicationFormData>;
+        savedResume?: SavedResumeDraft | null;
+        resumeMissing?: boolean;
+      }
+    | null
+    | undefined,
   saveDraft: undefined as unknown as ReturnType<typeof vi.fn>,
   fetchAccessToken: undefined as unknown as ReturnType<typeof vi.fn>,
 }));
@@ -151,6 +166,20 @@ describe("ApplicationForm draft loading and autosave", () => {
     );
   });
 
+  it("never sends resume fields with autosave so a stale tab cannot detach the resume", async () => {
+    vi.useFakeTimers();
+    env.draft = { status: "draft", draft: validRegistrationForm(), savedResume: null };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/First name/), { target: { value: "Sam" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    expect(env.saveDraft).toHaveBeenCalledOnce();
+    const patch = env.saveDraft.mock.calls[0]?.[0].patch;
+    expect(patch).not.toHaveProperty("resumeStorageId");
+    expect(patch).not.toHaveProperty("resumeFilename");
+  });
+
   it("autosaves other dietary restrictions with the rest of the draft patch", async () => {
     vi.useFakeTimers();
     renderValidForm();
@@ -223,13 +252,11 @@ describe("ApplicationForm submission failures and recovery", () => {
   it("shows upload failures on the resume field, scrolls to it, and does not submit", async () => {
     vi.mocked(uploadResume).mockRejectedValueOnce(new Error("Too many uploads. Please try again later."));
     renderValidForm();
-    await chooseResume(pdf());
     const scroll = vi.spyOn(document.getElementById("resume-upload")!, "scrollIntoView");
-    await submit();
+    await chooseResume(pdf());
 
     expect(screen.getByText("Too many uploads. Please try again later.")).toBeInTheDocument();
     expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
-    expect(submitRegistration).not.toHaveBeenCalled();
     expect(uploadResume).toHaveBeenCalledWith(expect.any(File), "jwt");
   });
 
@@ -237,7 +264,6 @@ describe("ApplicationForm submission failures and recovery", () => {
     vi.mocked(uploadResume).mockRejectedValueOnce(new Error("socket hang up"));
     renderValidForm();
     await chooseResume(pdf());
-    await submit();
     expect(screen.getByText("We couldn't upload your resume. Please try again.")).toBeInTheDocument();
   });
 
@@ -254,8 +280,11 @@ describe("ApplicationForm submission failures and recovery", () => {
     await submit();
     await waitFor(() => expect(onSubmitted).toHaveBeenCalledOnce());
     expect(uploadResume).toHaveBeenCalledTimes(1);
-    expect(submitRegistration).toHaveBeenLastCalledWith(expect.any(Object), { storageId: "s1", uploadToken: "t1" });
-    expect(discardResumeUpload).not.toHaveBeenCalled();
+    expect(submitRegistration).toHaveBeenLastCalledWith(
+      expect.objectContaining({ resumeStorageId: "s1" }),
+      null,
+    );
+    expect(discardResumeUpload).toHaveBeenCalledWith("t1");
   });
 
   it("routes resume-related submission failures to the resume field", async () => {
@@ -273,47 +302,68 @@ describe("ApplicationForm submission failures and recovery", () => {
     expect(screen.queryByText(SUBMIT_ERROR_MESSAGE)).not.toBeInTheDocument();
   });
 
-  it("discards the previous upload when the applicant picks a different resume", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.mocked(submitRegistration).mockRejectedValueOnce(new Error("Service unavailable"));
+  it("replaces a saved resume when the applicant picks a different file", async () => {
     vi.mocked(uploadResume)
       .mockResolvedValueOnce({ storageId: "s1", uploadToken: "t1" })
       .mockResolvedValueOnce({ storageId: "s2", uploadToken: "t2" });
-    const { onSubmitted } = renderValidForm();
+    renderValidForm();
     await chooseResume(pdf("first.pdf"));
-    await submit();
+    expect(env.saveDraft).toHaveBeenCalledWith({
+      patch: expect.objectContaining({
+        resumeStorageId: "s1",
+        resumeFilename: "first.pdf",
+      }),
+    });
 
     await chooseResume(pdf("second.pdf"));
-    expect(discardResumeUpload).toHaveBeenCalledWith("t1");
-
-    await submit();
-    await waitFor(() => expect(onSubmitted).toHaveBeenCalledOnce());
-    expect(submitRegistration).toHaveBeenLastCalledWith(expect.any(Object), { storageId: "s2", uploadToken: "t2" });
+    expect(env.saveDraft).toHaveBeenLastCalledWith({
+      patch: expect.objectContaining({
+        resumeStorageId: "s2",
+        resumeFilename: "second.pdf",
+      }),
+    });
+    expect(screen.getByText("second.pdf")).toBeInTheDocument();
   });
 
-  it("discards an uploaded resume that was removed before resubmitting", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.mocked(submitRegistration).mockRejectedValueOnce(new Error("Service unavailable"));
-    const { onSubmitted } = renderValidForm();
+  it("clears a saved resume from the draft when it is removed", async () => {
+    renderValidForm();
     await chooseResume(pdf());
-    await submit();
-
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove resume" }));
     });
-    expect(discardResumeUpload).toHaveBeenCalledWith("t1");
+    expect(env.saveDraft).toHaveBeenLastCalledWith({
+      patch: expect.objectContaining({
+        resumeStorageId: null,
+        resumeFilename: "",
+      }),
+    });
+    expect(screen.queryByText("resume.pdf")).not.toBeInTheDocument();
+  });
+
+  it("restores a saved resume after reload and submits without re-uploading", async () => {
+    env.draft = {
+      status: "draft",
+      draft: validRegistrationForm(),
+      savedResume: { storageId: "saved-resume", filename: "saved.pdf" },
+    };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.getByText("saved.pdf")).toBeInTheDocument();
+    expect(screen.getByText("Saved to your application")).toBeInTheDocument();
 
     await submit();
-    await waitFor(() => expect(onSubmitted).toHaveBeenCalledOnce());
-    expect(submitRegistration).toHaveBeenLastCalledWith(expect.any(Object), null);
+    await waitFor(() => expect(submitRegistration).toHaveBeenCalledOnce());
+    expect(uploadResume).not.toHaveBeenCalled();
+    expect(submitRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({ resumeStorageId: "saved-resume" }),
+      null,
+    );
   });
 
   it("cleans up a pending upload when the page unloads or the form unmounts", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.mocked(submitRegistration).mockRejectedValue(new Error("Service unavailable"));
-    const { unmount } = renderValidForm();
+    vi.stubEnv("VITE_USE_MOCK_API", "true");
+    const { unmount } = render(<ApplicationForm onSubmitted={vi.fn()} />);
     await chooseResume(pdf());
-    await submit();
+    await waitFor(() => expect(uploadResume).toHaveBeenCalledOnce());
 
     window.dispatchEvent(new Event("beforeunload"));
     expect(discardResumeUpload).toHaveBeenCalledWith("t1");
@@ -321,6 +371,70 @@ describe("ApplicationForm submission failures and recovery", () => {
     vi.mocked(discardResumeUpload).mockClear();
     unmount();
     expect(discardResumeUpload).toHaveBeenCalledWith("t1");
+  });
+
+  it("discards an upload when saving it to the draft fails", async () => {
+    env.saveDraft.mockRejectedValueOnce(new Error("offline"));
+    renderValidForm();
+    await chooseResume(pdf());
+    await waitFor(() => expect(discardResumeUpload).toHaveBeenCalledWith("t1"));
+    expect(screen.getByText(RESUME_UPLOAD_ERROR_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText("Saved to your application")).not.toBeInTheDocument();
+  });
+
+  it("shows resume-specific draft save failures on the resume field", async () => {
+    env.saveDraft.mockRejectedValueOnce(new Error(RESUME_UPLOAD_EXPIRED_MESSAGE));
+    renderValidForm();
+    await chooseResume(pdf());
+    expect(await screen.findByText(RESUME_UPLOAD_EXPIRED_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText(DRAFT_SAVE_ERROR_MESSAGE)).not.toBeInTheDocument();
+  });
+
+  it("saves the latest form answers with a resume that finishes uploading later", async () => {
+    let finishUpload!: () => void;
+    vi.mocked(uploadResume).mockImplementationOnce(
+      () => new Promise((resolve) => {
+        finishUpload = () => resolve({ storageId: "s1", uploadToken: "t1" });
+      }),
+    );
+    renderValidForm();
+    await chooseResume(pdf());
+    fireEvent.change(screen.getByLabelText(/First name/), { target: { value: "Updated" } });
+    await act(async () => finishUpload());
+
+    await waitFor(() =>
+      expect(env.saveDraft).toHaveBeenCalledWith({
+        patch: expect.objectContaining({ firstName: "Updated", resumeStorageId: "s1" }),
+      }),
+    );
+  });
+
+  it("keeps the saved resume and explains when removing it fails", async () => {
+    env.draft = {
+      status: "draft",
+      draft: validRegistrationForm(),
+      savedResume: { storageId: "saved-resume", filename: "saved.pdf" },
+    };
+    env.saveDraft.mockRejectedValueOnce(new Error("offline"));
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Remove resume" }));
+    });
+
+    expect(screen.getByText(RESUME_REMOVE_ERROR_MESSAGE)).toBeInTheDocument();
+    expect(screen.getByText("saved.pdf")).toBeInTheDocument();
+  });
+
+  it("tells the applicant when their saved resume file is missing", () => {
+    env.draft = {
+      status: "draft",
+      draft: validRegistrationForm(),
+      savedResume: null,
+      resumeMissing: true,
+    };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.getByText(RESUME_MISSING_MESSAGE)).toBeInTheDocument();
   });
 
   it("does not attempt cleanup on unload when nothing is pending", () => {
@@ -429,10 +543,17 @@ describe("ApplicationForm in mock API mode", () => {
     fillValidApplicationForm();
     const resume = pdf();
     await chooseResume(resume);
+    await waitFor(() =>
+      expect(uploadResume).toHaveBeenCalledWith(resume, "mock-auth-token"),
+    );
     await submit();
 
     await waitFor(() => expect(onSubmitted).toHaveBeenCalledOnce());
-    expect(uploadResume).toHaveBeenCalledWith(resume, "mock-auth-token");
+    expect(uploadResume).toHaveBeenCalledOnce();
+    expect(submitRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({ resumeStorageId: "s1" }),
+      { storageId: "s1", uploadToken: "t1" },
+    );
     expect(env.fetchAccessToken).not.toHaveBeenCalled();
   });
 });

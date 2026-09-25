@@ -11,6 +11,14 @@ export const RESUME_SIZE_ERROR_MESSAGE =
 export const RESUME_EMPTY_ERROR_MESSAGE =
   "Your PDF is empty. Please select another file.";
 
+export const RESUME_UPLOAD_EXPIRED_MESSAGE =
+  "Your resume upload expired. Please upload your resume again.";
+
+export const RESUME_MISSING_MESSAGE =
+  "We couldn't find your saved resume. Please upload it again.";
+
+export const MAX_RESUME_FILENAME_LENGTH = 255;
+
 /**
  * Resumes are stored in Convex file storage (_storage), not on the web server
  * filesystem, so uploaded bytes cannot be executed as application code.
@@ -19,6 +27,7 @@ export function isAllowedResumeFilename(filename: string | null | undefined): bo
   if (!filename?.trim()) return false;
 
   const normalized = filename.trim().toLowerCase();
+  if (normalized.length > MAX_RESUME_FILENAME_LENGTH) return false;
   if (
     normalized.includes("/") ||
     normalized.includes("\\") ||

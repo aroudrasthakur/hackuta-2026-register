@@ -1,4 +1,9 @@
-import { RESUME_EMPTY_ERROR_MESSAGE, RESUME_SIZE_ERROR_MESSAGE } from "./resume";
+import {
+  RESUME_EMPTY_ERROR_MESSAGE,
+  RESUME_MISSING_MESSAGE,
+  RESUME_SIZE_ERROR_MESSAGE,
+  RESUME_UPLOAD_EXPIRED_MESSAGE,
+} from "./resume";
 
 export const SUBMIT_ERROR_MESSAGE =
   "We couldn't submit your application. Please try again.";
@@ -15,6 +20,9 @@ export const SIGN_IN_REQUIRED_MESSAGE =
 export const RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE =
   "Please sign in to upload your resume.";
 
+export const RESUME_REMOVE_ERROR_MESSAGE =
+  "We couldn't remove your resume. Please try again.";
+
 /** Server messages safe to show applicants in production. */
 const USER_FACING_SERVER_MESSAGES = new Set([
   SIGN_IN_REQUIRED_MESSAGE,
@@ -22,6 +30,7 @@ const USER_FACING_SERVER_MESSAGES = new Set([
   "You have already submitted an application.",
   "Please upload a valid PDF resume of 2 MB or smaller.",
   "This resume is already attached to another application.",
+  RESUME_UPLOAD_EXPIRED_MESSAGE,
   "That email address is already associated with another account. Sign in with that email or contact us for help.",
   "Too many resume upload attempts. Please wait a few minutes and try again.",
 ]);
@@ -41,6 +50,9 @@ const RESUME_FIELD_MESSAGES = new Set([
   "Too many resume upload attempts. Please wait a few minutes and try again.",
   "Please upload a valid PDF resume of 2 MB or smaller.",
   "This resume is already attached to another application.",
+  RESUME_UPLOAD_EXPIRED_MESSAGE,
+  RESUME_MISSING_MESSAGE,
+  RESUME_REMOVE_ERROR_MESSAGE,
   RESUME_UPLOAD_ERROR_MESSAGE,
   "Resume upload is unavailable. Please try again later or contact us.",
   "We couldn't upload your resume. Check your connection and try again.",
@@ -115,6 +127,9 @@ export function mapConvexErrorToUserMessage(error: unknown): string {
   }
   if (normalized.includes("already attached")) {
     return "This resume is already attached to another application.";
+  }
+  if (normalized.includes("resume upload expired")) {
+    return RESUME_UPLOAD_EXPIRED_MESSAGE;
   }
   if (isLegacyResumeSizeMessage(detail)) {
     return RESUME_SIZE_ERROR_MESSAGE;

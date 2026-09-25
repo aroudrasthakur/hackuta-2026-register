@@ -7,8 +7,10 @@ import { validateRegistrationPayload } from "../shared/registration/validation";
 import type { RegistrationPayload } from "../shared/registration/types";
 import {
   MAX_RESUME_BYTES,
+  RESUME_MISSING_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../shared/registration/resume";
+import { deleteStorageIfExists } from "./lib/draftResume";
 import { getHackathonName } from "./lib/eventConfig";
 import { requireVerifiedAuthUser } from "./lib/auth";
 import {
@@ -77,6 +79,10 @@ async function upsertRegistration(
       isVerifiedUploadSessionValid(session, resumeStorageId!, now) &&
       uploadSessionOwnedByUser(session, authUser._id);
 
+    if (retainingOwnResume && !metadata) {
+      throw new Error(RESUME_MISSING_MESSAGE);
+    }
+
     if (metadata?.size != null && metadata.size > MAX_RESUME_BYTES) {
       throw new Error(RESUME_SIZE_ERROR_MESSAGE);
     }
@@ -98,6 +104,7 @@ async function upsertRegistration(
 
   const submittedAt = Date.now();
   const previousResume = draftApplication.resumeStorageId;
+  const keepsDraftResume = Boolean(resumeStorageId) && resumeStorageId === previousResume;
 
   await ctx.db.patch(draftApplication._id, {
     ...fields,
@@ -116,12 +123,13 @@ async function upsertRegistration(
     foodAllergyWaiverSubmittedAt: submittedAt,
     updatedAt: submittedAt,
     resumeStorageId: resumeStorageId ?? undefined,
+    resumeFilename: keepsDraftResume ? draftApplication.resumeFilename : undefined,
   });
 
   await syncAuthUserNameFromApplication(ctx, authUser._id, data);
 
   if (previousResume && previousResume !== resumeStorageId) {
-    await ctx.storage.delete(previousResume);
+    await deleteStorageIfExists(ctx, previousResume);
   }
 
   await ctx.scheduler.runAfter(0, sendApplicationConfirmationEmailRef, {

@@ -18,7 +18,20 @@ import {
 } from "./applicantFields";
 import { normalizeEmail } from "../lib/normalizeEmail";
 import { normalizeResidenceFormFields, requiresUsState } from "./residence";
+import type { SavedResumeDraft } from "./applicantFields";
 import type { ApplicationFormData } from "./types";
+
+export function savedResumeFromStoredApplication(
+  application: StoredApplicantApplication,
+): SavedResumeDraft | null {
+  const storageId = application.resumeStorageId;
+  if (typeof storageId !== "string" || storageId === "") return null;
+  const filename =
+    typeof application.resumeFilename === "string" && application.resumeFilename.trim()
+      ? application.resumeFilename
+      : "Resume.pdf";
+  return { storageId, filename };
+}
 
 function parseOptionalInt(raw: string): number | null {
   const trimmed = raw.trim();
@@ -33,13 +46,19 @@ export type StoredApplicantApplication = Partial<
     ApplicantAnswerFieldKey,
     string | number | boolean | string[] | null | undefined
   >
->;
+> & {
+  resumeStorageId?: string | null;
+  resumeFilename?: string | null;
+};
 
 /**
  * Full form snapshot for draft autosave.
  * Empty strings, null, and [] mean "clear this field" on the server.
  */
-export function formToDraftPatch(form: ApplicationFormData): DraftPatchPayload {
+export function formToDraftPatch(
+  form: ApplicationFormData,
+  savedResume: SavedResumeDraft | null | undefined = undefined,
+): DraftPatchPayload {
   const patch = {} as DraftPatchPayload;
 
   for (const key of TRIMMED_STRING_FIELDS) {
@@ -80,6 +99,16 @@ export function formToDraftPatch(form: ApplicationFormData): DraftPatchPayload {
 
   for (const key of REQUIRED_BOOLEAN_FIELDS) {
     patch[key] = form[key];
+  }
+
+  if (savedResume !== undefined) {
+    if (savedResume) {
+      patch.resumeStorageId = savedResume.storageId;
+      patch.resumeFilename = savedResume.filename;
+    } else {
+      patch.resumeStorageId = null;
+      patch.resumeFilename = "";
+    }
   }
 
   return patch;
@@ -143,6 +172,21 @@ export function mergeDraftPatchIntoApplication<T extends Record<string, unknown>
       delete next[key];
     } else {
       next[key] = value;
+    }
+  }
+
+  if ("resumeStorageId" in patch) {
+    if (patch.resumeStorageId === null) {
+      delete next.resumeStorageId;
+      delete next.resumeFilename;
+    } else if (patch.resumeStorageId !== undefined) {
+      next.resumeStorageId = patch.resumeStorageId;
+      const filename = patch.resumeFilename?.trim();
+      if (filename) {
+        next.resumeFilename = filename;
+      } else {
+        delete next.resumeFilename;
+      }
     }
   }
 

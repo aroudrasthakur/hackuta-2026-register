@@ -82,13 +82,23 @@ type StringArrayField = (typeof STRING_ARRAY_FIELDS)[number];
 type NullableBooleanField = (typeof NULLABLE_BOOLEAN_FIELDS)[number];
 type RequiredBooleanField = (typeof REQUIRED_BOOLEAN_FIELDS)[number];
 
+export type SavedResumeDraft = {
+  storageId: string;
+  filename: string;
+};
+
 export type DraftPatchPayload = Record<TrimmedStringField, string> &
   Record<PlainStringField, string> &
   Record<ConditionalStringField, string> &
   Record<OptionalIntField, number | null> &
   Record<StringArrayField, string[]> &
   Record<NullableBooleanField, boolean | null> &
-  Record<RequiredBooleanField, boolean>;
+  Record<RequiredBooleanField, boolean> & {
+    /** Null clears a previously saved draft resume. */
+    resumeStorageId?: string | null;
+    /** Empty string clears stored resume display metadata. */
+    resumeFilename?: string;
+  };
 
 /** Empty applicant form values (excludes UI-only `resume`). */
 export function createEmptyApplicantFormValues(): Record<ApplicantAnswerFieldKey, unknown> {

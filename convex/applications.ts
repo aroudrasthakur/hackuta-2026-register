@@ -27,7 +27,10 @@ import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
-import { applicationToDraftForm } from "../shared/registration/draftMapping";
+import {
+  applicationToDraftForm,
+  savedResumeFromStoredApplication,
+} from "../shared/registration/draftMapping";
 
 export const getMyApplicationDraft = query({
   args: {},
@@ -47,9 +50,17 @@ export const getMyApplicationDraft = query({
         : null;
     }
 
+    const storedResume = savedResumeFromStoredApplication(application);
+    const resumeFileExists =
+      storedResume !== null &&
+      application.resumeStorageId !== undefined &&
+      (await ctx.db.system.get("_storage", application.resumeStorageId)) !== null;
+
     return {
       status: application.status,
       draft: applicationToDraftForm(application),
+      savedResume: resumeFileExists ? storedResume : null,
+      resumeMissing: storedResume !== null && !resumeFileExists,
       updatedAt: application.updatedAt,
     };
   },
