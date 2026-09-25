@@ -42,6 +42,7 @@ export type ApplicationFormData = {
   otherMajor: string;
   graduationYear: string;
   gender: Gender | "";
+  otherGender: string;
   raceEthnicity: RaceEthnicity[];
   otherRaceEthnicity: string;
   dietaryRestrictions: DietaryOption[];
@@ -90,6 +91,7 @@ export const FIELD_ORDER: FieldName[] = [
   "otherMajor",
   "graduationYear",
   "gender",
+  "otherGender",
   "otherRaceEthnicity",
   "allergyDetails",
   "otherDietaryRestrictions",

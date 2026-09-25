@@ -41,6 +41,7 @@ export const CONDITIONAL_STRING_FIELDS = [
   "otherSchool",
   "otherMajor",
   "otherHearAbout",
+  "otherGender",
 ] as const;
 
 export const OPTIONAL_INT_FIELDS = ["age", "graduationYear", "hackathonsAttended"] as const;

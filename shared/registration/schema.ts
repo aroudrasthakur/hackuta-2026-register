@@ -8,6 +8,7 @@ import {
   EXPERIENCE_LEVELS,
   FIELD_LIMITS,
   GENDERS,
+  GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OPTIONS,
   HEAR_ABOUT_OTHER_OPTION,
   LEVELS_OF_STUDY,
@@ -266,11 +267,13 @@ export const registrationPayloadSchema = z
       max: FIELD_LIMITS.school,
       message: "Please select a school or university.",
     }).refine(
-      (value) =>
-        MLH_SCHOOLS_SET.has(value) ||
-        (value !== SCHOOL_OTHER_OPTION && value.length > 0),
-      "Please select a school from the list or enter your school name.",
+      (value) => MLH_SCHOOLS_SET.has(value) || value === SCHOOL_OTHER_OPTION,
+      "Please select a school from the list.",
     ),
+    otherSchool: safeOptionalPlainText({
+      max: FIELD_LIMITS.otherSchool,
+      tooLongMessage: "School name is too long.",
+    }),
     studentEmail: optionalEmail(),
     countryOfResidence: safePlainText({
       max: 100,
@@ -284,16 +287,21 @@ export const registrationPayloadSchema = z
     major: safePlainText({
       max: FIELD_LIMITS.major,
       message: "Please select a major or field of study.",
-    }).refine(
-      (value) => MAJORS_SET.has(value) || (value !== MAJOR_OTHER_OPTION && value.length > 0),
-      "Please select a major from the list or describe your field of study.",
-    ),
+    }).refine((value) => MAJORS_SET.has(value), "Please select a major from the list."),
+    otherMajor: safeOptionalPlainText({
+      max: FIELD_LIMITS.otherMajor,
+      tooLongMessage: "Major description is too long.",
+    }),
     graduationYear: requiredInteger(
       "Graduation year",
       MIN_GRADUATION_YEAR,
       MAX_GRADUATION_YEAR,
     ),
     gender: genderSchema,
+    otherGender: safeOptionalPlainText({
+      max: FIELD_LIMITS.otherGender,
+      tooLongMessage: "Gender description is too long.",
+    }),
     raceEthnicity: z.array(raceEthnicitySchema).default([]),
     otherRaceEthnicity: safeOptionalPlainText({
       max: FIELD_LIMITS.otherRaceEthnicity,
@@ -319,11 +327,13 @@ export const registrationPayloadSchema = z
       max: FIELD_LIMITS.hearAbout,
       message: "Please select how you heard about HackUTA.",
     }).refine(
-      (value) =>
-        HEAR_ABOUT_OPTIONS_SET.has(value) ||
-        (value !== HEAR_ABOUT_OTHER_OPTION && value.length > 0),
-      "Please select how you heard about HackUTA or describe how you heard about us.",
+      (value) => HEAR_ABOUT_OPTIONS_SET.has(value),
+      "Please select how you heard about HackUTA.",
     ),
+    otherHearAbout: safeOptionalPlainText({
+      max: FIELD_LIMITS.otherHearAbout,
+      tooLongMessage: "Response is too long.",
+    }),
     resumeStorageId: z.string().min(1).max(128).optional(),
     linkedin: optionalHttpUrl(
       "LinkedIn",
@@ -396,6 +406,38 @@ export const registrationPayloadSchema = z
         code: "custom",
         path: ["otherRaceEthnicity"],
         message: "Please specify your race or ethnicity.",
+      });
+    }
+
+    if (data.school === SCHOOL_OTHER_OPTION && !data.otherSchool?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["otherSchool"],
+        message: "Please enter your school or university name.",
+      });
+    }
+
+    if (data.major === MAJOR_OTHER_OPTION && !data.otherMajor?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["otherMajor"],
+        message: "Please describe your major or field of study.",
+      });
+    }
+
+    if (data.hearAbout === HEAR_ABOUT_OTHER_OPTION && !data.otherHearAbout?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["otherHearAbout"],
+        message: "Please tell us how you heard about HackUTA.",
+      });
+    }
+
+    if (data.gender === GENDER_SELF_DESCRIBE_OPTION && !data.otherGender?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["otherGender"],
+        message: "Please describe your gender.",
       });
     }
   })

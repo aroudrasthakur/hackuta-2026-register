@@ -1,4 +1,5 @@
 import {
+  GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
@@ -17,6 +18,12 @@ import {
   type DraftPatchPayload,
 } from "./applicantFields";
 import { resolveAllergyDetailsFromLegacy } from "./allergyMigration";
+import {
+  splitLegacyGender,
+  splitLegacyHearAbout,
+  splitLegacyMajor,
+  splitLegacySchool,
+} from "./otherOptionMigration";
 import { normalizeEmail } from "../lib/normalizeEmail";
 import { normalizeResidenceFormFields, requiresUsState } from "./residence";
 import type { SavedResumeDraft } from "./applicantFields";
@@ -85,6 +92,8 @@ export function formToDraftPatch(
     form.major === MAJOR_OTHER_OPTION ? form.otherMajor.trim() : "";
   patch.otherHearAbout =
     form.hearAbout === HEAR_ABOUT_OTHER_OPTION ? form.otherHearAbout.trim() : "";
+  patch.otherGender =
+    form.gender === GENDER_SELF_DESCRIBE_OPTION ? form.otherGender.trim() : "";
 
   for (const key of OPTIONAL_INT_FIELDS) {
     patch[key] = parseOptionalInt(form[key]);
@@ -141,6 +150,34 @@ export function applicationToDraftForm(
   for (const key of CONDITIONAL_STRING_FIELDS) {
     values[key] = (application[key] as string | undefined) ?? "";
   }
+
+  const schoolSplit = splitLegacySchool(
+    values.school as string,
+    values.otherSchool as string,
+  );
+  values.school = schoolSplit.school;
+  values.otherSchool = schoolSplit.otherSchool;
+
+  const majorSplit = splitLegacyMajor(
+    values.major as string,
+    values.otherMajor as string,
+  );
+  values.major = majorSplit.major;
+  values.otherMajor = majorSplit.otherMajor;
+
+  const hearAboutSplit = splitLegacyHearAbout(
+    values.hearAbout as string,
+    values.otherHearAbout as string,
+  );
+  values.hearAbout = hearAboutSplit.hearAbout;
+  values.otherHearAbout = hearAboutSplit.otherHearAbout;
+
+  const genderSplit = splitLegacyGender(
+    values.gender as string,
+    values.otherGender as string,
+  );
+  values.gender = genderSplit.gender;
+  values.otherGender = genderSplit.otherGender;
 
   for (const key of OPTIONAL_INT_FIELDS) {
     const stored = application[key];

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_FORM, type ApplicationFormData } from "../../shared/registration/types";
 import {
+  GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
@@ -81,11 +82,14 @@ describe("formToDraftPatch conditional fields", () => {
       otherMajor: " Space Law ",
       hearAbout: HEAR_ABOUT_OTHER_OPTION,
       otherHearAbout: " A friend ",
+      gender: GENDER_SELF_DESCRIBE_OPTION,
+      otherGender: " Genderfluid ",
     });
 
     expect(patch.otherSchool).toBe("Mars Academy");
     expect(patch.otherMajor).toBe("Space Law");
     expect(patch.otherHearAbout).toBe("A friend");
+    expect(patch.otherGender).toBe("Genderfluid");
   });
 
   it("clears stale 'Other' answers when a listed option is chosen instead", () => {
@@ -97,11 +101,14 @@ describe("formToDraftPatch conditional fields", () => {
       otherMajor: "Space Law",
       hearAbout: "Discord",
       otherHearAbout: "A friend",
+      gender: "Man",
+      otherGender: "Genderfluid",
     });
 
     expect(patch.otherSchool).toBe("");
     expect(patch.otherMajor).toBe("");
     expect(patch.otherHearAbout).toBe("");
+    expect(patch.otherGender).toBe("");
   });
 
   it("parses integer fields and treats non-numeric input as cleared", () => {
@@ -124,6 +131,46 @@ describe("applicationToDraftForm", () => {
     const { resume: _resume, ...expected } = form;
     void _resume;
     expect(applicationToDraftForm(formToDraftPatch(form))).toEqual(expected);
+  });
+
+  it("hydrates legacy merged school text as Other + otherSchool", () => {
+    const restored = applicationToDraftForm({
+      school: "Mars Academy",
+    });
+
+    expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
+    expect(restored.otherSchool).toBe("Mars Academy");
+  });
+
+  it("normalizes the legacy school Other sentinel on hydration", () => {
+    const restored = applicationToDraftForm({
+      school: "Other:",
+      otherSchool: "Mars Academy",
+    });
+
+    expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
+    expect(restored.otherSchool).toBe("Mars Academy");
+  });
+
+  it("hydrates legacy merged major and hear-about text", () => {
+    const restored = applicationToDraftForm({
+      major: "Biomedical engineering",
+      hearAbout: "Professor announcement",
+    });
+
+    expect(restored.major).toBe(MAJOR_OTHER_OPTION);
+    expect(restored.otherMajor).toBe("Biomedical engineering");
+    expect(restored.hearAbout).toBe(HEAR_ABOUT_OTHER_OPTION);
+    expect(restored.otherHearAbout).toBe("Professor announcement");
+  });
+
+  it("hydrates legacy merged gender text as self-describe + otherGender", () => {
+    const restored = applicationToDraftForm({
+      gender: "Genderfluid",
+    });
+
+    expect(restored.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);
+    expect(restored.otherGender).toBe("Genderfluid");
   });
 
   it("defaults every field for an empty application", () => {
