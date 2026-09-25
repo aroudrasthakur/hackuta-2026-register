@@ -119,6 +119,7 @@ describe("SuccessStep", () => {
 
 describe("ApplicationForm", () => {
   beforeEach(async () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
     vi.useRealTimers();
     draftApi.result = null;
     draftApi.save.mockClear();

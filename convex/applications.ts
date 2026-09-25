@@ -28,6 +28,7 @@ import {
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
 import { normalizeDraftCodeOfConductPatch } from "../shared/registration/consentFieldMigration";
+import { stripAgreementTimestamps } from "../shared/registration/consentTimestamps";
 import {
   applicationToDraftForm,
   savedResumeFromStoredApplication,
@@ -77,7 +78,9 @@ export const saveApplicationDraft = mutation({
       throw new Error("Your application has already been submitted.");
     }
 
-    const normalizedPatch = normalizeDraftCodeOfConductPatch(patch);
+    const normalizedPatch = normalizeDraftCodeOfConductPatch(
+      stripAgreementTimestamps(patch),
+    );
 
     const authUser = await getAuthUser(ctx);
     const email = normalizeEmail(authUser?.email) ?? application.email;
