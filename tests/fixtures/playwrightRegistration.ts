@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
+import {
+  APPLICATION_QUESTIONS,
+  MIN_GRADUATION_YEAR,
+} from "../../shared/registration/constants";
 import { signUpAsNewApplicant } from "./playwrightAuth";
 
 async function dismissOpenListboxes(page: Page) {
@@ -55,6 +58,12 @@ export async function fillApplicationForm(page: Page) {
   await clickInput(page, "dietary-no-beef");
   await clickInput(page, "dietary-no-pork");
   await page.getByLabel("How many hackathons have you attended", { exact: false }).fill("1");
+  await page
+    .getByLabel(APPLICATION_QUESTIONS.builtOrWantToBuild, { exact: false })
+    .fill("I built a campus events app with React and Convex.");
+  await page
+    .getByLabel(APPLICATION_QUESTIONS.shortDeadlineLearning, { exact: false })
+    .fill("Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.");
   await selectListboxOption(page, "hearAbout", "Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");
