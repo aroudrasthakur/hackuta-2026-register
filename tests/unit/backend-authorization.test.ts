@@ -39,7 +39,9 @@ const ref = {
   getDraft: makeFunctionReference<"query">("applications:getMyApplicationDraft"),
   saveDraft: makeFunctionReference<"mutation">("applications:saveApplicationDraft"),
   dashboard: makeFunctionReference<"query">("applications:getMyApplicantDashboard"),
-  register: makeFunctionReference<"mutation">("registrations:register"),
+  submitRegistration: makeFunctionReference<"mutation">(
+    "registrations:submitRegistration",
+  ),
   discardUpload: makeFunctionReference<"mutation">("resumeUploads:discardUploadSession"),
   createUploadSession: makeFunctionReference<"mutation">("resumeUploads:createVerifiedUploadSession"),
   cleanupUploads: makeFunctionReference<"mutation">("resumeUploads:cleanupExpiredUploadSessions"),
@@ -168,7 +170,7 @@ describe("authorization boundaries", () => {
     const t = createTest();
     const userId = await seedUser(t, { emailVerificationTime: 1 });
     await expect(
-      asUser(t, userId).mutation(ref.register, { data: validRegistrationPayload() }),
+      asUser(t, userId).mutation(ref.submitRegistration, { data: validRegistrationPayload() }),
     ).rejects.toThrow("Authentication required.");
   });
 
@@ -356,7 +358,7 @@ describe("registration resume replacement", () => {
     );
 
     await expect(
-      asUser(t, userId).mutation(ref.register, {
+      asUser(t, userId).mutation(ref.submitRegistration, {
         data: { ...validRegistrationPayload(), resumeStorageId: newResume.storageId },
         resumeUploadToken: "new-token",
       }),
@@ -371,7 +373,7 @@ describe("registration resume replacement", () => {
     const t = createTest();
     const userId = await seedUser(t);
     await expect(
-      asUser(t, userId).mutation(ref.register, {
+      asUser(t, userId).mutation(ref.submitRegistration, {
         data: { ...validRegistrationPayload(), resumeStorageId: "not-a-storage-id" },
         resumeUploadToken: "anything",
       }),

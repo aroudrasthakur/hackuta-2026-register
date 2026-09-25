@@ -157,12 +157,6 @@ const registrationArgs = {
   resumeUploadToken: v.optional(v.string()),
 };
 
-export const register = mutation({
-  args: registrationArgs,
-  handler: async (ctx, { data, resumeUploadToken }) =>
-    upsertRegistration(ctx, parseRegistrationData(data), resumeUploadToken),
-});
-
 export const submitRegistration = mutation({
   args: registrationArgs,
   handler: async (ctx, { data, resumeUploadToken }) =>

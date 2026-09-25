@@ -100,7 +100,7 @@ Exact question labels live in `APPLICATION_QUESTIONS` ([shared/registration/cons
 | Behavior | Detail |
 | --- | --- |
 | Draft autosave | applications:saveApplicationDraft debounced ~800ms while status is draft |
-| Resume upload | POST /resume-upload before submit; capability token redeemed at registrations:register |
+| Resume upload | POST /resume-upload before submit; capability token redeemed at registrations:submitRegistration |
 | Validation | Client Zod on submit + blur; server validateRegistrationPayload() is authoritative |
 | Errors | Inline per field; Convex/HTTP errors mapped via shared/registration/submitErrors.ts |
 | After submit | Brief SuccessStep, then redirect to /profile |

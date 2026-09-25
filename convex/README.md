@@ -45,8 +45,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | applications:getMyApplicationDraft | Required | [ApplicationForm](../src/pages/Register/ApplicationForm.tsx) |
 | applications:saveApplicationDraft | Required | [ApplicationForm](../src/pages/Register/ApplicationForm.tsx) |
 | applications:getMyApplicantDashboard | Required | [ProfilePage](../src/pages/Profile/ProfilePage.tsx) |
-| registrations:register | Required, verified email | [registerApi.ts](../src/pages/Register/registerApi.ts) |
-| registrations:submitRegistration | Required, verified email | Alias of register |
+| registrations:submitRegistration | Required, verified email | [registerApi.ts](../src/pages/Register/registerApi.ts) |
 | resumeUploads:discardUploadSession | Required; session must belong to caller | [registerApi.ts](../src/pages/Register/registerApi.ts) |
 | rateLimits:getOtpSendCooldown | None | [SignInPage](../src/pages/SignIn/SignInPage.tsx) |
 | rateLimits:getPasswordResetSendCooldown | None | [ForgotPasswordFlow](../src/pages/SignIn/ForgotPasswordFlow.tsx) |

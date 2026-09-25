@@ -5,7 +5,7 @@ Backend runs on [Convex](https://convex.dev). The frontend uses:
 - **WebSocket client** — queries, mutations, actions at `VITE_CONVEX_URL` (`https://<deployment>.convex.cloud`)
 - **HTTP actions** — resume upload and Auth OIDC at `VITE_CONVEX_SITE_URL` (`https://<deployment>.convex.site`)
 
-Function names use Convex `module:function` notation (e.g. `registrations:register`).
+Function names use Convex `module:function` notation (e.g. `registrations:submitRegistration`).
 
 **See also:** [SECURITY.md](SECURITY.md) · [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -99,9 +99,9 @@ Same response shape as `getOtpSendCooldown`. Tracks the `password_reset_send` bu
 
 ## Public mutations
 
-### `registrations:register` / `registrations:submitRegistration`
+### `registrations:submitRegistration`
 
-**Auth:** required · Aliases sharing one handler.
+**Auth:** required
 
 ```typescript
 {
@@ -356,7 +356,7 @@ One row per auth user. All application form fields are top-level columns.
 | Applicant dashboard | `applications:getMyApplicantDashboard` |
 | Draft autosave | `applications:getMyApplicationDraft`, `applications:saveApplicationDraft` |
 | Resume widget | `POST /resume-upload` |
-| Submit form | `registrations:register` |
+| Submit form | `registrations:submitRegistration` |
 | Discard resume | `resumeUploads:discardUploadSession` |
 
 ---
