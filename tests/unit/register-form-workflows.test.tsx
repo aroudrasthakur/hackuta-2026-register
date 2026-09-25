@@ -122,6 +122,37 @@ describe("ApplicationForm draft loading and autosave", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Loading your saved application…");
   });
 
+  it("hydrates a saved resume after the draft query resolves", async () => {
+    env.draft = undefined;
+    const { rerender } = render(<ApplicationForm onSubmitted={vi.fn()} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Loading your saved application…");
+
+    env.draft = {
+      status: "draft",
+      draft: validRegistrationForm(),
+      savedResume: { storageId: "saved-resume", filename: "saved.pdf" },
+    };
+    rerender(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    expect(await screen.findByText("saved.pdf")).toBeInTheDocument();
+    expect(screen.getByText("Saved to your application")).toBeInTheDocument();
+  });
+
+  it("shows a missing-resume message after draft hydration when storage is gone", async () => {
+    env.draft = undefined;
+    const { rerender } = render(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    env.draft = {
+      status: "draft",
+      draft: validRegistrationForm(),
+      savedResume: null,
+      resumeMissing: true,
+    };
+    rerender(<ApplicationForm onSubmitted={vi.fn()} />);
+
+    expect(await screen.findByText(RESUME_MISSING_MESSAGE)).toBeInTheDocument();
+  });
+
   it("shows a retry control when autosave fails and clears it after a successful retry", async () => {
     vi.useFakeTimers();
     env.saveDraft.mockRejectedValueOnce(new Error("offline"));
