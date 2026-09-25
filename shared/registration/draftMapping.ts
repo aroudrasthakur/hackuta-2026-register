@@ -18,7 +18,6 @@ import {
 } from "./applicantFields";
 import { resolveAllergyDetailsFromLegacy } from "./allergyMigration";
 import { normalizeEmail } from "../lib/normalizeEmail";
-import { normalizePhoneDraftFields } from "./phoneDraft";
 import { normalizeResidenceFormFields, requiresUsState } from "./residence";
 import type { SavedResumeDraft } from "./applicantFields";
 import type { ApplicationFormData } from "./types";
@@ -40,6 +39,12 @@ function parseOptionalInt(raw: string): number | null {
   if (trimmed === "") return null;
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isNaN(parsed) ? null : parsed;
+}
+
+/** Convert the domestic format used by drafts before international phone entry. */
+function normalizeLegacyPhone(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  return /^[\d\s().-]+$/.test(value) && digits.length === 10 ? `+1${digits}` : value;
 }
 
 /** Application columns needed to hydrate the registration form (excludes resume blob). */
@@ -123,7 +128,10 @@ export function applicationToDraftForm(
   const values: Record<string, unknown> = {};
 
   for (const key of TRIMMED_STRING_FIELDS) {
-    values[key] = (application[key] as string | undefined) ?? "";
+    const value = (application[key] as string | undefined) ?? "";
+    values[key] = key === "phone" || key === "emergencyContactPhone"
+      ? normalizeLegacyPhone(value)
+      : value;
   }
 
   const legacyOtherDietary = (application as { otherDietary?: string }).otherDietary;
@@ -170,7 +178,7 @@ export function applicationToDraftForm(
   }
 
   return normalizeResidenceFormFields(
-    normalizePhoneDraftFields(values as Omit<ApplicationFormData, "resume">),
+    values as Omit<ApplicationFormData, "resume">,
   );
 }
 

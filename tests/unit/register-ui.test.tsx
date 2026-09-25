@@ -137,11 +137,11 @@ describe("ApplicationForm", () => {
     vi.unstubAllEnvs();
   });
 
-  it("keeps typed formatting and lets each contact use a separate calling code", () => {
+  it("keeps typed formatting and lets each contact use a separate calling code", async () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
 
     const phone = screen.getByLabelText(/Phone number/);
-    fireEvent.change(phone, { target: { value: "(202) 555-0123" } });
+    await userEvent.type(phone, "(202) 555-0123");
     fireEvent.blur(phone);
     expect(phone).toHaveValue("(202) 555-0123");
 
@@ -169,12 +169,12 @@ describe("ApplicationForm", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     draftApi.result = {
       status: "draft",
-      draft: {
+      draft: applicationToDraftForm({
         ...validRegistrationForm(),
         school: "The University of Texas at Arlington",
         phone: "(202) 555-0123",
         emergencyContactPhone: "2025550124",
-      },
+      }),
     };
     const { submitRegistration } = await import("../../src/pages/Register/registerApi");
     render(<ApplicationForm onSubmitted={vi.fn()} />);
@@ -225,8 +225,8 @@ describe("ApplicationForm", () => {
       expect(patch).toMatchObject({
         phoneCountry: "CA",
         emergencyContactPhoneCountry: "GB",
-        phone: withNumbers ? "+12025550123" : "",
-        emergencyContactPhone: withNumbers ? "+442079460958" : "",
+        phone: withNumbers ? "+1202 555 0123" : "",
+        emergencyContactPhone: withNumbers ? "+4420 7946 0958" : "",
       });
 
       view.unmount();
@@ -234,7 +234,7 @@ describe("ApplicationForm", () => {
       render(<ApplicationForm onSubmitted={vi.fn()} />);
       expect(screen.getByLabelText("Applicant calling code")).toHaveValue("CA");
       expect(screen.getByLabelText("Emergency contact calling code")).toHaveValue("GB");
-      expect(screen.getByLabelText(/Phone number/)).toHaveValue(withNumbers ? "2025550123" : "");
+      expect(screen.getByLabelText(/Phone number/)).toHaveValue(withNumbers ? "202 555 0123" : "");
 
       if (withNumbers) {
         fireEvent.click(screen.getByRole("button", { name: "Submit application" }));

@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
 import {
   getCountries,
   getCountryCallingCode,
   parsePhoneNumberFromString,
   type CountryCode,
-} from "libphonenumber-js/min";
+} from "libphonenumber-js/max";
 import { FieldError, RequiredMark } from "./FormFields";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
 
@@ -19,14 +18,9 @@ function countryForNumber(phone: NonNullable<ReturnType<typeof parsePhoneNumberF
 
 function fromStored(value: string, selectedCountry: CountryCode | "") {
   const parsed = parsePhoneNumberFromString(value);
-  if (parsed) {
-    const country = selectedCountry || countryForNumber(parsed);
-    if (country) return {
-      country,
-      national: value.slice(parsed.countryCallingCode.length + 1).trim(),
-    };
-  }
-  return { country: selectedCountry || ("US" as CountryCode), national: value };
+  const country = selectedCountry || (parsed && countryForNumber(parsed)) || "US";
+  const prefix = `+${getCountryCallingCode(country)}`;
+  return { country, national: value.startsWith(prefix) ? value.slice(prefix.length) : value };
 }
 
 export function PhoneField({
@@ -46,20 +40,12 @@ export function PhoneField({
   error?: string | undefined;
   autoComplete?: string;
 }) {
-  const [entry, setEntry] = useState(() => fromStored(value, country));
-  const lastEmitted = useRef<{ value: string; country: CountryCode } | null>(null);
-
-  useEffect(() => {
-    if (value !== lastEmitted.current?.value || country !== lastEmitted.current?.country) {
-      setEntry(fromStored(value, country));
-    }
-  }, [value, country]);
+  const entry = fromStored(value, country);
 
   function emit(country: CountryCode, national: string) {
     const next = national.trim()
-      ? `+${getCountryCallingCode(country)}${national.replace(/\D/g, "")}`
+      ? `+${getCountryCallingCode(country)}${national}`
       : "";
-    lastEmitted.current = { value: next, country };
     onChange(next, country);
   }
 
@@ -70,12 +56,10 @@ export function PhoneField({
       const country = parsed && countryForNumber(parsed);
       if (country) {
         const national = raw.trim().slice(parsed.countryCallingCode.length + 1).trim();
-        setEntry({ country, national });
         emit(country, national);
         return;
       }
     }
-    setEntry({ ...entry, national: raw });
     emit(entry.country, raw);
   }
 
@@ -98,7 +82,6 @@ export function PhoneField({
           value={entry.country}
           onChange={(event) => {
             const country = event.target.value as CountryCode;
-            setEntry({ ...entry, country });
             emit(country, entry.national);
           }}
         >

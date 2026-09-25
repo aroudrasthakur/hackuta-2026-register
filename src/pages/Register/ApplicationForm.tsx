@@ -80,7 +80,6 @@ import {
   US_STATE_OPTIONS,
 } from "../../../shared/registration/residence";
 import { INITIAL_FORM } from "../../../shared/registration/types";
-import { normalizePhoneDraftFields } from "../../../shared/registration/phoneDraft";
 import { PhoneField } from "./components/PhoneField";
 import {
   RESUME_MISSING_MESSAGE,
@@ -135,9 +134,7 @@ function ApplicationFormContent({
   draftHydrated?: boolean;
   getUploadAuthToken?: () => Promise<string | null | undefined>;
 }) {
-  const [form, setForm] = useState<ApplicationFormData>(() =>
-    normalizePhoneDraftFields(initialForm),
-  );
+  const [form, setForm] = useState<ApplicationFormData>(initialForm);
   const [savedResume, setSavedResume] = useState<SavedResumeDraft | null>(
     initialSavedResume,
   );
