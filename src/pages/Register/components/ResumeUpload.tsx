@@ -5,13 +5,23 @@ import { FieldError } from "./FormFields";
 
 type ResumeUploadProps = {
   file: File | null;
+  savedFilename?: string | null;
+  uploading?: boolean;
   error?: string | undefined;
   disabled?: boolean;
   onChange: (file: File | null) => void;
   onError: (error: string | undefined) => void;
 };
 
-export function ResumeUpload({ file, error, disabled, onChange, onError }: ResumeUploadProps) {
+export function ResumeUpload({
+  file,
+  savedFilename = null,
+  uploading = false,
+  error,
+  disabled,
+  onChange,
+  onError,
+}: ResumeUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -53,8 +63,12 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
   };
 
   const handleClick = () => {
-    if (!disabled) inputRef.current?.click();
+    if (!disabled && !uploading) inputRef.current?.click();
   };
+
+  const displayedFilename = file?.name ?? savedFilename;
+  const hasResume = Boolean(displayedFilename);
+  const isDisabled = disabled || uploading;
 
   const handleRemove = () => {
     onChange(null);
@@ -89,12 +103,12 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
               ? "border-red-400 bg-red-50" 
               : "border-(--sand) bg-white hover:border-(--ocean) hover:bg-(--clay)/30"
           }
-          ${disabled ? "opacity-60 cursor-not-allowed" : ""}
+          ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}
         `}
         role="button"
-        tabIndex={disabled ? -1 : 0}
+        tabIndex={isDisabled ? -1 : 0}
         onKeyDown={(e) => {
-          if ((e.key === "Enter" || e.key === " ") && !disabled) {
+          if ((e.key === "Enter" || e.key === " ") && !isDisabled) {
             e.preventDefault();
             handleClick();
           }
@@ -105,14 +119,19 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
           ref={inputRef}
           type="file"
           accept=".pdf,application/pdf"
-          disabled={disabled}
+          disabled={isDisabled}
           className="hidden"
           id="resume-upload"
           onChange={(e) => handleFile(e.target.files?.[0] || null)}
           aria-describedby="resume-help resume-error"
         />
 
-        {file ? (
+        {uploading ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-sm font-semibold text-(--ink)">Uploading resume…</p>
+            <p className="text-xs text-(--mist)">This may take a moment.</p>
+          </div>
+        ) : hasResume ? (
           <div className="flex flex-col items-center gap-3">
             <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-(--ocean)/10">
               <svg className="h-8 w-8 text-(--ocean)" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -125,11 +144,15 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
 
             <div className="space-y-1">
               <p className="text-sm font-semibold text-(--ink)">
-                {file.name}
+                {displayedFilename}
               </p>
-              <p className="text-xs text-(--mist)">
-                {formatFileSize(file.size)}
-              </p>
+              {file ? (
+                <p className="text-xs text-(--mist)">
+                  {formatFileSize(file.size)}
+                </p>
+              ) : (
+                <p className="text-xs text-(--mist)">Saved to your application</p>
+              )}
             </div>
 
             <button
@@ -138,7 +161,7 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
                 e.stopPropagation();
                 handleRemove();
               }}
-              disabled={disabled}
+              disabled={isDisabled}
               className="text-sm font-medium text-(--ocean) underline decoration-1 underline-offset-2 transition-colors hover:text-(--ink)"
             >
               Remove resume
@@ -170,7 +193,7 @@ export function ResumeUpload({ file, error, disabled, onChange, onError }: Resum
                 e.stopPropagation();
                 handleClick();
               }}
-              disabled={disabled}
+              disabled={isDisabled}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

@@ -90,11 +90,13 @@ export const applicationRecord = {
   confirmationStatus: v.optional(confirmationStatus),
   internalNotes: v.optional(v.string()),
   resumeStorageId: v.optional(v.id("_storage")),
+  resumeFilename: v.optional(v.string()),
   ...applicantAnswerFields,
 };
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */
 export const applicationDraftPatch = v.object({
   ...applicantDraftPatchFields,
-  resumeStorageId: v.optional(v.id("_storage")),
+  resumeStorageId: v.optional(v.union(v.id("_storage"), v.null())),
+  resumeFilename: v.optional(draftNullableString),
 });

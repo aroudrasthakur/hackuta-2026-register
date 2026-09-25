@@ -14,6 +14,7 @@ import {
   applicationToDraftForm,
   formToDraftPatch,
   mergeDraftPatchIntoApplication,
+  savedResumeFromStoredApplication,
 } from "../../shared/registration/draftMapping";
 describe("formToDraftPatch", () => {
   it("includes every registered applicant answer field in the autosave patch", () => {
@@ -147,6 +148,29 @@ describe("applicationToDraftForm", () => {
     expect(restored.internationalStudent).toBeNull();
     expect(restored.dietaryRestrictions).toEqual([]);
     expect(restored.otherDietaryRestrictions).toBe("");
+  });
+
+  it("persists saved resume metadata in draft patches and restores it for the form", () => {
+    const patch = formToDraftPatch(validRegistrationForm(), {
+      storageId: "resume-123",
+      filename: "my-resume.pdf",
+    });
+    expect(patch.resumeStorageId).toBe("resume-123");
+    expect(patch.resumeFilename).toBe("my-resume.pdf");
+
+    expect(
+      savedResumeFromStoredApplication({
+        resumeStorageId: "resume-123",
+        resumeFilename: "my-resume.pdf",
+      }),
+    ).toEqual({
+      storageId: "resume-123",
+      filename: "my-resume.pdf",
+    });
+
+    const cleared = formToDraftPatch(validRegistrationForm(), null);
+    expect(cleared.resumeStorageId).toBeNull();
+    expect(cleared.resumeFilename).toBe("");
   });
 
   it("clears state in draft patches and restored forms when the country is not the United States", () => {

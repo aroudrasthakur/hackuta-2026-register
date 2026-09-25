@@ -1002,6 +1002,66 @@ describe("convex applicant auth flows", () => {
     expect(stored).not.toHaveProperty("stateOfResidence");
   });
 
+  it("saves and reloads resume metadata on draft applications", async () => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: upload.storageId,
+        filename: "my-resume.pdf",
+      }),
+    });
+
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      savedResume: { storageId: upload.storageId, filename: "my-resume.pdf" },
+    });
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.resumeStorageId).toBe(upload.storageId);
+    expect(stored?.resumeFilename).toBe("my-resume.pdf");
+  });
+
+  it("submits a draft-attached resume without a fresh upload token", async () => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: upload.storageId,
+        filename: "saved.pdf",
+      }),
+    });
+
+    await t.mutation("registrations:submitRegistration", {
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).toMatchObject({
+      status: "submitted",
+      resumeStorageId: upload.storageId,
+      resumeFilename: "saved.pdf",
+    });
+    expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).not.toBeNull();
+  });
+
+  it("clears draft resume storage when the applicant removes it", async () => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: upload.storageId,
+        filename: "saved.pdf",
+      }),
+    });
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), null),
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).not.toHaveProperty("resumeStorageId");
+    expect(stored).not.toHaveProperty("resumeFilename");
+    expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).toBeNull();
+  });
+
   it("reloads student email from the saved draft query", async () => {
     const t = await authTest();
     await t.mutation("applications:saveApplicationDraft", {

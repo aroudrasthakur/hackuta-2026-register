@@ -7,6 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import type { SavedResumeDraft } from "../../../shared/registration/applicantFields";
 import { formToDraftPatch } from "../../../shared/registration/draftPatch";
 import { getMyApplicationDraftRef, saveApplicationDraftRef } from "../../convex/api";
 import { isMockApiEnabled } from "../../constants/mockAuth";
@@ -84,6 +85,7 @@ type SavedDraft =
   | {
       draft?: Partial<ApplicationFormData>;
       status?: string;
+      savedResume?: SavedResumeDraft | null;
     }
   | null
   | undefined;
@@ -94,6 +96,7 @@ function ApplicationFormContent({
   saveDraft,
   hasConvexClient,
   initialForm = INITIAL_FORM,
+  initialSavedResume = null,
   draftHydrated = true,
   getUploadAuthToken,
 }: {
@@ -102,10 +105,13 @@ function ApplicationFormContent({
   saveDraft: ((args: { patch: ReturnType<typeof formToDraftPatch> }) => Promise<unknown>) | null;
   hasConvexClient: boolean;
   initialForm?: ApplicationFormData;
+  initialSavedResume?: SavedResumeDraft | null;
   draftHydrated?: boolean;
   getUploadAuthToken?: () => Promise<string | null | undefined>;
 }) {
   const [form, setForm] = useState<ApplicationFormData>(initialForm);
+  const [savedResume, setSavedResume] = useState<SavedResumeDraft | null>(initialSavedResume);
+  const [resumeUploading, setResumeUploading] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
@@ -117,12 +123,14 @@ function ApplicationFormContent({
     session: ResumeUploadSession;
   } | null>(null);
   const resumeUploadRef = useRef(resumeUpload);
+  const savedResumeRef = useRef(savedResume);
+  const resumePersistedToDraftRef = useRef(Boolean(initialSavedResume));
   const savedDraftStatus = savedDraft?.status;
 
   const saveDraftWithStatus = useCallback(async () => {
     if (!saveDraft || !routing.isAuthenticated) return;
     try {
-      await saveDraft({ patch: formToDraftPatch(form) });
+      await saveDraft({ patch: formToDraftPatch(form, savedResume) });
       setDraftError(null);
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -131,11 +139,15 @@ function ApplicationFormContent({
       setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
       throw error;
     }
-  }, [form, routing.isAuthenticated, saveDraft]);
+  }, [form, routing.isAuthenticated, saveDraft, savedResume]);
 
   useEffect(() => {
     resumeUploadRef.current = resumeUpload;
   }, [resumeUpload]);
+
+  useEffect(() => {
+    savedResumeRef.current = savedResume;
+  }, [savedResume]);
 
   useEffect(() => {
     if (!hasConvexClient || !saveDraft || !routing.isAuthenticated || !draftHydrated) {
@@ -156,12 +168,19 @@ function ApplicationFormContent({
     saveDraft,
     saveDraftWithStatus,
     savedDraftStatus,
+    savedResume,
   ]);
 
-  const discardPendingResume = useCallback(async () => {
+  const discardUnsavedUpload = useCallback(async () => {
     const pending = resumeUploadRef.current;
     if (!pending) return;
     setResumeUpload(null);
+    if (
+      resumePersistedToDraftRef.current &&
+      savedResumeRef.current?.storageId === pending.session.storageId
+    ) {
+      return;
+    }
     await discardResumeUpload(pending.session.uploadToken);
   }, []);
 
@@ -169,14 +188,103 @@ function ApplicationFormContent({
     const cleanupPendingUpload = () => {
       const pending = resumeUploadRef.current;
       if (!pending) return;
+      if (
+        resumePersistedToDraftRef.current &&
+        savedResumeRef.current?.storageId === pending.session.storageId
+      ) {
+        return;
+      }
       void discardResumeUpload(pending.session.uploadToken);
     };
     window.addEventListener("beforeunload", cleanupPendingUpload);
     return () => {
       window.removeEventListener("beforeunload", cleanupPendingUpload);
-      void discardPendingResume();
+      void discardUnsavedUpload();
     };
-  }, [discardPendingResume]);
+  }, [discardUnsavedUpload]);
+
+  const handleResumeChange = useCallback(
+    async (file: File | null) => {
+      if (!file) {
+        await discardUnsavedUpload();
+        setForm((prev) => ({ ...prev, resume: null }));
+        const hadSavedResume = savedResumeRef.current !== null;
+        setSavedResume(null);
+        resumePersistedToDraftRef.current = false;
+        if (hadSavedResume && saveDraft && routing.isAuthenticated) {
+          try {
+            await saveDraft({ patch: formToDraftPatch(form, null) });
+            setDraftError(null);
+          } catch (error) {
+            if (import.meta.env.DEV) {
+              console.error("Draft save failed:", error);
+            }
+            setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
+          }
+        }
+        return;
+      }
+
+      setForm((prev) => ({ ...prev, resume: file }));
+      setErrors((prev) => {
+        if (!prev.resume) return prev;
+        const next = { ...prev };
+        delete next.resume;
+        return next;
+      });
+      if (!getUploadAuthToken) return;
+
+      setResumeUploading(true);
+      let uploadedSession: ResumeUploadSession | null = null;
+      try {
+        await discardUnsavedUpload();
+        const authToken = await getUploadAuthToken();
+        uploadedSession = await uploadResume(file, authToken);
+        const nextSavedResume = {
+          storageId: uploadedSession.storageId,
+          filename: file.name,
+        };
+        setSavedResume(nextSavedResume);
+        setForm((prev) => ({ ...prev, resume: null }));
+
+        if (saveDraft && routing.isAuthenticated) {
+          try {
+            await saveDraft({ patch: formToDraftPatch(form, nextSavedResume) });
+            setDraftError(null);
+            resumePersistedToDraftRef.current = true;
+            await discardResumeUpload(uploadedSession.uploadToken);
+            uploadedSession = null;
+          } catch (error) {
+            await discardResumeUpload(uploadedSession.uploadToken);
+            uploadedSession = null;
+            setSavedResume(null);
+            resumePersistedToDraftRef.current = false;
+            if (import.meta.env.DEV) {
+              console.error("Draft save failed:", error);
+            }
+            setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
+            return;
+          }
+        } else {
+          setResumeUpload({ fileKey: resumeFileKey(file), session: uploadedSession });
+        }
+      } catch (err) {
+        if (uploadedSession) {
+          await discardResumeUpload(uploadedSession.uploadToken);
+        }
+        setResumeUpload(null);
+        setForm((prev) => ({ ...prev, resume: null }));
+        setSavedResume(null);
+        resumePersistedToDraftRef.current = false;
+        const message = mapUploadError(err);
+        setErrors((prev) => ({ ...prev, resume: message }));
+        focusFirstInvalidField({ resume: message });
+      } finally {
+        setResumeUploading(false);
+      }
+    },
+    [discardUnsavedUpload, form, getUploadAuthToken, routing.isAuthenticated, saveDraft],
+  );
 
   const updateField = useCallback(
     <K extends keyof ApplicationFormData>(
@@ -245,29 +353,26 @@ function ApplicationFormContent({
           return;
         }
       }
-      let session: ResumeUploadSession | null = null;
-      if (form.resume) {
-        const fileKey = resumeFileKey(form.resume);
-        if (resumeUpload?.fileKey === fileKey) {
-          session = resumeUpload.session;
-        } else {
-          await discardPendingResume();
-          try {
-            const authToken = getUploadAuthToken ? await getUploadAuthToken() : null;
-            session = await uploadResume(form.resume, authToken);
-            setResumeUpload({ fileKey, session });
-          } catch (err) {
-            const message = mapUploadError(err);
-            setErrors((prev) => ({ ...prev, resume: message }));
-            focusFirstInvalidField({ resume: message });
-            return;
-          }
+      let session: ResumeUploadSession | null = resumeUpload?.session ?? null;
+      if (!session && form.resume) {
+        try {
+          const authToken = getUploadAuthToken ? await getUploadAuthToken() : null;
+          session = await uploadResume(form.resume, authToken);
+          setResumeUpload({ fileKey: resumeFileKey(form.resume), session });
+        } catch (err) {
+          const message = mapUploadError(err);
+          setErrors((prev) => ({ ...prev, resume: message }));
+          focusFirstInvalidField({ resume: message });
+          return;
         }
-      } else {
-        await discardPendingResume();
       }
 
-      await submitRegistration(validation.payload, session);
+      const resumeStorageId = session?.storageId ?? savedResume?.storageId;
+      const submissionPayload = resumeStorageId
+        ? { ...validation.payload, resumeStorageId }
+        : validation.payload;
+
+      await submitRegistration(submissionPayload, session);
       setResumeUpload(null);
       onSubmitted();
     } catch (err) {
@@ -742,13 +847,12 @@ function ApplicationFormContent({
             <div className="sm:col-span-2">
               <ResumeUpload
                 file={form.resume}
+                savedFilename={savedResume?.filename ?? null}
+                uploading={resumeUploading}
                 error={errors.resume}
                 disabled={submitting}
                 onChange={(file) => {
-                  void (async () => {
-                    await discardPendingResume();
-                    setForm((prev) => ({ ...prev, resume: file }));
-                  })();
+                  void handleResumeChange(file);
                 }}
                 onError={(error) => {
                   setErrors((prev) => {
@@ -997,7 +1101,7 @@ function ApplicationFormContent({
       )}
 
       <div className="flex justify-center pt-2">
-        <OdysseyButton type="submit" disabled={submitting}>
+        <OdysseyButton type="submit" disabled={submitting || resumeUploading}>
           {submitting ? "Submitting your application…" : "Submit application"}
         </OdysseyButton>
       </div>
@@ -1036,6 +1140,8 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
           ...savedDraft.draft,
         })
       : INITIAL_FORM;
+  const initialSavedResume =
+    !isDraftLoading && savedDraft?.savedResume ? savedDraft.savedResume : null;
 
   if (isDraftLoading) {
     return (
@@ -1056,6 +1162,7 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
       saveDraft={saveDraft}
       hasConvexClient={Boolean(client)}
       initialForm={initialForm}
+      initialSavedResume={initialSavedResume}
       draftHydrated
     />
   );
@@ -1069,6 +1176,7 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: () => void }) {
         savedDraft={null}
         saveDraft={null}
         hasConvexClient={false}
+        initialSavedResume={null}
         getUploadAuthToken={async () => "mock-auth-token"}
       />
     );

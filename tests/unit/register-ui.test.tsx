@@ -439,6 +439,9 @@ describe("ApplicationForm", () => {
       "resume-upload",
     ) as HTMLInputElement;
     await user.upload(resumeInput, resume);
+    await waitFor(() =>
+      expect(uploadResume).toHaveBeenCalledWith(resume, "test-auth-token"),
+    );
 
     const button = screen.getByRole("button", { name: "Submit application" });
     fireEvent.click(button);
@@ -446,7 +449,6 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("Resume (optional)")).toBeDisabled();
 
     await waitFor(() => expect(submitRegistration).toHaveBeenCalledTimes(1));
-    expect(uploadResume).toHaveBeenCalledWith(resume, "test-auth-token");
     expect(submitRegistration).toHaveBeenCalledWith(
       expect.objectContaining({
         otherDietary: "No peanuts",
@@ -458,8 +460,9 @@ describe("ApplicationForm", () => {
         internationalStudent: false,
         dietaryRestrictions: ["No Beef", "No Pork", "Allergies"],
         firstHackathon: false,
+        resumeStorageId: "resume-id",
       }),
-      { storageId: "resume-id", uploadToken: "upload-token" },
+      null,
     );
 
     finish({ ok: true });

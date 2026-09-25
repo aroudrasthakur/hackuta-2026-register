@@ -27,7 +27,10 @@ import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
-import { applicationToDraftForm } from "../shared/registration/draftMapping";
+import {
+  applicationToDraftForm,
+  savedResumeFromStoredApplication,
+} from "../shared/registration/draftMapping";
 
 export const getMyApplicationDraft = query({
   args: {},
@@ -50,6 +53,7 @@ export const getMyApplicationDraft = query({
     return {
       status: application.status,
       draft: applicationToDraftForm(application),
+      savedResume: savedResumeFromStoredApplication(application),
       updatedAt: application.updatedAt,
     };
   },
