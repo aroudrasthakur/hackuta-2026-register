@@ -74,7 +74,12 @@ export const APPLICANT_DRAFT_PATCH_FIELD_KEYS = [
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */
 const applicantDraftPatchFields = {
-  ...fieldsFromKeys(applicantStringFieldKeys, () => draftNullableString),
+  // Older clients can still save drafts without the new country selections.
+  ...fieldsFromKeys(applicantStringFieldKeys, (key) =>
+    key === "phoneCountry" || key === "emergencyContactPhoneCountry"
+      ? v.optional(draftNullableString)
+      : draftNullableString,
+  ),
   ...fieldsFromKeys(OPTIONAL_INT_FIELDS, () => draftNullableNumber),
   ...fieldsFromKeys(STRING_ARRAY_FIELDS, () => v.array(v.string())),
   ...fieldsFromKeys(NULLABLE_BOOLEAN_FIELDS, () => draftNullableBoolean),

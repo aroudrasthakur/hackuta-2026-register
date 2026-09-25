@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { CountryCode } from "libphonenumber-js/min";
 import type { CountryOfResidence } from "./countries";
 import type {
   DIETARY_OPTIONS,
@@ -31,6 +32,7 @@ export type ApplicationFormData = {
   firstName: string;
   lastName: string;
   phone: string;
+  phoneCountry: CountryCode | "";
   age: string;
   school: MlhSchool | typeof SCHOOL_OTHER_OPTION | "";
   otherSchool: string;
@@ -63,6 +65,7 @@ export type ApplicationFormData = {
   shortDeadlineLearning: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  emergencyContactPhoneCountry: CountryCode | "";
   MLHcodeOfConductAgreed: boolean;
   mlhDataSharingConsent: boolean;
   mlhCommunicationsConsent: boolean;

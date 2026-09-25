@@ -20,6 +20,35 @@ function validPayloadFromForm() {
 }
 
 describe("validateApplicationForm", () => {
+  it.each([
+    ["phone", "phoneCountry"],
+    ["emergencyContactPhone", "emergencyContactPhoneCountry"],
+  ] as const)("validates %s against its selected country even with a shared calling code", (field, countryField) => {
+    const mismatch = validateApplicationForm({
+      ...validRegistrationForm(),
+      [field]: "+12025550123",
+      [countryField]: "CA",
+    });
+    expect(mismatch.success).toBe(false);
+    if (!mismatch.success) expect(mismatch.errors[field]).toBe("Enter a valid phone number.");
+
+    const matched = validateApplicationForm({
+      ...validRegistrationForm(),
+      [field]: "+14165550123",
+      [countryField]: "CA",
+    });
+    expect(matched.success).toBe(true);
+    if (matched.success) expect(matched.payload[countryField]).toBe("CA");
+  });
+
+  it("checks both countries on server submissions and accepts older payloads without them", () => {
+    const payload = validPayloadFromForm();
+    expect(validateRegistrationPayload({ ...payload, phoneCountry: "CA" }).success).toBe(false);
+    expect(validateRegistrationPayload({ ...payload, emergencyContactPhoneCountry: "US" }).success).toBe(false);
+    expect(validateRegistrationPayload({ ...payload, phoneCountry: "XX" }).success).toBe(false);
+    expect(validateRegistrationPayload(payload).success).toBe(true);
+  });
+
   it("rejects impossible international numbers in both phone fields", () => {
     for (const field of ["phone", "emergencyContactPhone"] as const) {
       const result = validateApplicationForm({

@@ -500,7 +500,11 @@ function ApplicationFormContent({
             id="phone"
             label="Phone number"
             value={form.phone}
-            onChange={(value) => updateField("phone", value)}
+            country={form.phoneCountry}
+            onChange={(value, country) => {
+              updateField("phone", value);
+              updateField("phoneCountry", country);
+            }}
             autoComplete="section-applicant tel-national"
             error={errors.phone}
           />
@@ -1067,7 +1071,11 @@ function ApplicationFormContent({
             id="emergencyContactPhone"
             label="Emergency contact phone"
             value={form.emergencyContactPhone}
-            onChange={(value) => updateField("emergencyContactPhone", value)}
+            country={form.emergencyContactPhoneCountry}
+            onChange={(value, country) => {
+              updateField("emergencyContactPhone", value);
+              updateField("emergencyContactPhoneCountry", country);
+            }}
             autoComplete="section-emergency tel-national"
             error={errors.emergencyContactPhone}
           />

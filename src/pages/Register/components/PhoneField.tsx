@@ -17,22 +17,23 @@ function countryForNumber(phone: NonNullable<ReturnType<typeof parsePhoneNumberF
   );
 }
 
-function fromStored(value: string) {
+function fromStored(value: string, selectedCountry: CountryCode | "") {
   const parsed = parsePhoneNumberFromString(value);
   if (parsed) {
-    const country = countryForNumber(parsed);
+    const country = selectedCountry || countryForNumber(parsed);
     if (country) return {
       country,
       national: value.slice(parsed.countryCallingCode.length + 1).trim(),
     };
   }
-  return { country: "US" as CountryCode, national: value };
+  return { country: selectedCountry || ("US" as CountryCode), national: value };
 }
 
 export function PhoneField({
   id,
   label,
   value,
+  country,
   onChange,
   error,
   autoComplete,
@@ -40,23 +41,26 @@ export function PhoneField({
   id: string;
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  country: CountryCode | "";
+  onChange: (value: string, country: CountryCode) => void;
   error?: string | undefined;
   autoComplete?: string;
 }) {
-  const [entry, setEntry] = useState(() => fromStored(value));
-  const lastEmitted = useRef<string | null>(null);
+  const [entry, setEntry] = useState(() => fromStored(value, country));
+  const lastEmitted = useRef<{ value: string; country: CountryCode } | null>(null);
 
   useEffect(() => {
-    if (value !== lastEmitted.current) setEntry(fromStored(value));
-  }, [value]);
+    if (value !== lastEmitted.current?.value || country !== lastEmitted.current?.country) {
+      setEntry(fromStored(value, country));
+    }
+  }, [value, country]);
 
   function emit(country: CountryCode, national: string) {
     const next = national.trim()
       ? `+${getCountryCallingCode(country)}${national.replace(/\D/g, "")}`
       : "";
-    lastEmitted.current = next;
-    onChange(next);
+    lastEmitted.current = { value: next, country };
+    onChange(next, country);
   }
 
   function changeNumber(raw: string) {

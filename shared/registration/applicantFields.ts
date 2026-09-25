@@ -25,6 +25,8 @@ export const TRIMMED_STRING_FIELDS = [
 
 /** Stored as-is from selects/text; cleared with "" on draft save. */
 export const PLAIN_STRING_FIELDS = [
+  "phoneCountry",
+  "emergencyContactPhoneCountry",
   "school",
   "countryOfResidence",
   "stateOfResidence",
