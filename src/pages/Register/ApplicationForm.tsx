@@ -978,10 +978,10 @@ function ApplicationFormContent({
             <TextField
               id="linkedin"
               label="LinkedIn (optional)"
-              type="url"
+              type="text"
               value={form.linkedin}
               onChange={(e) => updateField("linkedin", e.target.value)}
-              placeholder="https://"
+              placeholder="linkedin.com/in/yourname"
               autoCapitalize="none"
               spellCheck={false}
               maxLength={FIELD_LIMITS.url}
@@ -990,10 +990,10 @@ function ApplicationFormContent({
             <TextField
               id="github"
               label="GitHub (optional)"
-              type="url"
+              type="text"
               value={form.github}
               onChange={(e) => updateField("github", e.target.value)}
-              placeholder="https://"
+              placeholder="github.com/yourname"
               autoCapitalize="none"
               spellCheck={false}
               maxLength={FIELD_LIMITS.url}
@@ -1002,10 +1002,10 @@ function ApplicationFormContent({
             <TextField
               id="portfolio"
               label="Portfolio (optional)"
-              type="url"
+              type="text"
               value={form.portfolio}
               onChange={(e) => updateField("portfolio", e.target.value)}
-              placeholder="https://"
+              placeholder="yoursite.com"
               autoCapitalize="none"
               spellCheck={false}
               maxLength={FIELD_LIMITS.url}
@@ -1014,10 +1014,10 @@ function ApplicationFormContent({
             <TextField
               id="devpost"
               label="Devpost (optional)"
-              type="url"
+              type="text"
               value={form.devpost}
               onChange={(e) => updateField("devpost", e.target.value)}
-              placeholder="https://"
+              placeholder="devpost.com"
               autoCapitalize="none"
               spellCheck={false}
               maxLength={FIELD_LIMITS.url}

@@ -479,9 +479,22 @@ describe("validateApplicationForm", () => {
   });
 
   it.each([
-    ["linkedin", "not-a-url", "Enter a valid linkedin URL."],
-    ["portfolio", "ftp://example.com", "Enter a valid portfolio URL."],
-    ["devpost", "http://???", "Enter a valid devpost URL."],
+    [
+      "linkedin",
+      "not-a-url",
+      "Enter a valid LinkedIn link on linkedin.com, such as linkedin.com/in/yourname.",
+    ],
+    [
+      "github",
+      "not-a-url",
+      "Enter a valid GitHub link on github.com, such as github.com/yourname.",
+    ],
+    ["portfolio", "ftp://example.com", "Enter a valid website link, such as yoursite.com."],
+    [
+      "devpost",
+      "http://???",
+      "Enter a valid Devpost link on devpost.com, such as devpost.com.",
+    ],
   ] as const)("rejects invalid optional %s URLs", (field, value, message) => {
     const form = validRegistrationForm();
     form[field] = value;
@@ -495,10 +508,10 @@ describe("validateApplicationForm", () => {
   });
 
   it.each([
-    ["linkedin", "https://linkedin.com/in/sam"],
-    ["portfolio", "https://example.com/sam"],
-    ["devpost", "https://devpost.com/software/hackuta-project"],
-  ] as const)("accepts a valid optional %s URL", (field, value) => {
+    ["linkedin", "https://linkedin.com/in/sam", "https://linkedin.com/in/sam"],
+    ["portfolio", "https://example.com/sam", "https://example.com/sam"],
+    ["devpost", "https://devpost.com/hackuta-project", "https://devpost.com/hackuta-project"],
+  ] as const)("accepts a valid optional %s URL", (field, value, expected) => {
     const form = validRegistrationForm();
     form[field] = value;
 
@@ -506,7 +519,75 @@ describe("validateApplicationForm", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.payload[field]).toBe(value);
+      expect(result.payload[field]).toBe(expected);
+    }
+  });
+
+  it.each([
+    ["linkedin", "www.linkedin.com/in/sam", "https://www.linkedin.com/in/sam"],
+    ["github", "www.github.com/sam", "https://www.github.com/sam"],
+    [
+      "devpost",
+      "www.devpost.com/hackuta-project",
+      "https://www.devpost.com/hackuta-project",
+    ],
+  ] as const)("accepts official %s subdomains", (field, value, expected) => {
+    const form = validRegistrationForm();
+    form[field] = value;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload[field]).toBe(expected);
+    }
+  });
+
+  it.each([
+    ["linkedin", "https://example.com/profile"],
+    ["github", "https://example.com/user"],
+    ["devpost", "https://example.com/project"],
+  ] as const)("rejects non-%s domains in platform URL fields", (field, value) => {
+    const form = validRegistrationForm();
+    form[field] = value;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors[field]).toMatch(/^This must be a /);
+    }
+  });
+
+  it.each([
+    ["linkedin", "https://github.com@evil.com/in/sam"],
+    ["github", "https://linkedin.com@evil.com/user"],
+    ["devpost", "https://devpost.com@evil.com/project"],
+  ] as const)("rejects userinfo phishing in optional %s URLs", (field, value) => {
+    const form = validRegistrationForm();
+    form[field] = value;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors[field]).toBeTruthy();
+    }
+  });
+
+  it.each([
+    ["linkedin", "linkedin.com/in/sam", "https://linkedin.com/in/sam"],
+    ["github", "github.com/sam", "https://github.com/sam"],
+    ["devpost", "devpost.com/hackuta-project", "https://devpost.com/hackuta-project"],
+  ] as const)("normalizes optional %s URLs without a scheme", (field, value, expected) => {
+    const form = validRegistrationForm();
+    form[field] = value;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload[field]).toBe(expected);
     }
   });
 
@@ -626,13 +707,13 @@ describe("validateRegistrationPayload", () => {
       linkedin: "https://linkedin.com/in/sam",
       github: "https://github.com/sam",
       portfolio: "https://example.com/sam",
-      devpost: "https://devpost.com/software/hackuta-project",
+      devpost: "https://devpost.com/hackuta-project",
     });
 
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.payload.devpost).toBe(
-        "https://devpost.com/software/hackuta-project",
+        "https://devpost.com/hackuta-project",
       );
     }
   });
@@ -649,6 +730,44 @@ describe("isValidHttpUrl", () => {
     const { isValidHttpUrl } = await import("../../shared/registration/schema");
     expect(isValidHttpUrl("not-a-url")).toBe(false);
     expect(isValidHttpUrl("ftp://example.com")).toBe(false);
+    expect(isValidHttpUrl("https://localhost")).toBe(true);
+  });
+});
+
+describe("normalizeHttpUrl", () => {
+  it("prepends https:// when the scheme is omitted", async () => {
+    const { normalizeHttpUrl } = await import("../../shared/registration/schema");
+    expect(normalizeHttpUrl("github.com/user")).toBe("https://github.com/user");
+    expect(normalizeHttpUrl("linkedin.com/in/sam")).toBe("https://linkedin.com/in/sam");
+  });
+
+  it("preserves an existing http or https scheme", async () => {
+    const { normalizeHttpUrl } = await import("../../shared/registration/schema");
+    expect(normalizeHttpUrl("https://github.com/user")).toBe("https://github.com/user");
+    expect(normalizeHttpUrl("http://example.com")).toBe("http://example.com");
+  });
+
+  it("returns null for invalid values", async () => {
+    const { normalizeHttpUrl } = await import("../../shared/registration/schema");
+    expect(normalizeHttpUrl("")).toBeNull();
+    expect(normalizeHttpUrl("not-a-url")).toBeNull();
+    expect(normalizeHttpUrl("ftp://example.com")).toBeNull();
+    expect(normalizeHttpUrl("http://???")).toBeNull();
+    expect(normalizeHttpUrl("https://github.com@evil.com/user")).toBeNull();
+  });
+
+  it("enforces platform base domains when provided", async () => {
+    const { GITHUB_BASE_DOMAIN, normalizeHttpUrl } = await import(
+      "../../shared/registration/schema"
+    );
+    expect(
+      normalizeHttpUrl("github.com/user", { allowedBaseDomains: [GITHUB_BASE_DOMAIN] }),
+    ).toBe("https://github.com/user");
+    expect(
+      normalizeHttpUrl("https://example.com/user", {
+        allowedBaseDomains: [GITHUB_BASE_DOMAIN],
+      }),
+    ).toBeNull();
   });
 });
 
