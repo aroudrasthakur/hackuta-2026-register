@@ -36,7 +36,7 @@ describe("validateApplicationForm", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.errors.firstName).toBe("First name is required.");
-      expect(result.errors.codeOfConductAgreed).toBeTruthy();
+      expect(result.errors.MLHcodeOfConductAgreed).toBeTruthy();
     }
   });
 
@@ -695,7 +695,7 @@ describe("validateRegistrationPayload", () => {
   it("rejects missing consent fields", () => {
     const result = validateRegistrationPayload({
       ...validPayloadFromForm(),
-      codeOfConductAgreed: false,
+      MLHcodeOfConductAgreed: false,
     });
 
     expect(result.success).toBe(false);
@@ -832,7 +832,7 @@ describe("validateRegistrationPayload", () => {
 
 describe("focusFirstInvalidField focus targets", () => {
   it("uses the mapped focus id for composite fields and tolerates missing elements", () => {
-    expect(() => focusFirstInvalidField({ codeOfConductAgreed: "Required" })).not.toThrow();
+    expect(() => focusFirstInvalidField({ MLHcodeOfConductAgreed: "Required" })).not.toThrow();
   });
 });
 

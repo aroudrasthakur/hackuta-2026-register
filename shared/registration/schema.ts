@@ -362,7 +362,7 @@ export const registrationPayloadSchema = z
       max: FIELD_LIMITS.phone,
       message: "Emergency contact phone is required.",
     }).refine(isValidPhone, "Enter a valid phone number."),
-    codeOfConductAgreed: z.literal(true, {
+    MLHcodeOfConductAgreed: z.literal(true, {
       message: "You must agree to the MLH Code of Conduct to continue.",
     }),
     mlhDataSharingConsent: z.literal(true, {
