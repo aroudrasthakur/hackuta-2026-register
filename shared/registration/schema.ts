@@ -32,13 +32,62 @@ export function isValidPhone(value: string) {
   return digits.length >= 7 && digits.length <= 15;
 }
 
-export function isValidHttpUrl(value: string) {
+const HTTP_URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
+
+export const LINKEDIN_BASE_DOMAIN = "linkedin.com";
+export const GITHUB_BASE_DOMAIN = "github.com";
+export const DEVPOST_BASE_DOMAIN = "devpost.com";
+
+export function hostnameMatchesBaseDomain(hostname: string, baseDomain: string) {
+  const host = hostname.toLowerCase();
+  const base = baseDomain.toLowerCase();
+  return host === base || host.endsWith(`.${base}`);
+}
+
+export function isValidHttpUrl(
+  value: string,
+  options?: { allowedBaseDomains?: readonly string[] },
+) {
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return false;
+    }
+    if (!url.hostname) {
+      return false;
+    }
+    if (url.username || url.password) {
+      return false;
+    }
+    if (url.hostname !== "localhost" && !url.hostname.includes(".")) {
+      return false;
+    }
+    if (options?.allowedBaseDomains?.length) {
+      return options.allowedBaseDomains.some((domain) =>
+        hostnameMatchesBaseDomain(url.hostname, domain),
+      );
+    }
+    return true;
   } catch {
     return false;
   }
+}
+
+/** Prepends https:// when missing and returns a normalized URL, or null if invalid. */
+export function normalizeHttpUrl(
+  value: string,
+  options?: { allowedBaseDomains?: readonly string[] },
+): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const candidate = HTTP_URL_SCHEME_PATTERN.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+
+  return isValidHttpUrl(candidate, options) ? candidate : null;
 }
 
 function safePlainText(options: {
@@ -117,15 +166,43 @@ function optionalEmail(message = "Enter a valid student email address.") {
     );
 }
 
-function optionalHttpUrl(label: string) {
+function optionalHttpUrl(
+  label: string,
+  example: string,
+  allowedBaseDomain?: string,
+) {
+  const invalidMessage = allowedBaseDomain
+    ? `Enter a valid ${label} link on ${allowedBaseDomain}, such as ${example}.`
+    : `Enter a valid ${label} link, such as ${example}.`;
+  const wrongDomainMessage = allowedBaseDomain
+    ? `This must be a ${label} link on ${allowedBaseDomain}, such as ${example}.`
+    : invalidMessage;
+
   return z
     .string()
     .trim()
     .max(FIELD_LIMITS.url, `${label} is too long.`)
     .optional()
-    .transform((value) => value || undefined)
-    .refine((value) => value === undefined || isValidHttpUrl(value), {
-      message: `Enter a valid ${label.toLowerCase()} URL.`,
+    .transform((value, ctx) => {
+      if (!value) {
+        return undefined;
+      }
+
+      const normalized = normalizeHttpUrl(value);
+      if (!normalized) {
+        ctx.addIssue({ code: "custom", message: invalidMessage });
+        return z.NEVER;
+      }
+
+      if (
+        allowedBaseDomain &&
+        !hostnameMatchesBaseDomain(new URL(normalized).hostname, allowedBaseDomain)
+      ) {
+        ctx.addIssue({ code: "custom", message: wrongDomainMessage });
+        return z.NEVER;
+      }
+
+      return normalized;
     });
 }
 
@@ -248,10 +325,18 @@ export const registrationPayloadSchema = z
       "Please select how you heard about HackUTA or describe how you heard about us.",
     ),
     resumeStorageId: z.string().min(1).max(128).optional(),
-    linkedin: optionalHttpUrl("LinkedIn"),
-    github: optionalHttpUrl("GitHub"),
-    portfolio: optionalHttpUrl("Portfolio"),
-    devpost: optionalHttpUrl("Devpost"),
+    linkedin: optionalHttpUrl(
+      "LinkedIn",
+      "linkedin.com/in/yourname",
+      LINKEDIN_BASE_DOMAIN,
+    ),
+    github: optionalHttpUrl("GitHub", "github.com/yourname", GITHUB_BASE_DOMAIN),
+    portfolio: optionalHttpUrl("website", "yoursite.com"),
+    devpost: optionalHttpUrl(
+      "Devpost",
+      "devpost.com",
+      DEVPOST_BASE_DOMAIN,
+    ),
     accessibilityNeeds: safeOptionalPlainText({
       max: FIELD_LIMITS.accessibilityNeeds,
       allowNewlines: true,

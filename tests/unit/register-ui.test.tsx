@@ -546,7 +546,7 @@ describe("ApplicationForm", () => {
     setInputValueById("portfolio", "https://example.com/sam");
     setInputValueById(
       "devpost",
-      "https://devpost.com/software/hackuta-project",
+      "https://devpost.com/hackuta-project",
     );
     setInputValue(/Accessibility needs/, "Step-free access");
     setInputValueById("hackathonsAttended", "2");
@@ -573,7 +573,7 @@ describe("ApplicationForm", () => {
         allergyDetails: "No peanuts",
         linkedin: "https://linkedin.com/in/sam",
         portfolio: "https://example.com/sam",
-        devpost: "https://devpost.com/software/hackuta-project",
+        devpost: "https://devpost.com/hackuta-project",
         accessibilityNeeds: "Step-free access",
         stateOfResidence: "Texas",
         internationalStudent: false,
@@ -654,12 +654,59 @@ describe("ApplicationForm", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows a Devpost validation error for invalid URLs", () => {
-    render(<ApplicationForm onSubmitted={vi.fn()} />);
-    fillValidApplicationForm();
-    setInputValueById("devpost", "not-a-url");
-    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+  it.each([
+    [
+      "devpost",
+      "not-a-url",
+      "Enter a valid Devpost link on devpost.com, such as devpost.com.",
+    ],
+    [
+      "github",
+      "not-a-url",
+      "Enter a valid GitHub link on github.com, such as github.com/yourname.",
+    ],
+    [
+      "linkedin",
+      "not-a-url",
+      "Enter a valid LinkedIn link on linkedin.com, such as linkedin.com/in/yourname.",
+    ],
+  ] as const)(
+    "shows a user-friendly validation error for invalid %s URLs",
+    (fieldId, value, message) => {
+      render(<ApplicationForm onSubmitted={vi.fn()} />);
+      fillValidApplicationForm();
+      setInputValueById(fieldId, value);
+      fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
 
-    expect(screen.getByText("Enter a valid devpost URL.")).toBeInTheDocument();
-  });
+      expect(screen.getByText(message)).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    [
+      "github",
+      "https://example.com/user",
+      "This must be a GitHub link on github.com, such as github.com/yourname.",
+    ],
+    [
+      "linkedin",
+      "https://example.com/in/sam",
+      "This must be a LinkedIn link on linkedin.com, such as linkedin.com/in/yourname.",
+    ],
+    [
+      "devpost",
+      "https://example.com/project",
+      "This must be a Devpost link on devpost.com, such as devpost.com.",
+    ],
+  ] as const)(
+    "shows a user-friendly validation error for off-platform %s URLs",
+    (fieldId, value, message) => {
+      render(<ApplicationForm onSubmitted={vi.fn()} />);
+      fillValidApplicationForm();
+      setInputValueById(fieldId, value);
+      fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+      expect(screen.getByText(message)).toBeInTheDocument();
+    },
+  );
 });
