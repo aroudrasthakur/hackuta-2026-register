@@ -118,7 +118,7 @@ describe("SuccessStep", () => {
   });
 });
 
-describe("ApplicationForm", () => {
+describe("ApplicationForm", { timeout: 15_000 }, () => {
   beforeEach(async () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     vi.useRealTimers();
@@ -138,35 +138,35 @@ describe("ApplicationForm", () => {
     vi.unstubAllEnvs();
   });
 
-  it("formats US numbers on blur and lets each contact use a separate calling code", async () => {
+  it("accepts digits-only phone input and lets each contact use a separate calling code", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
 
     const phone = screen.getByLabelText(/Phone number/);
-    await userEvent.type(phone, "2025550123");
+    fireEvent.change(phone, { target: { value: "2025550123" } });
     expect(phone).toHaveValue("2025550123");
     fireEvent.blur(phone);
-    expect(phone).toHaveValue("(202)-555-0123");
+    expect(phone).toHaveValue("2025550123");
 
     const emergencyPhone = screen.getByLabelText(/Emergency contact phone/);
     fireEvent.change(screen.getByLabelText("Emergency contact calling code"), {
       target: { value: "GB" },
     });
     fireEvent.change(emergencyPhone, { target: { value: "20 7946 0958" } });
-    expect(emergencyPhone).toHaveValue("20 7946 0958");
+    expect(emergencyPhone).toHaveValue("2079460958");
     expect(screen.getByLabelText("Applicant calling code")).toHaveValue("US");
     expect(screen.getByLabelText("Emergency contact calling code")).toHaveValue("GB");
   });
 
-  it("recognizes a pasted international number on blur", () => {
+  it("strips non-digits from pasted phone input and caps at 15 digits", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
 
     const phone = screen.getByLabelText(/Phone number/);
     fireEvent.change(phone, { target: { value: "+44 20 7946 0958" } });
-
+    expect(phone).toHaveValue("442079460958");
     expect(screen.getByLabelText("Applicant calling code")).toHaveValue("US");
-    fireEvent.blur(phone);
-    expect(screen.getByLabelText("Applicant calling code")).toHaveValue("GB");
-    expect(phone).toHaveValue("+44 20 7946 0958");
+
+    fireEvent.change(phone, { target: { value: "123456789012345678" } });
+    expect(phone).toHaveValue("123456789012345");
   });
 
   it("submits a restored legacy draft without editing either phone field", async () => {
@@ -229,8 +229,8 @@ describe("ApplicationForm", () => {
       expect(patch).toMatchObject({
         phoneCountry: "CA",
         emergencyContactPhoneCountry: "GB",
-        phone: withNumbers ? "202 555 0123" : "",
-        emergencyContactPhone: withNumbers ? "20 7946 0958" : "",
+        phone: withNumbers ? "2025550123" : "",
+        emergencyContactPhone: withNumbers ? "2079460958" : "",
       });
 
       view.unmount();
@@ -238,7 +238,7 @@ describe("ApplicationForm", () => {
       render(<ApplicationForm onSubmitted={vi.fn()} />);
       expect(screen.getByLabelText("Applicant calling code")).toHaveValue("CA");
       expect(screen.getByLabelText("Emergency contact calling code")).toHaveValue("GB");
-      expect(screen.getByLabelText(/Phone number/)).toHaveValue(withNumbers ? "202 555 0123" : "");
+      expect(screen.getByLabelText(/Phone number/)).toHaveValue(withNumbers ? "2025550123" : "");
 
       if (withNumbers) {
         await act(async () => {

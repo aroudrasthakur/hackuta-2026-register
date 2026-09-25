@@ -31,6 +31,21 @@ describe("formToDraftPatch", () => {
     }
   });
 
+  it("includes phone country fields in draft patches", () => {
+    const patch = formToDraftPatch({
+      ...validRegistrationForm(),
+      phone: "2025550123",
+      phoneCountry: "CA",
+      emergencyContactPhone: "2079460958",
+      emergencyContactPhoneCountry: "GB",
+    });
+
+    expect(patch.phone).toBe("2025550123");
+    expect(patch.phoneCountry).toBe("CA");
+    expect(patch.emergencyContactPhone).toBe("2079460958");
+    expect(patch.emergencyContactPhoneCountry).toBe("GB");
+  });
+
   it("sends empty strings and nulls so the server can clear stored values", () => {
     const patch = formToDraftPatch({
       ...INITIAL_FORM,

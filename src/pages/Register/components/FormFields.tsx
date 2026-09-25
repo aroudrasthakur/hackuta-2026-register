@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
   type TextareaHTMLAttributes,
 } from "react";
+import { DropdownChevron } from "./DropdownChevron";
 import { dropdownOptionClass, dropdownPanelClass } from "./dropdownStyles";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
 import { useDropdownDismiss } from "./useDropdownDismiss";
@@ -244,20 +245,7 @@ export const SelectField = memo(function SelectField({
               {displayValue}
             </span>
           </button>
-          <div
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-            aria-hidden="true"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M4 6l4 4 4-4"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+          <DropdownChevron active={open} />
         </div>
         {helperText ? (
           <p id={helperId} className="text-xs font-normal text-(--ocean)">

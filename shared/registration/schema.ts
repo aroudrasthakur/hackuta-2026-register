@@ -29,9 +29,15 @@ import { isValidEmailSyntax, normalizeEmail } from "../lib/normalizeEmail";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
 import { isUsaCountry, US_STATE_OPTIONS } from "./residence";
 
+export const MAX_PHONE_DIGITS = 15;
+
+export function sanitizePhoneDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(0, MAX_PHONE_DIGITS);
+}
+
 export function isValidPhone(value: string) {
   const digits = value.replace(/\D/g, "");
-  return digits.length >= 10 && digits.length <= 15;
+  return digits.length >= 10 && digits.length <= MAX_PHONE_DIGITS;
 }
 
 export function formatUsPhone(value: string) {

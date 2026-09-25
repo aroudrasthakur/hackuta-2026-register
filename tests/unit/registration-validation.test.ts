@@ -899,7 +899,11 @@ describe("normalizeHttpUrl", () => {
 
 describe("isValidPhone", () => {
   it("accepts local and international numbers with 10 to 15 digits", async () => {
-    const { isValidPhone } = await import("../../shared/registration/schema");
+    const { sanitizePhoneDigits, isValidPhone } = await import("../../shared/registration/schema");
+    expect(sanitizePhoneDigits("123456789012345678")).toBe("123456789012345");
+    expect(sanitizePhoneDigits("(202) 555-0123")).toBe("2025550123");
+    expect(sanitizePhoneDigits("+44 20 7946 0958")).toBe("442079460958");
+    expect(sanitizePhoneDigits("")).toBe("");
     expect(isValidPhone("5551234567")).toBe(true);
     expect(isValidPhone("202-555-0123")).toBe(true);
     expect(isValidPhone("+1 202-555-0123")).toBe(true);

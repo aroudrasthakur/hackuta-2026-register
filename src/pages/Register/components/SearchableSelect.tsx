@@ -7,6 +7,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { DropdownChevron } from "./DropdownChevron";
 import { FieldError, RequiredMark } from "./FormFields";
 import { dropdownOptionClass, dropdownPanelClass } from "./dropdownStyles";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
@@ -152,30 +153,33 @@ export const SearchableSelect = memo(function SearchableSelect({
           {label}
           {required ? <RequiredMark /> : null}
         </span>
-        <input
-          id={id}
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-autocomplete="list"
-          aria-invalid={!!error}
-          aria-describedby={error ? errorId : undefined}
-          className={fieldClass(error)}
-          placeholder={placeholder}
-          value={inputValue}
-          onChange={(event) => {
-            const nextQuery = event.target.value;
-            setQuery(nextQuery);
-            setActiveIndex(0);
-            setOpen(true);
-            if (!nextQuery.trim()) {
-              onChange("");
-            }
-          }}
-          onFocus={openList}
-          onKeyDown={handleKeyDown}
-          autoComplete="off"
-        />
+        <div className="relative w-full">
+          <input
+            id={id}
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            aria-autocomplete="list"
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
+            className={`${fieldClass(error)} pr-10`}
+            placeholder={placeholder}
+            value={inputValue}
+            onChange={(event) => {
+              const nextQuery = event.target.value;
+              setQuery(nextQuery);
+              setActiveIndex(0);
+              setOpen(true);
+              if (!nextQuery.trim()) {
+                onChange("");
+              }
+            }}
+            onFocus={openList}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+          />
+          <DropdownChevron active={open} />
+        </div>
         <FieldError id={errorId} message={error} />
       </label>
 

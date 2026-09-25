@@ -53,6 +53,17 @@ export function fieldClass(error?: string) {
   return error ? `${inputClass} ${inputErrorClass}` : inputClass;
 }
 
+const compactSelectClass =
+  "appearance-none rounded-lg border-2 border-(--sand) bg-white py-3 pl-2 pr-5 text-xs text-(--ink) " +
+  "outline-none transition-colors focus:border-(--ocean) focus:ring-2 focus:ring-(--ocean)/20 " +
+  "disabled:cursor-not-allowed disabled:opacity-60";
+
+export function countryCodeSelectClass(error?: string) {
+  return error
+    ? `${compactSelectClass} border-red-400 focus:border-red-500 focus:ring-red-100`
+    : compactSelectClass;
+}
+
 export function fieldsetErrorClass(hasError: boolean) {
   return hasError ? "rounded-lg border-2 border-red-400 bg-red-50 p-4" : "";
 }
