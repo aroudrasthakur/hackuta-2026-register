@@ -180,7 +180,7 @@ describe("applicationToDraftForm", () => {
     expect(restored.age).toBe("");
     expect(restored.raceEthnicity).toEqual([]);
     expect(restored.hackathonsAttended).toBe("");
-    expect(restored.codeOfConductAgreed).toBe(false);
+    expect(restored.MLHcodeOfConductAgreed).toBe(false);
     expect(restored.mlhCommunicationsConsent).toBe(false);
     expect(restored.sponsorSharingConsent).toBe(false);
     expect(restored.foodAllergyWaiverAgreed).toBe(false);

@@ -53,7 +53,7 @@ const payload: RegistrationPayload = {
     "Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.",
   emergencyContactName: "Jane Test",
   emergencyContactPhone: "5559876543",
-  codeOfConductAgreed: true,
+  MLHcodeOfConductAgreed: true,
   mlhDataSharingConsent: true,
   mlhCommunicationsConsent: false,
   sponsorSharingConsent: false,
