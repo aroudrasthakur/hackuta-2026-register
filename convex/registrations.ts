@@ -105,9 +105,6 @@ async function upsertRegistration(
 
   await ctx.db.patch(draftApplication._id, {
     ...fields,
-    otherSchool: draftApplication.otherSchool,
-    otherMajor: draftApplication.otherMajor,
-    otherHearAbout: draftApplication.otherHearAbout,
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
     status: "submitted",

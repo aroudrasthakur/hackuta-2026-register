@@ -4,7 +4,18 @@ import { makeFunctionReference } from "convex/server";
 import { describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
 import { RESUME_UPLOAD_BUCKET } from "../../convex/lib/rateLimitBuckets";
+import {
+  GENDER_SELF_DESCRIBE_OPTION,
+  HEAR_ABOUT_OTHER_OPTION,
+  MAJOR_OTHER_OPTION,
+  SCHOOL_OTHER_OPTION,
+} from "../../shared/registration/constants";
 import { formToDraftPatch } from "../../shared/registration/draftPatch";
+import { validateApplicationForm } from "../../shared/registration/validation";
+import {
+  formWithAllOtherOptions,
+  OTHER_OPTION_FIXTURES,
+} from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm, validRegistrationPayload } from "../fixtures/validRegistrationForm";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import {
@@ -336,9 +347,10 @@ describe("convex registrations", () => {
       stateOfResidence: "Texas",
       internationalStudent: false,
       dietaryRestrictions: [],
-      MLHcodeOfConductAgreed: true,
+      mlhCodeOfConductAgreed: true,
     });
     expect(stored).not.toHaveProperty("codeOfConductAgreed");
+    expect(stored).not.toHaveProperty("MLHcodeOfConductAgreed");
     await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       registration: { answers: { stateOfResidence: "Texas" } },
     });
@@ -354,7 +366,7 @@ describe("convex registrations", () => {
     const t = await authTest();
 
     await expect(t.mutation("registrations:submitRegistration", {
-      data: { ...validRegistrationPayload(), MLHcodeOfConductAgreed: false },
+      data: { ...validRegistrationPayload(), mlhCodeOfConductAgreed: false },
     })).rejects.toThrow("Invalid registration data.");
 
     expect(await t.run((ctx) => ctx.db.query("applications").first())).toBeNull();
@@ -1359,6 +1371,67 @@ describe("convex applicant auth flows", () => {
     await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
       draft: { studentEmail: "student@mail.utexas.edu" },
     });
+  });
+
+  it("persists split other option fields through draft, submission, and dashboard answers", async () => {
+    const t = await authTest();
+    const form = formWithAllOtherOptions();
+    const validated = validateApplicationForm(form);
+    expect(validated.success).toBe(true);
+    if (!validated.success) return;
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(form),
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: {
+        school: SCHOOL_OTHER_OPTION,
+        otherSchool: OTHER_OPTION_FIXTURES.school,
+        major: MAJOR_OTHER_OPTION,
+        otherMajor: OTHER_OPTION_FIXTURES.major,
+        gender: GENDER_SELF_DESCRIBE_OPTION,
+        otherGender: OTHER_OPTION_FIXTURES.gender,
+        hearAbout: HEAR_ABOUT_OTHER_OPTION,
+        otherHearAbout: OTHER_OPTION_FIXTURES.hearAbout,
+        mlhCodeOfConductAgreed: true,
+      },
+    });
+
+    await t.mutation("registrations:submitRegistration", {
+      data: validated.payload,
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).toMatchObject({
+      school: SCHOOL_OTHER_OPTION,
+      otherSchool: OTHER_OPTION_FIXTURES.school,
+      major: MAJOR_OTHER_OPTION,
+      otherMajor: OTHER_OPTION_FIXTURES.major,
+      gender: GENDER_SELF_DESCRIBE_OPTION,
+      otherGender: OTHER_OPTION_FIXTURES.gender,
+      hearAbout: HEAR_ABOUT_OTHER_OPTION,
+      otherHearAbout: OTHER_OPTION_FIXTURES.hearAbout,
+      mlhCodeOfConductAgreed: true,
+      status: "submitted",
+    });
+    expect(stored).not.toHaveProperty("codeOfConductAgreed");
+    expect(stored).not.toHaveProperty("MLHcodeOfConductAgreed");
+
+    const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
+      registration: { answers: Record<string, unknown> };
+    };
+    expect(dashboard.registration.answers).toMatchObject({
+      school: SCHOOL_OTHER_OPTION,
+      otherSchool: OTHER_OPTION_FIXTURES.school,
+      major: MAJOR_OTHER_OPTION,
+      otherMajor: OTHER_OPTION_FIXTURES.major,
+      gender: GENDER_SELF_DESCRIBE_OPTION,
+      otherGender: OTHER_OPTION_FIXTURES.gender,
+      hearAbout: HEAR_ABOUT_OTHER_OPTION,
+      otherHearAbout: OTHER_OPTION_FIXTURES.hearAbout,
+      mlhCodeOfConductAgreed: true,
+    });
+    await drainScheduledFunctions(t);
   });
 
   it("persists student email through submission and dashboard answers", async () => {

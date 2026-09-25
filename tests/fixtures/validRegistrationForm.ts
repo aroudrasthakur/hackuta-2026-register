@@ -35,7 +35,7 @@ export function validRegistrationForm(): ApplicationFormData {
     hearAbout: "Discord",
     emergencyContactName: "Jane Test",
     emergencyContactPhone: "5559876543",
-    MLHcodeOfConductAgreed: true,
+    mlhCodeOfConductAgreed: true,
     mlhDataSharingConsent: true,
     foodAllergyWaiverAgreed: true,
   };

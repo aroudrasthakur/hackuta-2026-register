@@ -41,6 +41,7 @@ export const CONDITIONAL_STRING_FIELDS = [
   "otherSchool",
   "otherMajor",
   "otherHearAbout",
+  "otherGender",
 ] as const;
 
 export const OPTIONAL_INT_FIELDS = ["age", "graduationYear", "hackathonsAttended"] as const;
@@ -50,7 +51,7 @@ export const STRING_ARRAY_FIELDS = ["raceEthnicity", "dietaryRestrictions"] as c
 export const NULLABLE_BOOLEAN_FIELDS = ["internationalStudent"] as const;
 
 export const REQUIRED_BOOLEAN_FIELDS = [
-  "MLHcodeOfConductAgreed",
+  "mlhCodeOfConductAgreed",
   "mlhDataSharingConsent",
   "mlhCommunicationsConsent",
   "sponsorSharingConsent",

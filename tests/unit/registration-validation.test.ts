@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { AGE_TOO_HIGH_MESSAGE } from "../../shared/registration/constants";
+import {
+  AGE_TOO_HIGH_MESSAGE,
+  GENDER_SELF_DESCRIBE_OPTION,
+  HEAR_ABOUT_OTHER_OPTION,
+  MAJOR_OTHER_OPTION,
+  SCHOOL_OTHER_OPTION,
+} from "../../shared/registration/constants";
 import { registrationPayloadSchema } from "../../shared/registration/schema";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import {
@@ -36,7 +42,7 @@ describe("validateApplicationForm", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.errors.firstName).toBe("First name is required.");
-      expect(result.errors.MLHcodeOfConductAgreed).toBeTruthy();
+      expect(result.errors.mlhCodeOfConductAgreed).toBeTruthy();
     }
   });
 
@@ -251,20 +257,21 @@ describe("validateApplicationForm", () => {
 
   it("accepts a custom school when Other is selected", () => {
     const form = validRegistrationForm();
-    form.school = "Other:";
+    form.school = SCHOOL_OTHER_OPTION;
     form.otherSchool = "My Local Community College";
 
     const result = validateApplicationForm(form);
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.payload.school).toBe("My Local Community College");
+      expect(result.payload.school).toBe(SCHOOL_OTHER_OPTION);
+      expect(result.payload.otherSchool).toBe("My Local Community College");
     }
   });
 
   it("requires a school name when Other is selected", () => {
     const form = validRegistrationForm();
-    form.school = "Other:";
+    form.school = SCHOOL_OTHER_OPTION;
     form.otherSchool = "";
 
     const result = validateApplicationForm(form);
@@ -279,20 +286,21 @@ describe("validateApplicationForm", () => {
 
   it("accepts a custom hear-about response when Other is selected", () => {
     const form = validRegistrationForm();
-    form.hearAbout = "Other";
+    form.hearAbout = HEAR_ABOUT_OTHER_OPTION;
     form.otherHearAbout = "Professor announcement";
 
     const result = validateApplicationForm(form);
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.payload.hearAbout).toBe("Professor announcement");
+      expect(result.payload.hearAbout).toBe(HEAR_ABOUT_OTHER_OPTION);
+      expect(result.payload.otherHearAbout).toBe("Professor announcement");
     }
   });
 
   it("requires a hear-about response when Other is selected", () => {
     const form = validRegistrationForm();
-    form.hearAbout = "Other";
+    form.hearAbout = HEAR_ABOUT_OTHER_OPTION;
     form.otherHearAbout = "";
 
     const result = validateApplicationForm(form);
@@ -307,20 +315,21 @@ describe("validateApplicationForm", () => {
 
   it("accepts a custom major when Other is selected", () => {
     const form = validRegistrationForm();
-    form.major = "Other (please specify)";
+    form.major = MAJOR_OTHER_OPTION;
     form.otherMajor = "Biomedical engineering";
 
     const result = validateApplicationForm(form);
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.payload.major).toBe("Biomedical engineering");
+      expect(result.payload.major).toBe(MAJOR_OTHER_OPTION);
+      expect(result.payload.otherMajor).toBe("Biomedical engineering");
     }
   });
 
   it("requires a major description when Other is selected", () => {
     const form = validRegistrationForm();
-    form.major = "Other (please specify)";
+    form.major = MAJOR_OTHER_OPTION;
     form.otherMajor = "";
 
     const result = validateApplicationForm(form);
@@ -330,6 +339,33 @@ describe("validateApplicationForm", () => {
       expect(result.errors.otherMajor).toBe(
         "Please describe your major or field of study.",
       );
+    }
+  });
+
+  it("accepts a self-described gender when Prefer to self-describe is selected", () => {
+    const form = validRegistrationForm();
+    form.gender = GENDER_SELF_DESCRIBE_OPTION;
+    form.otherGender = "Genderfluid";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);
+      expect(result.payload.otherGender).toBe("Genderfluid");
+    }
+  });
+
+  it("requires a gender description when Prefer to self-describe is selected", () => {
+    const form = validRegistrationForm();
+    form.gender = GENDER_SELF_DESCRIBE_OPTION;
+    form.otherGender = "";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.otherGender).toBe("Please describe your gender.");
     }
   });
 
@@ -695,10 +731,24 @@ describe("validateRegistrationPayload", () => {
   it("rejects missing consent fields", () => {
     const result = validateRegistrationPayload({
       ...validPayloadFromForm(),
-      MLHcodeOfConductAgreed: false,
+      mlhCodeOfConductAgreed: false,
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("requires mlhCodeOfConductAgreed with a specific error message", () => {
+    const form = validRegistrationForm();
+    form.mlhCodeOfConductAgreed = false;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.mlhCodeOfConductAgreed).toBe(
+        "You must agree to the MLH Code of Conduct to continue.",
+      );
+    }
   });
 
   it("accepts optional profile URLs including devpost", () => {
@@ -832,7 +882,7 @@ describe("validateRegistrationPayload", () => {
 
 describe("focusFirstInvalidField focus targets", () => {
   it("uses the mapped focus id for composite fields and tolerates missing elements", () => {
-    expect(() => focusFirstInvalidField({ MLHcodeOfConductAgreed: "Required" })).not.toThrow();
+    expect(() => focusFirstInvalidField({ mlhCodeOfConductAgreed: "Required" })).not.toThrow();
   });
 });
 

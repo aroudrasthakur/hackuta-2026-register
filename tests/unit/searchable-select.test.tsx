@@ -179,6 +179,24 @@ describe("SearchableSelect", () => {
     expect(screen.getAllByRole("option", { name: "Texas State University" })).toHaveLength(1);
   });
 
+  it("prepends extra options before featured and search results", async () => {
+    render(
+      <SearchableSelect
+        id="school"
+        label="School / university"
+        value=""
+        options={OPTIONS}
+        featuredOptions={FEATURED}
+        extraOptions={["Other (Please Specify)"]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    const options = screen.getAllByRole("option");
+    expect(options[0]).toHaveAccessibleName("Other (Please Specify)");
+  });
+
   it("falls back to the first options slice without featured options", async () => {
     render(
       <SearchableSelect

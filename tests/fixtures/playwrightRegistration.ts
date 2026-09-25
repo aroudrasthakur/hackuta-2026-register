@@ -68,7 +68,7 @@ export async function fillApplicationForm(page: Page) {
   await selectListboxOption(page, "hearAbout", "Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");
-  await clickInput(page, "MLHcodeOfConductAgreed");
+  await clickInput(page, "mlhCodeOfConductAgreed");
   await clickInput(page, "mlhDataSharingConsent");
   await clickInput(page, "foodAllergyWaiverAgreed")
 }

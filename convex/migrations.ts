@@ -1,5 +1,11 @@
 import type { GenericMutationCtx } from "convex/server";
 import { resolveAllergyDetailsFromLegacy } from "../shared/registration/allergyMigration";
+import {
+  splitLegacyGender,
+  splitLegacyHearAbout,
+  splitLegacyMajor,
+  splitLegacySchool,
+} from "../shared/registration/otherOptionMigration";
 import { mergeLegacyMeatPreferencesIntoDietaryRestrictions } from "../shared/registration/dietaryMigration";
 import { internalMutation } from "./_generated/server";
 
@@ -220,6 +226,129 @@ export const migrateOtherDietaryToAllergyDetails = internalMutation({
     return { ok: true as const, updated };
   },
 });
+
+/**
+ * One-time migration: store custom school/major/hear-about text in separate
+ * `other*` columns instead of merged parent fields, and normalize the school
+ * Other sentinel from legacy `"Other:"` to `"Other (Please Specify)"`.
+ */
+export const migrateMergedOtherFieldsToSeparateColumns = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      const legacy = application as typeof application & {
+        school?: string;
+        otherSchool?: string;
+        major?: string;
+        otherMajor?: string;
+        hearAbout?: string;
+        otherHearAbout?: string;
+        gender?: string;
+        otherGender?: string;
+      };
+
+      const schoolSplit = splitLegacySchool(legacy.school, legacy.otherSchool);
+      const majorSplit = splitLegacyMajor(legacy.major, legacy.otherMajor);
+      const hearAboutSplit = splitLegacyHearAbout(
+        legacy.hearAbout,
+        legacy.otherHearAbout,
+      );
+      const genderSplit = splitLegacyGender(legacy.gender, legacy.otherGender);
+
+      const patch: Record<string, string | undefined> = {};
+
+      if (schoolSplit.school !== (legacy.school ?? "")) {
+        patch.school = schoolSplit.school || undefined;
+      }
+      if (schoolSplit.otherSchool !== (legacy.otherSchool ?? "")) {
+        patch.otherSchool = schoolSplit.otherSchool || undefined;
+      }
+      if (majorSplit.major !== (legacy.major ?? "")) {
+        patch.major = majorSplit.major || undefined;
+      }
+      if (majorSplit.otherMajor !== (legacy.otherMajor ?? "")) {
+        patch.otherMajor = majorSplit.otherMajor || undefined;
+      }
+      if (hearAboutSplit.hearAbout !== (legacy.hearAbout ?? "")) {
+        patch.hearAbout = hearAboutSplit.hearAbout || undefined;
+      }
+      if (hearAboutSplit.otherHearAbout !== (legacy.otherHearAbout ?? "")) {
+        patch.otherHearAbout = hearAboutSplit.otherHearAbout || undefined;
+      }
+      if (genderSplit.gender !== (legacy.gender ?? "")) {
+        patch.gender = genderSplit.gender || undefined;
+      }
+      if (genderSplit.otherGender !== (legacy.otherGender ?? "")) {
+        patch.otherGender = genderSplit.otherGender || undefined;
+      }
+
+      if (Object.keys(patch).length === 0) {
+        continue;
+      }
+
+      await ctx.db.patch(application._id, patch);
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
+/**
+ * One-time migration: consolidate legacy `codeOfConductAgreed` and interim
+ * `MLHcodeOfConductAgreed` into `mlhCodeOfConductAgreed`.
+ */
+export const migrateLegacyCodeOfConductFields = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      const legacy = application as typeof application & {
+        codeOfConductAgreed?: boolean;
+        MLHcodeOfConductAgreed?: boolean;
+        mlhCodeOfConductAgreed?: boolean;
+      };
+
+      const hasLegacyColumn =
+        "codeOfConductAgreed" in legacy || "MLHcodeOfConductAgreed" in legacy;
+      if (!hasLegacyColumn) {
+        continue;
+      }
+
+      const {
+        _id,
+        _creationTime,
+        codeOfConductAgreed,
+        MLHcodeOfConductAgreed,
+        ...replacement
+      } = legacy;
+      void _creationTime;
+      void codeOfConductAgreed;
+      void MLHcodeOfConductAgreed;
+
+      const mlhCodeOfConductAgreed =
+        legacy.mlhCodeOfConductAgreed ??
+        legacy.MLHcodeOfConductAgreed ??
+        legacy.codeOfConductAgreed;
+
+      await ctx.db.replace(_id, {
+        ...replacement,
+        ...(mlhCodeOfConductAgreed !== undefined
+          ? { mlhCodeOfConductAgreed }
+          : {}),
+      });
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
+/** @deprecated Use migrateLegacyCodeOfConductFields */
+export const migrateCodeOfConductAgreedToMlhField = migrateLegacyCodeOfConductFields;
 
 /** One-time cleanup after removing hackathonId from the applications schema. */
 export const stripLegacyApplicationHackathonIds = internalMutation({

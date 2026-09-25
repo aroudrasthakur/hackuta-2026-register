@@ -27,6 +27,7 @@ import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
+import { normalizeDraftCodeOfConductPatch } from "../shared/registration/consentFieldMigration";
 import {
   applicationToDraftForm,
   savedResumeFromStoredApplication,
@@ -76,6 +77,8 @@ export const saveApplicationDraft = mutation({
       throw new Error("Your application has already been submitted.");
     }
 
+    const normalizedPatch = normalizeDraftCodeOfConductPatch(patch);
+
     const authUser = await getAuthUser(ctx);
     const email = normalizeEmail(authUser?.email) ?? application.email;
     const updatedAt = Date.now();
@@ -83,7 +86,7 @@ export const saveApplicationDraft = mutation({
     await replaceApplicationWithDraftPatch(
       ctx,
       application,
-      patch as DraftPatchPayload,
+      normalizedPatch as DraftPatchPayload,
       {
         email,
         emailVerificationTime:
@@ -94,8 +97,12 @@ export const saveApplicationDraft = mutation({
 
     if (authUser) {
       await syncAuthUserNameFromApplication(ctx, authUser._id, {
-        firstName: isClearedDraftValue(patch.firstName) ? null : patch.firstName,
-        lastName: isClearedDraftValue(patch.lastName) ? null : patch.lastName,
+        firstName: isClearedDraftValue(normalizedPatch.firstName)
+          ? null
+          : normalizedPatch.firstName,
+        lastName: isClearedDraftValue(normalizedPatch.lastName)
+          ? null
+          : normalizedPatch.lastName,
       });
     }
 

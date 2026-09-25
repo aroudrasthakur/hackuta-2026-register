@@ -15,7 +15,7 @@ describe("validateApplicationForm candidate building", () => {
 
   it("maps unchecked consent to undefined", () => {
     const form = validRegistrationForm();
-    form.MLHcodeOfConductAgreed = false;
+    form.mlhCodeOfConductAgreed = false;
     form.mlhDataSharingConsent = false;
     form.mlhCommunicationsConsent = false;
 

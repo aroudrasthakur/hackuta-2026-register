@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_FORM, type ApplicationFormData } from "../../shared/registration/types";
 import {
+  GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
+import {
+  INTERIM_MLH_CODE_OF_CONDUCT_FIELD,
+  LEGACY_CODE_OF_CONDUCT_FIELD,
+  MLH_CODE_OF_CONDUCT_FIELD,
+} from "../../shared/registration/consentFieldMigration";
+import { OTHER_OPTION_FIXTURES } from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
 import {
   APPLICANT_ANSWER_FIELD_KEYS,
@@ -80,12 +87,15 @@ describe("formToDraftPatch conditional fields", () => {
       major: MAJOR_OTHER_OPTION,
       otherMajor: " Space Law ",
       hearAbout: HEAR_ABOUT_OTHER_OPTION,
-      otherHearAbout: " A friend ",
+      otherHearAbout: ` ${OTHER_OPTION_FIXTURES.hearAbout} `,
+      gender: GENDER_SELF_DESCRIBE_OPTION,
+      otherGender: " Genderfluid ",
     });
 
     expect(patch.otherSchool).toBe("Mars Academy");
     expect(patch.otherMajor).toBe("Space Law");
-    expect(patch.otherHearAbout).toBe("A friend");
+    expect(patch.otherHearAbout).toBe(OTHER_OPTION_FIXTURES.hearAbout);
+    expect(patch.otherGender).toBe("Genderfluid");
   });
 
   it("clears stale 'Other' answers when a listed option is chosen instead", () => {
@@ -96,12 +106,15 @@ describe("formToDraftPatch conditional fields", () => {
       major: "Computer science, computer engineering, or software engineering",
       otherMajor: "Space Law",
       hearAbout: "Discord",
-      otherHearAbout: "A friend",
+      otherHearAbout: OTHER_OPTION_FIXTURES.hearAbout,
+      gender: "Man",
+      otherGender: "Genderfluid",
     });
 
     expect(patch.otherSchool).toBe("");
     expect(patch.otherMajor).toBe("");
     expect(patch.otherHearAbout).toBe("");
+    expect(patch.otherGender).toBe("");
   });
 
   it("parses integer fields and treats non-numeric input as cleared", () => {
@@ -126,6 +139,79 @@ describe("applicationToDraftForm", () => {
     expect(applicationToDraftForm(formToDraftPatch(form))).toEqual(expected);
   });
 
+  it("hydrates legacy merged school text as Other + otherSchool", () => {
+    const restored = applicationToDraftForm({
+      school: "Mars Academy",
+    });
+
+    expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
+    expect(restored.otherSchool).toBe("Mars Academy");
+  });
+
+  it("normalizes the legacy school Other sentinel on hydration", () => {
+    const restored = applicationToDraftForm({
+      school: "Other:",
+      otherSchool: "Mars Academy",
+    });
+
+    expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
+    expect(restored.otherSchool).toBe("Mars Academy");
+  });
+
+  it("hydrates legacy merged major and hear-about text", () => {
+    const restored = applicationToDraftForm({
+      major: "Biomedical engineering",
+      hearAbout: "Professor announcement",
+    });
+
+    expect(restored.major).toBe(MAJOR_OTHER_OPTION);
+    expect(restored.otherMajor).toBe("Biomedical engineering");
+    expect(restored.hearAbout).toBe(HEAR_ABOUT_OTHER_OPTION);
+    expect(restored.otherHearAbout).toBe("Professor announcement");
+  });
+
+  it("hydrates legacy codeOfConductAgreed into mlhCodeOfConductAgreed", () => {
+    const restored = applicationToDraftForm({
+      codeOfConductAgreed: true,
+    } as Parameters<typeof applicationToDraftForm>[0]);
+
+    expect(restored.mlhCodeOfConductAgreed).toBe(true);
+  });
+
+  it("includes mlhCodeOfConductAgreed in draft autosave patches", () => {
+    const form = validRegistrationForm();
+    form.mlhCodeOfConductAgreed = true;
+
+    expect(formToDraftPatch(form).mlhCodeOfConductAgreed).toBe(true);
+  });
+
+  it("strips legacy code of conduct columns when merging mlhCodeOfConductAgreed", () => {
+    const patch = formToDraftPatch(validRegistrationForm());
+    patch.mlhCodeOfConductAgreed = true;
+
+    const merged = mergeDraftPatchIntoApplication(
+      {
+        [LEGACY_CODE_OF_CONDUCT_FIELD]: false,
+        [INTERIM_MLH_CODE_OF_CONDUCT_FIELD]: false,
+      },
+      patch,
+      { email: "sam@example.com", updatedAt: 1 },
+    );
+
+    expect(merged).toMatchObject({ [MLH_CODE_OF_CONDUCT_FIELD]: true });
+    expect(merged).not.toHaveProperty(LEGACY_CODE_OF_CONDUCT_FIELD);
+    expect(merged).not.toHaveProperty(INTERIM_MLH_CODE_OF_CONDUCT_FIELD);
+  });
+
+  it("hydrates legacy merged gender text as self-describe + otherGender", () => {
+    const restored = applicationToDraftForm({
+      gender: "Genderfluid",
+    });
+
+    expect(restored.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);
+    expect(restored.otherGender).toBe("Genderfluid");
+  });
+
   it("defaults every field for an empty application", () => {
     const restored = applicationToDraftForm({});
     expect(restored.firstName).toBe("");
@@ -133,7 +219,7 @@ describe("applicationToDraftForm", () => {
     expect(restored.age).toBe("");
     expect(restored.raceEthnicity).toEqual([]);
     expect(restored.hackathonsAttended).toBe("");
-    expect(restored.MLHcodeOfConductAgreed).toBe(false);
+    expect(restored.mlhCodeOfConductAgreed).toBe(false);
     expect(restored.mlhCommunicationsConsent).toBe(false);
     expect(restored.sponsorSharingConsent).toBe(false);
     expect(restored.foodAllergyWaiverAgreed).toBe(false);
