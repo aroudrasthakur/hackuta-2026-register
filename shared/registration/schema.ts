@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 import { containsDangerousMarkup, sanitizePlainText } from "../lib/sanitizeInput";
 import { COUNTRIES_OF_RESIDENCE } from "./countries";
 import {
@@ -28,14 +29,13 @@ import { MLH_SCHOOLS_SET } from "./mlhSchools";
 import { isUsaCountry, US_STATE_OPTIONS } from "./residence";
 
 export function isValidPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  return digits.length >= 10 && digits.length <= 15;
+  if (!/^\+[\d\s().-]+$/.test(value)) return false;
+  const phone = parsePhoneNumberFromString(value);
+  return phone?.isValid() ?? false;
 }
 
-export function formatPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length !== 10) return value;
-  return `(${digits.slice(0, 3)})-${digits.slice(3, 6)}-${digits.slice(6)}`;
+export function normalizePhone(value: string) {
+  return parsePhoneNumberFromString(value)?.number ?? value;
 }
 
 const HTTP_URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
@@ -268,7 +268,7 @@ export const registrationPayloadSchema = z
       message: "Phone number is required.",
     })
       .refine(isValidPhone, "Enter a valid phone number.")
-      .transform(formatPhone),
+      .transform(normalizePhone),
     age: ageSchema,
     school: safePlainText({
       max: FIELD_LIMITS.school,
@@ -371,7 +371,7 @@ export const registrationPayloadSchema = z
       message: "Emergency contact phone is required.",
     })
       .refine(isValidPhone, "Enter a valid phone number.")
-      .transform(formatPhone),
+      .transform(normalizePhone),
     MLHcodeOfConductAgreed: z.literal(true, {
       message: "You must agree to the MLH Code of Conduct to continue.",
     }),

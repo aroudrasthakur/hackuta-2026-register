@@ -80,7 +80,7 @@ import {
   US_STATE_OPTIONS,
 } from "../../../shared/registration/residence";
 import { INITIAL_FORM } from "../../../shared/registration/types";
-import { formatPhone } from "../../../shared/registration/schema";
+import { PhoneField } from "./components/PhoneField";
 import {
   RESUME_MISSING_MESSAGE,
   resumeFileKey,
@@ -493,17 +493,12 @@ function ApplicationFormContent({
             maxLength={FIELD_LIMITS.name}
             error={errors.lastName}
           />
-          <TextField
+          <PhoneField
             id="phone"
             label="Phone number"
-            required
-            type="tel"
-            inputMode="tel"
             value={form.phone}
-            onChange={(e) => updateField("phone", e.target.value)}
-            onBlur={(e) => updateField("phone", formatPhone(e.target.value))}
-            autoComplete="tel"
-            maxLength={FIELD_LIMITS.phone}
+            onChange={(value) => updateField("phone", value)}
+            autoComplete="section-applicant tel-national"
             error={errors.phone}
           />
           <TextField
@@ -1065,20 +1060,12 @@ function ApplicationFormContent({
             maxLength={FIELD_LIMITS.name}
             error={errors.emergencyContactName}
           />
-          <TextField
+          <PhoneField
             id="emergencyContactPhone"
             label="Emergency contact phone"
-            required
-            type="tel"
-            inputMode="tel"
             value={form.emergencyContactPhone}
-            onChange={(e) =>
-              updateField("emergencyContactPhone", e.target.value)
-            }
-            onBlur={(e) =>
-              updateField("emergencyContactPhone", formatPhone(e.target.value))
-            }
-            maxLength={FIELD_LIMITS.phone}
+            onChange={(value) => updateField("emergencyContactPhone", value)}
+            autoComplete="section-emergency tel-national"
             error={errors.emergencyContactPhone}
           />
         </div>
