@@ -119,6 +119,26 @@ describe("formToDraftPatch conditional fields", () => {
 });
 
 describe("applicationToDraftForm", () => {
+  it.each(["2025550123", "(202) 555-0123", "202-555-0123"])(
+    "restores legacy domestic phone numbers as international numbers (%s)",
+    (phone) => {
+      expect(applicationToDraftForm({ phone, emergencyContactPhone: phone })).toMatchObject({
+        phone: "+12025550123",
+        emergencyContactPhone: "+12025550123",
+      });
+    },
+  );
+
+  it.each(["", "555-0123", "+44 20 7946 0958", "+3545551234", "2025550123 ext 4"])(
+    "preserves nonlegacy phone values for normal validation (%s)",
+    (phone) => {
+      expect(applicationToDraftForm({ phone, emergencyContactPhone: phone })).toMatchObject({
+        phone,
+        emergencyContactPhone: phone,
+      });
+    },
+  );
+
   it("round-trips a fully answered form through the draft patch", () => {
     const form = { ...validRegistrationForm(), sponsorSharingConsent: true };
     const { resume: _resume, ...expected } = form;

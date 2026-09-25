@@ -18,6 +18,7 @@ import {
 } from "./applicantFields";
 import { resolveAllergyDetailsFromLegacy } from "./allergyMigration";
 import { normalizeEmail } from "../lib/normalizeEmail";
+import { normalizePhoneDraftFields } from "./phoneDraft";
 import { normalizeResidenceFormFields, requiresUsState } from "./residence";
 import type { SavedResumeDraft } from "./applicantFields";
 import type { ApplicationFormData } from "./types";
@@ -169,7 +170,7 @@ export function applicationToDraftForm(
   }
 
   return normalizeResidenceFormFields(
-    values as Omit<ApplicationFormData, "resume">,
+    normalizePhoneDraftFields(values as Omit<ApplicationFormData, "resume">),
   );
 }
 

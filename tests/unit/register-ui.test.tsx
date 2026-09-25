@@ -164,6 +164,30 @@ describe("ApplicationForm", () => {
     expect(phone).toHaveValue("20 7946 0958");
   });
 
+  it("submits a restored legacy draft without editing either phone field", async () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    draftApi.result = {
+      status: "draft",
+      draft: {
+        ...validRegistrationForm(),
+        school: "The University of Texas at Arlington",
+        phone: "(202) 555-0123",
+        emergencyContactPhone: "2025550124",
+      },
+    };
+    const { submitRegistration } = await import("../../src/pages/Register/registerApi");
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+    await waitFor(() => expect(submitRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone: "+12025550123",
+        emergencyContactPhone: "+12025550124",
+      }),
+      null,
+    ));
+  });
+
   it.each([true, false])(
     "autosaves and restores new answers on remount (answer=%s)",
     async (answer) => {
