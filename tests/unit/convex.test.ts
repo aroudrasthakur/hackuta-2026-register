@@ -255,6 +255,7 @@ describe("convex registrations", () => {
       builtOrWantToBuild: "Built a campus events app with React and Convex.",
       shortDeadlineLearning: "Learned GitHub Actions in one night before a demo.",
       hackathonsAttended: "2",
+      experienceLevel: "Advanced" as const,
     };
     await t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch({ ...validRegistrationForm(), ...answers }),
@@ -264,6 +265,7 @@ describe("convex registrations", () => {
         builtOrWantToBuild: answers.builtOrWantToBuild,
         shortDeadlineLearning: answers.shortDeadlineLearning,
         hackathonsAttended: answers.hackathonsAttended,
+        experienceLevel: answers.experienceLevel,
       },
     });
 
@@ -273,6 +275,7 @@ describe("convex registrations", () => {
         builtOrWantToBuild: answers.builtOrWantToBuild,
         shortDeadlineLearning: answers.shortDeadlineLearning,
         hackathonsAttended: 2,
+        experienceLevel: answers.experienceLevel,
       },
     });
 
@@ -280,6 +283,7 @@ describe("convex registrations", () => {
       builtOrWantToBuild: answers.builtOrWantToBuild,
       shortDeadlineLearning: answers.shortDeadlineLearning,
       hackathonsAttended: 2,
+      experienceLevel: answers.experienceLevel,
       status: "submitted",
     });
 
@@ -290,6 +294,7 @@ describe("convex registrations", () => {
       builtOrWantToBuild: answers.builtOrWantToBuild,
       shortDeadlineLearning: answers.shortDeadlineLearning,
       hackathonsAttended: 2,
+      experienceLevel: answers.experienceLevel,
     });
     await drainScheduledFunctions(t);
   });

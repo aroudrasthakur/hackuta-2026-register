@@ -364,13 +364,13 @@ describe("validateApplicationForm", () => {
   it("requires a description when dietary Allergies is selected", () => {
     const form = validRegistrationForm();
     form.dietaryRestrictions = ["Allergies"];
-    form.otherDietary = "";
+    form.allergyDetails = "";
 
     const result = validateApplicationForm(form);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.errors.otherDietary).toBe("Please describe your food allergies.");
+      expect(result.errors.allergyDetails).toBe("Please describe your food allergies.");
     }
   });
 
@@ -456,13 +456,13 @@ describe("validateApplicationForm", () => {
     const form = validRegistrationForm();
     form.dietaryRestrictions = ["Allergies"];
     form.otherDietaryRestrictions = "Low sodium";
-    form.otherDietary = "";
+    form.allergyDetails = "";
 
     const result = validateApplicationForm(form);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.errors.otherDietary).toBe("Please describe your food allergies.");
+      expect(result.errors.allergyDetails).toBe("Please describe your food allergies.");
     }
   });
 

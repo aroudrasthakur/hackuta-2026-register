@@ -61,6 +61,17 @@ const applicantAnswerFields = {
   ...fieldsFromKeys(REQUIRED_BOOLEAN_FIELDS, () => v.optional(v.boolean())),
 };
 
+/** Draft patch keys derived from shared registration field lists (plus resume metadata). */
+export const APPLICANT_DRAFT_PATCH_FIELD_KEYS = [
+  ...applicantStringFieldKeys,
+  ...OPTIONAL_INT_FIELDS,
+  ...STRING_ARRAY_FIELDS,
+  ...NULLABLE_BOOLEAN_FIELDS,
+  ...REQUIRED_BOOLEAN_FIELDS,
+  "resumeStorageId",
+  "resumeFilename",
+] as const;
+
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */
 const applicantDraftPatchFields = {
   ...fieldsFromKeys(applicantStringFieldKeys, () => draftNullableString),

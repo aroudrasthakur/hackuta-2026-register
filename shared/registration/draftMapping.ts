@@ -124,6 +124,11 @@ export function applicationToDraftForm(
     values[key] = (application[key] as string | undefined) ?? "";
   }
 
+  if (!values.allergyDetails && "otherDietary" in application) {
+    values.allergyDetails =
+      (application as { otherDietary?: string }).otherDietary ?? "";
+  }
+
   for (const key of PLAIN_STRING_FIELDS) {
     values[key] = (application[key] as string | undefined) ?? "";
   }

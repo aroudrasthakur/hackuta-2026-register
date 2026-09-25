@@ -10,7 +10,7 @@ export const TRIMMED_STRING_FIELDS = [
   "phone",
   "studentEmail",
   "otherRaceEthnicity",
-  "otherDietary",
+  "allergyDetails",
   "otherDietaryRestrictions",
   "linkedin",
   "github",
@@ -32,6 +32,7 @@ export const PLAIN_STRING_FIELDS = [
   "major",
   "gender",
   "tshirtSize",
+  "experienceLevel",
   "hearAbout",
 ] as const;
 

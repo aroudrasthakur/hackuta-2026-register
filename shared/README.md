@@ -38,8 +38,11 @@ Convex application validators in [convex/applicationFields.ts](../convex/applica
 | `builtOrWantToBuild` | `TRIMMED_STRING_FIELDS` | Mandatory multiline; trimmed on draft save |
 | `shortDeadlineLearning` | `TRIMMED_STRING_FIELDS` | Mandatory multiline; trimmed on draft save |
 | `hackathonsAttended` | `OPTIONAL_INT_FIELDS` | Mandatory on submit; stored as integer 0–100 |
+| `experienceLevel` | `PLAIN_STRING_FIELDS` | Mandatory select; Beginner through Expert |
+| `allergyDetails` | `TRIMMED_STRING_FIELDS` | Required when dietary Allergies is checked; up to 500 characters |
+| `otherDietaryRestrictions` | `TRIMMED_STRING_FIELDS` | Optional free-text dietary notes |
 
-Draft hydration maps legacy `firstHackathon: true` → `"0"` and `false` → `"1"` when `hackathonsAttended` is absent ([draftMapping.ts](registration/draftMapping.ts)).
+Draft hydration maps legacy `firstHackathon: true` → `"0"` and `false` → `"1"` when `hackathonsAttended` is absent, and legacy `otherDietary` → `allergyDetails` when needed ([draftMapping.ts](registration/draftMapping.ts)).
 
 ## Auth (`auth/`)
 

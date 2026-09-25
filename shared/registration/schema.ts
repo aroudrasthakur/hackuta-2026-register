@@ -5,6 +5,7 @@ import {
   AGE_TOO_HIGH_MESSAGE,
   APPLICATION_QUESTIONS,
   DIETARY_OPTIONS,
+  EXPERIENCE_LEVELS,
   FIELD_LIMITS,
   GENDERS,
   HEAR_ABOUT_OPTIONS,
@@ -141,6 +142,9 @@ const dietaryOptionSchema = z.enum(DIETARY_OPTIONS);
 const tshirtSizeSchema = z.enum(TSHIRT_SIZES, {
   message: "Please select a t-shirt size.",
 });
+const experienceLevelSchema = z.enum(EXPERIENCE_LEVELS, {
+  message: "Please select your experience level.",
+});
 const requiredInteger = (label: string, min: number, max: number) =>
   z
     .number({ message: `${label} is required.` })
@@ -219,15 +223,16 @@ export const registrationPayloadSchema = z
       tooLongMessage: "Race / ethnicity details are too long.",
     }),
     dietaryRestrictions: z.array(dietaryOptionSchema).default([]),
-    otherDietary: safeOptionalPlainText({
-      max: FIELD_LIMITS.otherDietary,
-      tooLongMessage: "Dietary details are too long.",
+    allergyDetails: safeOptionalPlainText({
+      max: FIELD_LIMITS.allergyDetails,
+      tooLongMessage: "Allergy details are too long.",
     }),
     otherDietaryRestrictions: safeOptionalPlainText({
       max: FIELD_LIMITS.otherDietaryRestrictions,
       tooLongMessage: "Other dietary restrictions are too long.",
     }),
     tshirtSize: tshirtSizeSchema,
+    experienceLevel: experienceLevelSchema,
     hackathonsAttended: requiredInteger(
       "Hackathons attended",
       MIN_HACKATHONS_ATTENDED,
@@ -294,10 +299,10 @@ export const registrationPayloadSchema = z
       });
     }
 
-    if (data.dietaryRestrictions.includes("Allergies") && !data.otherDietary) {
+    if (data.dietaryRestrictions.includes("Allergies") && !data.allergyDetails) {
       ctx.addIssue({
         code: "custom",
-        path: ["otherDietary"],
+        path: ["allergyDetails"],
         message: "Please describe your food allergies.",
       });
     }

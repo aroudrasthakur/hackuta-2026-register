@@ -88,7 +88,10 @@ Notable required applicant fields (2026):
 | --- | --- | --- |
 | `builtOrWantToBuild` | Multiline textarea in **Application Questions** | Required; up to 2,000 characters; newlines allowed |
 | `shortDeadlineLearning` | Multiline textarea in **Application Questions** | Required; up to 2,000 characters; newlines allowed |
-| `hackathonsAttended` | Number input in **Event Preferences** | Required integer 0–100 (“How many hackathons have you attended”) |
+| `hackathonsAttended` | Number input in **Application Questions** | Required integer 0–100 (“How many hackathons have you attended”) |
+| `experienceLevel` | Select in **Application Questions** | Required; Beginner, Intermediate, Advanced, Expert |
+| `allergyDetails` | Text input in **Event Preferences** (when Allergies is checked) | Required with Allergies; up to 500 characters |
+| `otherDietaryRestrictions` | Optional text input in **Event Preferences** | Optional free-text dietary notes |
 
 Exact question labels live in `APPLICATION_QUESTIONS` ([shared/registration/constants.ts](../shared/registration/constants.ts)). Legacy `firstHackathon` yes/no answers hydrate as counts and are migrated server-side.
 

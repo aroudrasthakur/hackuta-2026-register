@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type { CountryOfResidence } from "./countries";
 import type {
   DIETARY_OPTIONS,
+  EXPERIENCE_LEVELS,
   GENDERS,
   HEAR_ABOUT_OPTIONS,
   LEVELS_OF_STUDY,
@@ -21,6 +22,7 @@ export type RaceEthnicity = (typeof RACE_ETHNICITY_OPTIONS)[number];
 export type DietaryOption = (typeof DIETARY_OPTIONS)[number];
 export type Major = (typeof MAJORS)[number];
 export type TshirtSize = (typeof TSHIRT_SIZES)[number];
+export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
 export type HearAboutOption = (typeof HEAR_ABOUT_OPTIONS)[number];
 export type StateOfResidence = (typeof STATES_OF_RESIDENCE)[number];
 
@@ -43,9 +45,10 @@ export type ApplicationFormData = {
   raceEthnicity: RaceEthnicity[];
   otherRaceEthnicity: string;
   dietaryRestrictions: DietaryOption[];
-  otherDietary: string;
+  allergyDetails: string;
   otherDietaryRestrictions: string;
   tshirtSize: TshirtSize | "";
+  experienceLevel: ExperienceLevel | "";
   hackathonsAttended: string;
   internationalStudent: boolean | null;
   hearAbout: HearAboutOption | "";
@@ -88,11 +91,12 @@ export const FIELD_ORDER: FieldName[] = [
   "graduationYear",
   "gender",
   "otherRaceEthnicity",
-  "otherDietary",
+  "allergyDetails",
   "otherDietaryRestrictions",
   "dietaryRestrictions",
   "tshirtSize",
   "hackathonsAttended",
+  "experienceLevel",
   "builtOrWantToBuild",
   "shortDeadlineLearning",
   "hearAbout",
@@ -119,6 +123,7 @@ export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
   studentEmail: "studentEmail",
   internationalStudent: "internationalStudent-yes",
   hackathonsAttended: "hackathonsAttended",
+  allergyDetails: "allergyDetails",
   resume: "resume-upload",
   codeOfConductAgreed: "codeOfConductAgreed",
   mlhDataSharingConsent: "mlhDataSharingConsent",

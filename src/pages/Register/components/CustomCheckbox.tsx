@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes } from "react";
+import { RequiredMark } from "./FormFields";
 import {
   customCheckboxBoxClass,
   customCheckboxCaptionClass,
@@ -16,7 +17,13 @@ type CustomCheckboxProps = {
   id: string;
 } & InputHTMLAttributes<HTMLInputElement>;
 
-export function CustomCheckbox({ label, id, className = "", ...props }: CustomCheckboxProps) {
+export function CustomCheckbox({
+  label,
+  id,
+  className = "",
+  required,
+  ...props
+}: CustomCheckboxProps) {
   const captionId = `${id}-caption`;
 
   return (
@@ -25,7 +32,9 @@ export function CustomCheckbox({ label, id, className = "", ...props }: CustomCh
         <input
           type="checkbox"
           id={id}
+          required={required}
           aria-labelledby={captionId}
+          aria-required={required ? true : undefined}
           className={customControlInputClass}
           {...props}
         />
@@ -50,6 +59,7 @@ export function CustomCheckbox({ label, id, className = "", ...props }: CustomCh
       </label>
       <span id={captionId} className={customCheckboxCaptionClass}>
         {label}
+        {required ? <RequiredMark /> : null}
       </span>
     </div>
   );
