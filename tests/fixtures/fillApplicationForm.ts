@@ -52,4 +52,7 @@ export function fillValidApplicationForm() {
   setInputValue(/Emergency contact phone/, "5559876543");
   fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
   fireEvent.click(screen.getByLabelText(/authorize HackUTA to share my registration information/));
+  fireEvent.click(
+    screen.getByLabelText(/cannot guarantee that food served at this event/),
+  );
 }

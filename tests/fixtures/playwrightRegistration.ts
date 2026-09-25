@@ -60,6 +60,7 @@ export async function fillApplicationForm(page: Page) {
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");
   await clickInput(page, "codeOfConductAgreed");
   await clickInput(page, "mlhDataSharingConsent");
+  await clickInput(page, "foodAllergyWaiverAgreed")
 }
 
 export async function signUpAndSubmitApplication(

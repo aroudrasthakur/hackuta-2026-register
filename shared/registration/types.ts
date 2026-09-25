@@ -61,6 +61,8 @@ export type ApplicationFormData = {
   codeOfConductAgreed: boolean;
   mlhDataSharingConsent: boolean;
   mlhCommunicationsConsent: boolean;
+  sponsorSharingConsent: boolean;
+  foodAllergyWaiverAgreed: boolean;
 };
 
 export type RegistrationPayload = z.infer<typeof registrationPayloadSchema>;
@@ -100,6 +102,7 @@ export const FIELD_ORDER: FieldName[] = [
   "emergencyContactPhone",
   "codeOfConductAgreed",
   "mlhDataSharingConsent",
+  "foodAllergyWaiverAgreed",
 ];
 
 export const INITIAL_FORM: ApplicationFormData = {
@@ -115,4 +118,5 @@ export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
   resume: "resume-upload",
   codeOfConductAgreed: "codeOfConductAgreed",
   mlhDataSharingConsent: "mlhDataSharingConsent",
+  foodAllergyWaiverAgreed: "foodAllergyWaiverAgreed",
 };

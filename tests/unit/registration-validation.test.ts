@@ -53,6 +53,22 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("requires the food allergy waiver but allows sponsor sharing to remain unchecked", () => {
+    const form = validRegistrationForm();
+    form.foodAllergyWaiverAgreed = false;
+    form.sponsorSharingConsent = false;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.foodAllergyWaiverAgreed).toContain("food allergy");
+    }
+
+    form.foodAllergyWaiverAgreed = true;
+    expect(validateApplicationForm(form).success).toBe(true);
+  });
+
   it("rejects invalid age values", () => {
     const form = validRegistrationForm();
     form.age = "-500";

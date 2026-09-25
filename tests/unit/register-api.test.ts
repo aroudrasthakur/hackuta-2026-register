@@ -52,6 +52,8 @@ const payload: RegistrationPayload = {
   codeOfConductAgreed: true,
   mlhDataSharingConsent: true,
   mlhCommunicationsConsent: false,
+  sponsorSharingConsent: false,
+  foodAllergyWaiverAgreed: true,
 };
 
 const session = { storageId: "resume-id", uploadToken: "upload-token" };

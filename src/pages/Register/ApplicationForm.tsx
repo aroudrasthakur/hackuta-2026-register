@@ -29,6 +29,7 @@ import {
   COUNTRIES_OF_RESIDENCE,
   DIETARY_OPTIONS,
   FIELD_LIMITS,
+  FOOD_ALLERGY_WAIVER_TEXT,
   GENDERS,
   HEAR_ABOUT_OPTIONS,
   HEAR_ABOUT_OTHER_OPTION,
@@ -36,6 +37,7 @@ import {
   MAJOR_OTHER_OPTION,
   MAJORS,
   SCHOOL_OTHER_OPTION,
+  SPONSOR_SHARING_CONSENT_TEXT,
   STATES_OF_RESIDENCE,
   MAX_GRADUATION_YEAR,
   MIN_GRADUATION_YEAR,
@@ -564,6 +566,27 @@ function ApplicationFormContent({
               />
             </>
           ) : null}
+          <div className="flex flex-col gap-1">
+            <CustomCheckbox
+              id="foodAllergyWaiverAgreed"
+              label={FOOD_ALLERGY_WAIVER_TEXT}
+              required
+              checked={form.foodAllergyWaiverAgreed}
+              onChange={(e) =>
+                updateField("foodAllergyWaiverAgreed", e.target.checked)
+              }
+              aria-invalid={!!errors.foodAllergyWaiverAgreed}
+              aria-describedby={
+                errors.foodAllergyWaiverAgreed
+                  ? "foodAllergyWaiverAgreed-error"
+                  : undefined
+              }
+            />
+            <FieldError
+              id="foodAllergyWaiverAgreed-error"
+              message={errors.foodAllergyWaiverAgreed}
+            />
+          </div>
         </fieldset>
       </section>
 
@@ -737,6 +760,16 @@ function ApplicationFormContent({
                 }}
               />
             </div>
+            <div className="sm:col-span-2 flex flex-col gap-1">
+              <CustomCheckbox
+                id="sponsorSharingConsent"
+                label={SPONSOR_SHARING_CONSENT_TEXT}
+                checked={form.sponsorSharingConsent}
+                onChange={(e) =>
+                  updateField("sponsorSharingConsent", e.target.checked)
+                }
+              />
+            </div>
             <TextField
               id="linkedin"
               label="LinkedIn (optional)"
@@ -852,7 +885,9 @@ function ApplicationFormContent({
 
         <div
           className={`flex flex-col gap-4 rounded-xl border-2 bg-white p-5 text-sm ${
-            errors.codeOfConductAgreed || errors.mlhDataSharingConsent
+            errors.codeOfConductAgreed ||
+            errors.mlhDataSharingConsent ||
+            errors.foodAllergyWaiverAgreed
               ? "border-red-400 bg-red-50"
               : "border-(--sand)"
           }`}

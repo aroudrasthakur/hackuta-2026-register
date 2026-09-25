@@ -20,6 +20,10 @@ import {
 } from "./lib/applications";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import {
+  FOOD_ALLERGY_WAIVER_VERSION,
+  SPONSOR_SHARING_CONSENT_VERSION,
+} from "../shared/registration/constants";
+import {
   findUploadSessionByToken,
   isVerifiedUploadSessionValid,
   uploadSessionOwnedByUser,
@@ -110,6 +114,14 @@ async function upsertRegistration(
     formSubmitted: true,
     confirmationStatus: "unconfirmed",
     submittedAt,
+    ...(data.sponsorSharingConsent
+      ? {
+          sponsorSharingConsentVersion: SPONSOR_SHARING_CONSENT_VERSION,
+          sponsorSharingConsentSubmittedAt: submittedAt,
+        }
+      : {}),
+    foodAllergyWaiverVersion: FOOD_ALLERGY_WAIVER_VERSION,
+    foodAllergyWaiverSubmittedAt: submittedAt,
     updatedAt: submittedAt,
     resumeStorageId: resumeStorageId ?? undefined,
   });
