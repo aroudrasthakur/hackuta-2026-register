@@ -296,6 +296,60 @@ export const migrateMergedOtherFieldsToSeparateColumns = internalMutation({
   },
 });
 
+/**
+ * One-time migration: consolidate legacy `codeOfConductAgreed` and interim
+ * `MLHcodeOfConductAgreed` into `mlhCodeOfConductAgreed`.
+ */
+export const migrateLegacyCodeOfConductFields = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      const legacy = application as typeof application & {
+        codeOfConductAgreed?: boolean;
+        MLHcodeOfConductAgreed?: boolean;
+        mlhCodeOfConductAgreed?: boolean;
+      };
+
+      const hasLegacyColumn =
+        "codeOfConductAgreed" in legacy || "MLHcodeOfConductAgreed" in legacy;
+      if (!hasLegacyColumn) {
+        continue;
+      }
+
+      const {
+        _id,
+        _creationTime,
+        codeOfConductAgreed,
+        MLHcodeOfConductAgreed,
+        ...replacement
+      } = legacy;
+      void _creationTime;
+      void codeOfConductAgreed;
+      void MLHcodeOfConductAgreed;
+
+      const mlhCodeOfConductAgreed =
+        legacy.mlhCodeOfConductAgreed ??
+        legacy.MLHcodeOfConductAgreed ??
+        legacy.codeOfConductAgreed;
+
+      await ctx.db.replace(_id, {
+        ...replacement,
+        ...(mlhCodeOfConductAgreed !== undefined
+          ? { mlhCodeOfConductAgreed }
+          : {}),
+      });
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
+/** @deprecated Use migrateLegacyCodeOfConductFields */
+export const migrateCodeOfConductAgreedToMlhField = migrateLegacyCodeOfConductFields;
+
 /** One-time cleanup after removing hackathonId from the applications schema. */
 export const stripLegacyApplicationHackathonIds = internalMutation({
   args: {},

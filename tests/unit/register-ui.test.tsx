@@ -642,6 +642,19 @@ describe("ApplicationForm", () => {
     ).toBeInTheDocument();
   });
 
+  it("requires MLH Code of Conduct agreement before submit", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "true");
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fillValidApplicationForm();
+
+    fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+    expect(
+      screen.getByText("You must agree to the MLH Code of Conduct to continue."),
+    ).toBeInTheDocument();
+  });
+
   it("requires follow-up answers for Other selections before submit", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "true");
     render(<ApplicationForm onSubmitted={vi.fn()} />);

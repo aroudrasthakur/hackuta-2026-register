@@ -1076,14 +1076,14 @@ function ApplicationFormContent({
 
         <div
           className={`flex flex-col gap-4 rounded-xl border-2 bg-white p-5 text-sm ${
-            errors.MLHcodeOfConductAgreed || errors.mlhDataSharingConsent
+            errors.mlhCodeOfConductAgreed || errors.mlhDataSharingConsent
               ? "border-red-400 bg-red-50"
               : "border-(--sand)"
           }`}
         >
           <div className="flex flex-col gap-1">
             <CustomCheckbox
-              id="MLHcodeOfConductAgreed"
+              id="mlhCodeOfConductAgreed"
               label={
                 <>
                   I have read and agree to the{" "}
@@ -1099,20 +1099,20 @@ function ApplicationFormContent({
                 </>
               }
               required
-              checked={form.MLHcodeOfConductAgreed}
+              checked={form.mlhCodeOfConductAgreed}
               onChange={(e) =>
-                updateField("MLHcodeOfConductAgreed", e.target.checked)
+                updateField("mlhCodeOfConductAgreed", e.target.checked)
               }
-              aria-invalid={!!errors.MLHcodeOfConductAgreed}
+              aria-invalid={!!errors.mlhCodeOfConductAgreed}
               aria-describedby={
-                errors.MLHcodeOfConductAgreed
-                  ? "MLHcodeOfConductAgreed-error"
+                errors.mlhCodeOfConductAgreed
+                  ? "mlhCodeOfConductAgreed-error"
                   : undefined
               }
             />
             <FieldError
-              id="MLHcodeOfConductAgreed-error"
-              message={errors.MLHcodeOfConductAgreed}
+              id="mlhCodeOfConductAgreed-error"
+              message={errors.mlhCodeOfConductAgreed}
             />
           </div>
           <div className="flex flex-col gap-1">

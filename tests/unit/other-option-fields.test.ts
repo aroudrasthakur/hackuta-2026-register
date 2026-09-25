@@ -18,6 +18,11 @@ import {
   validateApplicationForm,
   validateRegistrationPayload,
 } from "../../shared/registration/validation";
+import {
+  formWithAllOtherOptions,
+  OTHER_OPTION_FIXTURES,
+  storedApplicationWithAllOtherOptions,
+} from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm, validRegistrationPayload } from "../fixtures/validRegistrationForm";
 
 const OTHER_FIELD_KEYS = [
@@ -47,66 +52,66 @@ describe("other option field regression", () => {
     it("stores school sentinel and otherSchool separately", () => {
       const form = validRegistrationForm();
       form.school = SCHOOL_OTHER_OPTION;
-      form.otherSchool = "Mars Academy";
+      form.otherSchool = OTHER_OPTION_FIXTURES.school;
 
       const result = validateApplicationForm(form);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.payload.school).toBe(SCHOOL_OTHER_OPTION);
-        expect(result.payload.otherSchool).toBe("Mars Academy");
-        expect(result.payload.school).not.toBe("Mars Academy");
+        expect(result.payload.otherSchool).toBe(OTHER_OPTION_FIXTURES.school);
+        expect(result.payload.school).not.toBe(OTHER_OPTION_FIXTURES.school);
       }
     });
 
     it("stores major sentinel and otherMajor separately", () => {
       const form = validRegistrationForm();
       form.major = MAJOR_OTHER_OPTION;
-      form.otherMajor = "Space Law";
+      form.otherMajor = OTHER_OPTION_FIXTURES.major;
 
       const result = validateApplicationForm(form);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.payload.major).toBe(MAJOR_OTHER_OPTION);
-        expect(result.payload.otherMajor).toBe("Space Law");
+        expect(result.payload.otherMajor).toBe(OTHER_OPTION_FIXTURES.major);
       }
     });
 
     it("stores hear-about sentinel and otherHearAbout separately", () => {
       const form = validRegistrationForm();
       form.hearAbout = HEAR_ABOUT_OTHER_OPTION;
-      form.otherHearAbout = "Professor announcement";
+      form.otherHearAbout = OTHER_OPTION_FIXTURES.hearAbout;
 
       const result = validateApplicationForm(form);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.payload.hearAbout).toBe(HEAR_ABOUT_OTHER_OPTION);
-        expect(result.payload.otherHearAbout).toBe("Professor announcement");
+        expect(result.payload.otherHearAbout).toBe(OTHER_OPTION_FIXTURES.hearAbout);
       }
     });
 
     it("stores gender sentinel and otherGender separately", () => {
       const form = validRegistrationForm();
       form.gender = GENDER_SELF_DESCRIBE_OPTION;
-      form.otherGender = "Genderfluid";
+      form.otherGender = OTHER_OPTION_FIXTURES.gender;
 
       const result = validateApplicationForm(form);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.payload.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);
-        expect(result.payload.otherGender).toBe("Genderfluid");
+        expect(result.payload.otherGender).toBe(OTHER_OPTION_FIXTURES.gender);
       }
     });
 
     it("clears other* fields in the payload when a listed option is selected", () => {
       const form = validRegistrationForm();
       form.school = SCHOOL_OTHER_OPTION;
-      form.otherSchool = "Mars Academy";
+      form.otherSchool = OTHER_OPTION_FIXTURES.school;
       form.major = MAJOR_OTHER_OPTION;
-      form.otherMajor = "Space Law";
+      form.otherMajor = OTHER_OPTION_FIXTURES.major;
       form.hearAbout = HEAR_ABOUT_OTHER_OPTION;
-      form.otherHearAbout = "A friend";
+      form.otherHearAbout = OTHER_OPTION_FIXTURES.hearAbout;
       form.gender = GENDER_SELF_DESCRIBE_OPTION;
-      form.otherGender = "Genderfluid";
+      form.otherGender = OTHER_OPTION_FIXTURES.gender;
 
       form.school = validRegistrationForm().school;
       form.major = validRegistrationForm().major;
@@ -173,17 +178,7 @@ describe("other option field regression", () => {
 
   describe("draft round-trip", () => {
     it("round-trips all Other selections through draft autosave", () => {
-      const form = {
-        ...validRegistrationForm(),
-        school: SCHOOL_OTHER_OPTION,
-        otherSchool: "Mars Academy",
-        major: MAJOR_OTHER_OPTION,
-        otherMajor: "Space Law",
-        hearAbout: HEAR_ABOUT_OTHER_OPTION,
-        otherHearAbout: "A friend",
-        gender: GENDER_SELF_DESCRIBE_OPTION,
-        otherGender: "Genderfluid",
-      };
+      const form = formWithAllOtherOptions();
       const { resume: _resume, ...expected } = form;
       void _resume;
 
@@ -191,25 +186,18 @@ describe("other option field regression", () => {
     });
 
     it("round-trips stored split columns from the database back into the form", () => {
-      const restored = applicationToDraftForm({
-        school: SCHOOL_OTHER_OPTION,
-        otherSchool: "Mars Academy",
-        major: MAJOR_OTHER_OPTION,
-        otherMajor: "Space Law",
-        hearAbout: HEAR_ABOUT_OTHER_OPTION,
-        otherHearAbout: "A friend",
-        gender: GENDER_SELF_DESCRIBE_OPTION,
-        otherGender: "Genderfluid",
-      });
+      const stored = storedApplicationWithAllOtherOptions();
+      const restored = applicationToDraftForm(stored);
 
       expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
-      expect(restored.otherSchool).toBe("Mars Academy");
+      expect(restored.otherSchool).toBe(OTHER_OPTION_FIXTURES.school);
       expect(restored.major).toBe(MAJOR_OTHER_OPTION);
-      expect(restored.otherMajor).toBe("Space Law");
+      expect(restored.otherMajor).toBe(OTHER_OPTION_FIXTURES.major);
       expect(restored.hearAbout).toBe(HEAR_ABOUT_OTHER_OPTION);
-      expect(restored.otherHearAbout).toBe("A friend");
+      expect(restored.otherHearAbout).toBe(OTHER_OPTION_FIXTURES.hearAbout);
       expect(restored.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);
-      expect(restored.otherGender).toBe("Genderfluid");
+      expect(restored.otherGender).toBe(OTHER_OPTION_FIXTURES.gender);
+      expect(restored.mlhCodeOfConductAgreed).toBe(true);
     });
   });
 });

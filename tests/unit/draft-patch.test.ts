@@ -6,6 +6,12 @@ import {
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
+import {
+  INTERIM_MLH_CODE_OF_CONDUCT_FIELD,
+  LEGACY_CODE_OF_CONDUCT_FIELD,
+  MLH_CODE_OF_CONDUCT_FIELD,
+} from "../../shared/registration/consentFieldMigration";
+import { OTHER_OPTION_FIXTURES } from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
 import {
   APPLICANT_ANSWER_FIELD_KEYS,
@@ -81,14 +87,14 @@ describe("formToDraftPatch conditional fields", () => {
       major: MAJOR_OTHER_OPTION,
       otherMajor: " Space Law ",
       hearAbout: HEAR_ABOUT_OTHER_OPTION,
-      otherHearAbout: " A friend ",
+      otherHearAbout: ` ${OTHER_OPTION_FIXTURES.hearAbout} `,
       gender: GENDER_SELF_DESCRIBE_OPTION,
       otherGender: " Genderfluid ",
     });
 
     expect(patch.otherSchool).toBe("Mars Academy");
     expect(patch.otherMajor).toBe("Space Law");
-    expect(patch.otherHearAbout).toBe("A friend");
+    expect(patch.otherHearAbout).toBe(OTHER_OPTION_FIXTURES.hearAbout);
     expect(patch.otherGender).toBe("Genderfluid");
   });
 
@@ -100,7 +106,7 @@ describe("formToDraftPatch conditional fields", () => {
       major: "Computer science, computer engineering, or software engineering",
       otherMajor: "Space Law",
       hearAbout: "Discord",
-      otherHearAbout: "A friend",
+      otherHearAbout: OTHER_OPTION_FIXTURES.hearAbout,
       gender: "Man",
       otherGender: "Genderfluid",
     });
@@ -164,6 +170,39 @@ describe("applicationToDraftForm", () => {
     expect(restored.otherHearAbout).toBe("Professor announcement");
   });
 
+  it("hydrates legacy codeOfConductAgreed into mlhCodeOfConductAgreed", () => {
+    const restored = applicationToDraftForm({
+      codeOfConductAgreed: true,
+    });
+
+    expect(restored.mlhCodeOfConductAgreed).toBe(true);
+  });
+
+  it("includes mlhCodeOfConductAgreed in draft autosave patches", () => {
+    const form = validRegistrationForm();
+    form.mlhCodeOfConductAgreed = true;
+
+    expect(formToDraftPatch(form).mlhCodeOfConductAgreed).toBe(true);
+  });
+
+  it("strips legacy code of conduct columns when merging mlhCodeOfConductAgreed", () => {
+    const patch = formToDraftPatch(validRegistrationForm());
+    patch.mlhCodeOfConductAgreed = true;
+
+    const merged = mergeDraftPatchIntoApplication(
+      {
+        [LEGACY_CODE_OF_CONDUCT_FIELD]: false,
+        [INTERIM_MLH_CODE_OF_CONDUCT_FIELD]: false,
+      },
+      patch,
+      { email: "sam@example.com", updatedAt: 1 },
+    );
+
+    expect(merged).toMatchObject({ [MLH_CODE_OF_CONDUCT_FIELD]: true });
+    expect(merged).not.toHaveProperty(LEGACY_CODE_OF_CONDUCT_FIELD);
+    expect(merged).not.toHaveProperty(INTERIM_MLH_CODE_OF_CONDUCT_FIELD);
+  });
+
   it("hydrates legacy merged gender text as self-describe + otherGender", () => {
     const restored = applicationToDraftForm({
       gender: "Genderfluid",
@@ -180,7 +219,7 @@ describe("applicationToDraftForm", () => {
     expect(restored.age).toBe("");
     expect(restored.raceEthnicity).toEqual([]);
     expect(restored.hackathonsAttended).toBe("");
-    expect(restored.MLHcodeOfConductAgreed).toBe(false);
+    expect(restored.mlhCodeOfConductAgreed).toBe(false);
     expect(restored.mlhCommunicationsConsent).toBe(false);
     expect(restored.sponsorSharingConsent).toBe(false);
     expect(restored.foodAllergyWaiverAgreed).toBe(false);

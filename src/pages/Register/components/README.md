@@ -37,7 +37,7 @@ SelectField and SearchableSelect use custom listbox/combobox widgets (not native
 | --- | --- |
 | SearchableSelect.tsx | [searchable-select.test.tsx](../../../../tests/unit/searchable-select.test.tsx) |
 | SelectWithOther.tsx | [select-with-other.test.tsx](../../../../tests/unit/select-with-other.test.tsx) |
-| Other option storage regression | [other-option-fields.test.ts](../../../../tests/unit/other-option-fields.test.ts) |
+| Other option storage regression | [other-option-fields.test.ts](../../../../tests/unit/other-option-fields.test.ts), [other-option-schema.test.ts](../../../../tests/unit/other-option-schema.test.ts) |
 | SelectField (FormFields.tsx) | [select-field.test.tsx](../../../../tests/unit/select-field.test.tsx) |
 | CustomCheckbox.tsx | [custom-checkbox.test.tsx](../../../../tests/unit/custom-checkbox.test.tsx) |
 | FormFields.tsx (TextAreaField) | [form-fields.test.tsx](../../../../tests/unit/form-fields.test.tsx) |

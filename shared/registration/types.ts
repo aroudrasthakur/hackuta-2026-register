@@ -64,7 +64,7 @@ export type ApplicationFormData = {
   shortDeadlineLearning: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
-  MLHcodeOfConductAgreed: boolean;
+  mlhCodeOfConductAgreed: boolean;
   mlhDataSharingConsent: boolean;
   mlhCommunicationsConsent: boolean;
   sponsorSharingConsent: boolean;
@@ -110,7 +110,7 @@ export const FIELD_ORDER: FieldName[] = [
   "devpost",
   "emergencyContactName",
   "emergencyContactPhone",
-  "MLHcodeOfConductAgreed",
+  "mlhCodeOfConductAgreed",
   "mlhDataSharingConsent",
   "foodAllergyWaiverAgreed",
 ];
@@ -127,7 +127,7 @@ export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
   hackathonsAttended: "hackathonsAttended",
   allergyDetails: "allergyDetails",
   resume: "resume-upload",
-  MLHcodeOfConductAgreed: "MLHcodeOfConductAgreed",
+  mlhCodeOfConductAgreed: "mlhCodeOfConductAgreed",
   mlhDataSharingConsent: "mlhDataSharingConsent",
   foodAllergyWaiverAgreed: "foodAllergyWaiverAgreed",
 };

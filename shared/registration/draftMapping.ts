@@ -19,6 +19,12 @@ import {
 } from "./applicantFields";
 import { resolveAllergyDetailsFromLegacy } from "./allergyMigration";
 import {
+  INTERIM_MLH_CODE_OF_CONDUCT_FIELD,
+  LEGACY_CODE_OF_CONDUCT_FIELD,
+  MLH_CODE_OF_CONDUCT_FIELD,
+  resolveMlhCodeOfConductAgreed,
+} from "./consentFieldMigration";
+import {
   splitLegacyGender,
   splitLegacyHearAbout,
   splitLegacyMajor,
@@ -202,6 +208,10 @@ export function applicationToDraftForm(
   }
 
   for (const key of REQUIRED_BOOLEAN_FIELDS) {
+    if (key === MLH_CODE_OF_CONDUCT_FIELD) {
+      values[key] = resolveMlhCodeOfConductAgreed(application);
+      continue;
+    }
     values[key] = (application[key] as boolean | undefined) ?? false;
   }
 
@@ -244,6 +254,11 @@ export function mergeDraftPatchIntoApplication<T extends Record<string, unknown>
         delete next.resumeFilename;
       }
     }
+  }
+
+  if (MLH_CODE_OF_CONDUCT_FIELD in patch) {
+    delete next[LEGACY_CODE_OF_CONDUCT_FIELD];
+    delete next[INTERIM_MLH_CODE_OF_CONDUCT_FIELD];
   }
 
   delete next._id;

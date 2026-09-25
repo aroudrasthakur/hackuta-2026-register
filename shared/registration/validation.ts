@@ -80,7 +80,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     shortDeadlineLearning: form.shortDeadlineLearning,
     emergencyContactName: form.emergencyContactName,
     emergencyContactPhone: form.emergencyContactPhone,
-    MLHcodeOfConductAgreed: form.MLHcodeOfConductAgreed ? true : undefined,
+    mlhCodeOfConductAgreed: form.mlhCodeOfConductAgreed ? true : undefined,
     mlhDataSharingConsent: form.mlhDataSharingConsent ? true : undefined,
     mlhCommunicationsConsent: form.mlhCommunicationsConsent,
     sponsorSharingConsent: form.sponsorSharingConsent,

@@ -42,7 +42,7 @@ describe("validateApplicationForm", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.errors.firstName).toBe("First name is required.");
-      expect(result.errors.MLHcodeOfConductAgreed).toBeTruthy();
+      expect(result.errors.mlhCodeOfConductAgreed).toBeTruthy();
     }
   });
 
@@ -731,10 +731,24 @@ describe("validateRegistrationPayload", () => {
   it("rejects missing consent fields", () => {
     const result = validateRegistrationPayload({
       ...validPayloadFromForm(),
-      MLHcodeOfConductAgreed: false,
+      mlhCodeOfConductAgreed: false,
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("requires mlhCodeOfConductAgreed with a specific error message", () => {
+    const form = validRegistrationForm();
+    form.mlhCodeOfConductAgreed = false;
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.mlhCodeOfConductAgreed).toBe(
+        "You must agree to the MLH Code of Conduct to continue.",
+      );
+    }
   });
 
   it("accepts optional profile URLs including devpost", () => {
@@ -868,7 +882,7 @@ describe("validateRegistrationPayload", () => {
 
 describe("focusFirstInvalidField focus targets", () => {
   it("uses the mapped focus id for composite fields and tolerates missing elements", () => {
-    expect(() => focusFirstInvalidField({ MLHcodeOfConductAgreed: "Required" })).not.toThrow();
+    expect(() => focusFirstInvalidField({ mlhCodeOfConductAgreed: "Required" })).not.toThrow();
   });
 });
 

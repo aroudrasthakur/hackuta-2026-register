@@ -28,6 +28,7 @@ import {
   uploadResume,
 } from "../../src/pages/Register/registerApi";
 import { fillValidApplicationForm, selectListboxOption } from "../fixtures/fillApplicationForm";
+import { OTHER_OPTION_FIXTURES } from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
 
 const env = vi.hoisted(() => ({
@@ -528,7 +529,7 @@ describe("ApplicationForm conditional answers", () => {
 
     selectListboxOption(/How did you hear about HackUTA/, HEAR_ABOUT_OTHER_OPTION);
     fireEvent.change(screen.getByPlaceholderText(/Tell us how you heard about HackUTA/), {
-      target: { value: "A friend" },
+      target: { value: "Professor announcement" },
     });
 
     fireEvent.click(
@@ -552,7 +553,8 @@ describe("ApplicationForm conditional answers", () => {
         major: MAJOR_OTHER_OPTION,
         otherMajor: "Space Law",
         hearAbout: HEAR_ABOUT_OTHER_OPTION,
-        otherHearAbout: "A friend",
+        otherHearAbout: OTHER_OPTION_FIXTURES.hearAbout,
+        mlhCodeOfConductAgreed: true,
         otherRaceEthnicity: "Custom",
         github: "https://github.com/sam",
         mlhCommunicationsConsent: true,
