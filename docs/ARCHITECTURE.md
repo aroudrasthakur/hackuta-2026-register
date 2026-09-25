@@ -87,7 +87,7 @@ Draft rows use `status: "draft"`. Users can leave and resume until submit. Autos
 ```
 /register form → client Zod validate
               → POST /resume-upload (optional PDF)
-              → registrations:register { data, resumeUploadToken }
+              → registrations:submitRegistration { data, resumeUploadToken }
               → application status → submitted
               → confirmation email (internal action)
 ```
@@ -154,8 +154,7 @@ Dev deployment: `standing-manatee-425`. Production: `brilliant-ostrich-892`.
 1. **Profiles table** — separates auth from application data; enables draft rows without nested objects.
 2. **Password + OTP verify** — passwords for return visits; email verification via 6-digit OTP on sign-up; separate OTP flow for password reset.
 3. **Capability-token resume upload** — HTTP upload requires an authenticated JWT; uploads are bound to `authUserId`, rate-limited per user/IP, and redeemed with a single-use capability token at registration time.
-4. **Duplicate mutation aliases** — `register` and `submitRegistration` share one handler (public API stability).
-5. **Mock mode** — `VITE_USE_MOCK_API` for CI/UI dev only; never on production Vercel.
+4. **Mock mode** — `VITE_USE_MOCK_API` for CI/UI dev only; never on production Vercel.
 
 ## Related docs
 

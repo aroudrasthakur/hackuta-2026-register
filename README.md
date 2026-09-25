@@ -119,7 +119,7 @@ npx convex env unset --prod REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS
 4. The app routes to `/register` (not yet submitted) or `/profile` (already submitted).
 5. Forgot password: request a separate reset OTP, verify the code, set a new password (must differ from the current one), then sign in again.
 6. On `/register`, form fields autosave every ~800ms; applicants can leave and resume later.
-7. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:register`. Unneeded uploads can be discarded via `resumeUploads:discardUploadSession`.
+7. Resume upload goes to a Convex HTTP action; the returned upload token is redeemed at `registrations:submitRegistration`. Unneeded uploads can be discarded via `resumeUploads:discardUploadSession`.
 8. Sign-out returns the visitor to `/sign-in`.
 
 ### OTP rate limits

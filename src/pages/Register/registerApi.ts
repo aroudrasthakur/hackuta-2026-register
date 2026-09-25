@@ -25,7 +25,9 @@ function getConvexSiteUrl() {
   return normalizeConvexUrl(import.meta.env.VITE_CONVEX_SITE_URL) || derivedSiteUrl;
 }
 
-const registerRef = makeFunctionReference<"mutation">("registrations:register");
+const submitRegistrationRef = makeFunctionReference<"mutation">(
+  "registrations:submitRegistration",
+);
 const discardUploadSessionRef = makeFunctionReference<"mutation">("resumeUploads:discardUploadSession");
 
 export type ResumeUploadSession = {
@@ -34,7 +36,7 @@ export type ResumeUploadSession = {
 };
 
 async function callConvexMutation<T>(
-  mutation: typeof registerRef | typeof discardUploadSessionRef,
+  mutation: typeof submitRegistrationRef | typeof discardUploadSessionRef,
   args: Record<string, unknown>,
 ): Promise<T> {
   if (USE_MOCK_API) {
@@ -120,7 +122,7 @@ export async function submitRegistration(
   payload: RegistrationPayload,
   resumeSession: ResumeUploadSession | null = null,
 ) {
-  return callConvexMutation<{ ok: true }>(registerRef, {
+  return callConvexMutation<{ ok: true }>(submitRegistrationRef, {
     data: resumeSession ? { ...payload, resumeStorageId: resumeSession.storageId } : payload,
     ...(resumeSession ? { resumeUploadToken: resumeSession.uploadToken } : {}),
   });

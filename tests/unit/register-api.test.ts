@@ -66,6 +66,19 @@ const payload: RegistrationPayload = {
 
 const session = { storageId: "resume-id", uploadToken: "upload-token" };
 
+function convexFunctionName(ref: unknown): string {
+  const nameSym = Object.getOwnPropertySymbols(ref as object)
+    .find((symbol) => symbol.description === "functionName");
+  if (!nameSym) {
+    throw new Error("Expected a Convex function reference");
+  }
+  const name = (ref as Record<symbol, string | undefined>)[nameSym];
+  if (!name) {
+    throw new Error("Expected a Convex function reference with a name");
+  }
+  return name;
+}
+
 describe("uploadResume", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -243,13 +256,14 @@ describe("submitRegistration", () => {
     mutationMock.mockResolvedValue({ ok: true });
     const { submitRegistration } = await import("../../src/pages/Register/registerApi");
     await expect(submitRegistration(payload, session)).resolves.toEqual({ ok: true });
-    expect(mutationMock).toHaveBeenCalledWith(
-      expect.anything(),
-      {
-        data: { ...payload, resumeStorageId: "resume-id" },
-        resumeUploadToken: "upload-token",
-      },
+    expect(mutationMock).toHaveBeenCalledOnce();
+    expect(convexFunctionName(mutationMock.mock.calls[0]![0])).toBe(
+      "registrations:submitRegistration",
     );
+    expect(mutationMock.mock.calls[0]![1]).toEqual({
+      data: { ...payload, resumeStorageId: "resume-id" },
+      resumeUploadToken: "upload-token",
+    });
   });
 
   it("throws a friendly error when Convex is not configured", async () => {
@@ -270,7 +284,11 @@ describe("submitRegistration", () => {
     mutationMock.mockResolvedValue({ ok: true });
     const { submitRegistration } = await import("../../src/pages/Register/registerApi");
     await expect(submitRegistration(payload)).resolves.toEqual({ ok: true });
-    expect(mutationMock).toHaveBeenCalledWith(expect.anything(), { data: payload });
+    expect(mutationMock).toHaveBeenCalledOnce();
+    expect(convexFunctionName(mutationMock.mock.calls[0]![0])).toBe(
+      "registrations:submitRegistration",
+    );
+    expect(mutationMock.mock.calls[0]![1]).toEqual({ data: payload });
   });
 
   it("maps server failures to a friendly error", async () => {
@@ -310,7 +328,11 @@ describe("discardResumeUpload", () => {
     mutationMock.mockResolvedValue({ ok: true });
     const { discardResumeUpload } = await import("../../src/pages/Register/registerApi");
     await discardResumeUpload("upload-token");
-    expect(mutationMock).toHaveBeenCalledWith(expect.anything(), { uploadToken: "upload-token" });
+    expect(mutationMock).toHaveBeenCalledOnce();
+    expect(convexFunctionName(mutationMock.mock.calls[0]![0])).toBe(
+      "resumeUploads:discardUploadSession",
+    );
+    expect(mutationMock.mock.calls[0]![1]).toEqual({ uploadToken: "upload-token" });
   });
 
   it("swallows discard failures so cleanup never blocks the applicant", async () => {
