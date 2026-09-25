@@ -69,6 +69,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | applicant-timeline.test.tsx | Profile timeline UI |
 | searchable-select.test.tsx | School search control |
 | select-field.test.tsx | Custom SelectField listbox |
+| custom-checkbox.test.tsx | CustomCheckbox and CustomRadio controls |
 | weather-mood.test.tsx | Sign-in weather toggle |
 | app-shell.test.tsx | main.tsx providers and routes, Convex client, storm backdrop, presentational components |
 

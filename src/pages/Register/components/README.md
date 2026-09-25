@@ -33,6 +33,7 @@ SelectField and SearchableSelect use custom listbox/combobox widgets (not native
 | --- | --- |
 | SearchableSelect.tsx | [searchable-select.test.tsx](../../../../tests/unit/searchable-select.test.tsx) |
 | SelectField (FormFields.tsx) | [select-field.test.tsx](../../../../tests/unit/select-field.test.tsx) |
+| CustomCheckbox.tsx | [custom-checkbox.test.tsx](../../../../tests/unit/custom-checkbox.test.tsx) |
 | ResumeUpload.tsx | [resume-upload.test.tsx](../../../../tests/unit/resume-upload.test.tsx) |
 
 Validation rules: [shared/registration/](../../../../shared/registration/) (e.g. validateResume).
