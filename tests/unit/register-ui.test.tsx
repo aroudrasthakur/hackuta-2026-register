@@ -728,19 +728,24 @@ describe("ApplicationForm", () => {
   it("shows follow-up fields when Other options are selected", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
 
+    selectListboxOption(/Gender/, "Prefer to self-describe");
+    expect(
+      screen.getByPlaceholderText(/Describe your gender/),
+    ).toBeInTheDocument();
+
     selectListboxOption(/Major \/ field of study/, "Other (please specify)");
     expect(
-      screen.getByLabelText(/Describe your major \/ field of study/),
+      screen.getByPlaceholderText(/Describe your major \/ field of study/),
     ).toBeInTheDocument();
 
     selectListboxOption(/How did you hear about HackUTA/, "Other");
     expect(
-      screen.getByLabelText(/Tell us how you heard about HackUTA/),
+      screen.getByPlaceholderText(/Tell us how you heard about HackUTA/),
     ).toBeInTheDocument();
 
-    selectSearchableOption(/School \/ university/, "Other:");
+    selectSearchableOption(/School \/ university/, "Other (Please Specify)");
     expect(
-      screen.getByLabelText(/Enter your school \/ university/),
+      screen.getByPlaceholderText(/Enter your school \/ university/),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText(/^Other \(Please Specify\)$/));
@@ -749,15 +754,30 @@ describe("ApplicationForm", () => {
     ).toBeInTheDocument();
   });
 
+  it("requires MLH Code of Conduct agreement before submit", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "true");
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    fillValidApplicationForm();
+
+    fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+    expect(
+      screen.getByText("You must agree to the MLH Code of Conduct to continue."),
+    ).toBeInTheDocument();
+  });
+
   it("requires follow-up answers for Other selections before submit", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "true");
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     fillValidApplicationForm();
 
+    selectListboxOption(/Gender/, "Prefer to self-describe");
     selectListboxOption(/Major \/ field of study/, "Other (please specify)");
     selectListboxOption(/How did you hear about HackUTA/, "Other");
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
 
+    expect(screen.getByText("Please describe your gender.")).toBeInTheDocument();
     expect(
       screen.getByText("Please describe your major or field of study."),
     ).toBeInTheDocument();

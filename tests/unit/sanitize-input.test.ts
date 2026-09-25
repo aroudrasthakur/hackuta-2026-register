@@ -122,7 +122,7 @@ describe("server-side XSS validation integration", () => {
       age: Number(form.age),
       graduationYear: Number(form.graduationYear),
       major: form.major,
-      MLHcodeOfConductAgreed: true as const,
+      mlhCodeOfConductAgreed: true as const,
       mlhDataSharingConsent: true as const,
     };
 

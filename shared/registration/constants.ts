@@ -27,6 +27,8 @@ export const GENDERS = [
   "Prefer Not to Answer",
 ] as const;
 
+export const GENDER_SELF_DESCRIBE_OPTION = "Prefer to self-describe" as const;
+
 export const RACE_ETHNICITY_OPTIONS = [
   "Asian Indian",
   "Black or African",
@@ -138,7 +140,7 @@ export const MAJORS = [
 ] as const;
 
 export const MAJOR_OTHER_OPTION = "Other (please specify)" as const;
-export const SCHOOL_OTHER_OPTION = "Other:" as const;
+export const SCHOOL_OTHER_OPTION = "Other (Please Specify)" as const;
 
 export const TSHIRT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 
@@ -178,6 +180,7 @@ export const FIELD_LIMITS = {
   otherMajor: 200,
   otherSchool: 200,
   otherHearAbout: 200,
+  otherGender: 200,
   otherRaceEthnicity: 200,
 } as const;
 

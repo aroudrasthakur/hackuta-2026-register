@@ -6,7 +6,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
 import { lookupOtpSendStatus } from "../../convex/lib/otpSendStatus";
 import { RESUME_UPLOAD_BUCKET } from "../../convex/lib/rateLimitBuckets";
+import {
+  GENDER_SELF_DESCRIBE_OPTION,
+  HEAR_ABOUT_OTHER_OPTION,
+  MAJOR_OTHER_OPTION,
+  SCHOOL_OTHER_OPTION,
+} from "../../shared/registration/constants";
 import { formToDraftPatch } from "../../shared/registration/draftMapping";
+import { LEGACY_SCHOOL_OTHER_OPTION } from "../../shared/registration/otherOptionMigration";
 import { RESUME_FILENAME_HEADER, RESUME_TEST_CONTENT_LENGTH_HEADER } from "../../shared/registration/resume";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import { validRegistrationPayload } from "../fixtures/validRegistrationForm";
@@ -46,6 +53,12 @@ const ref = {
   stripHackathonIds: makeFunctionReference<"mutation">("migrations:stripLegacyApplicationHackathonIds"),
   stripCheckInAndConfirmedAt: makeFunctionReference<"mutation">(
     "migrations:stripLegacyApplicationCheckInAndConfirmedAt",
+  ),
+  migrateMergedOtherFields: makeFunctionReference<"mutation">(
+    "migrations:migrateMergedOtherFieldsToSeparateColumns",
+  ),
+  migrateLegacyCodeOfConductFields: makeFunctionReference<"mutation">(
+    "migrations:migrateLegacyCodeOfConductFields",
   ),
   publicEventConfig: makeFunctionReference<"query">("eventConfig:getPublicEventConfig"),
   hackathonNameInternal: makeFunctionReference<"query">("eventConfig:getHackathonNameInternal"),
@@ -724,6 +737,156 @@ describe("maintenance and migrations", () => {
     expect(applications.find((application) => application.email === "p50@example.com")?.createdAt).toBe(50);
 
     await expect(t.mutation(ref.stripHackathonIds, {})).resolves.toEqual({ ok: true, updated: 0 });
+  }, 30_000);
+
+  it("migrates merged Other/self-describe answers into separate other* columns", async () => {
+    const t = createTest();
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "merged-other@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 1,
+        updatedAt: 1,
+        school: "Mars Academy",
+        major: "Biomedical engineering",
+        hearAbout: "Professor announcement",
+        gender: "Genderfluid",
+      });
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "legacy-sentinel@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 2,
+        updatedAt: 2,
+        school: LEGACY_SCHOOL_OTHER_OPTION,
+        otherSchool: "Homeschool Co-op",
+      });
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "already-split@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 3,
+        updatedAt: 3,
+        school: SCHOOL_OTHER_OPTION,
+        otherSchool: "Mars Academy",
+        major: MAJOR_OTHER_OPTION,
+        otherMajor: "Biomedical engineering",
+        hearAbout: HEAR_ABOUT_OTHER_OPTION,
+        otherHearAbout: "Professor announcement",
+        gender: GENDER_SELF_DESCRIBE_OPTION,
+        otherGender: "Genderfluid",
+      });
+    });
+
+    await expect(t.mutation(ref.migrateMergedOtherFields, {})).resolves.toEqual({
+      ok: true,
+      updated: 2,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    const merged = applications.find((application) => application.email === "merged-other@example.com");
+    expect(merged?.school).toBe(SCHOOL_OTHER_OPTION);
+    expect(merged?.otherSchool).toBe("Mars Academy");
+    expect(merged?.major).toBe(MAJOR_OTHER_OPTION);
+    expect(merged?.otherMajor).toBe("Biomedical engineering");
+    expect(merged?.hearAbout).toBe(HEAR_ABOUT_OTHER_OPTION);
+    expect(merged?.otherHearAbout).toBe("Professor announcement");
+    expect(merged?.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);
+    expect(merged?.otherGender).toBe("Genderfluid");
+
+    const legacySentinel = applications.find(
+      (application) => application.email === "legacy-sentinel@example.com",
+    );
+    expect(legacySentinel?.school).toBe(SCHOOL_OTHER_OPTION);
+    expect(legacySentinel?.otherSchool).toBe("Homeschool Co-op");
+
+    await expect(t.mutation(ref.migrateMergedOtherFields, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
+    });
+  }, 30_000);
+
+  it("consolidates legacy code-of-conduct columns into mlhCodeOfConductAgreed", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "legacy-code@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 1,
+        updatedAt: 1,
+        codeOfConductAgreed: true,
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "interim-code@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 2,
+        updatedAt: 2,
+        MLHcodeOfConductAgreed: false,
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "prefers-canonical@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 3,
+        updatedAt: 3,
+        mlhCodeOfConductAgreed: true,
+        codeOfConductAgreed: false,
+        MLHcodeOfConductAgreed: false,
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "already-migrated@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 4,
+        updatedAt: 4,
+        mlhCodeOfConductAgreed: true,
+      });
+    });
+
+    await expect(t.mutation(ref.migrateLegacyCodeOfConductFields, {})).resolves.toEqual({
+      ok: true,
+      updated: 3,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications.some((application) => "codeOfConductAgreed" in application)).toBe(false);
+    expect(applications.some((application) => "MLHcodeOfConductAgreed" in application)).toBe(false);
+    expect(
+      applications.find((application) => application.email === "legacy-code@example.com")
+        ?.mlhCodeOfConductAgreed,
+    ).toBe(true);
+    expect(
+      applications.find((application) => application.email === "interim-code@example.com")
+        ?.mlhCodeOfConductAgreed,
+    ).toBe(false);
+    expect(
+      applications.find((application) => application.email === "prefers-canonical@example.com")
+        ?.mlhCodeOfConductAgreed,
+    ).toBe(true);
+    expect(
+      applications.find((application) => application.email === "already-migrated@example.com")
+        ?.mlhCodeOfConductAgreed,
+    ).toBe(true);
+
+    await expect(t.mutation(ref.migrateLegacyCodeOfConductFields, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
+    });
   }, 30_000);
 });
 

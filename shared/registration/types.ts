@@ -44,6 +44,7 @@ export type ApplicationFormData = {
   otherMajor: string;
   graduationYear: string;
   gender: Gender | "";
+  otherGender: string;
   raceEthnicity: RaceEthnicity[];
   otherRaceEthnicity: string;
   dietaryRestrictions: DietaryOption[];
@@ -66,7 +67,7 @@ export type ApplicationFormData = {
   emergencyContactName: string;
   emergencyContactPhone: string;
   emergencyContactPhoneCountry: CountryCode | "";
-  MLHcodeOfConductAgreed: boolean;
+  mlhCodeOfConductAgreed: boolean;
   mlhDataSharingConsent: boolean;
   mlhCommunicationsConsent: boolean;
   sponsorSharingConsent: boolean;
@@ -93,6 +94,7 @@ export const FIELD_ORDER: FieldName[] = [
   "otherMajor",
   "graduationYear",
   "gender",
+  "otherGender",
   "otherRaceEthnicity",
   "allergyDetails",
   "otherDietaryRestrictions",
@@ -111,7 +113,7 @@ export const FIELD_ORDER: FieldName[] = [
   "devpost",
   "emergencyContactName",
   "emergencyContactPhone",
-  "MLHcodeOfConductAgreed",
+  "mlhCodeOfConductAgreed",
   "mlhDataSharingConsent",
   "foodAllergyWaiverAgreed",
 ];
@@ -128,7 +130,7 @@ export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
   hackathonsAttended: "hackathonsAttended",
   allergyDetails: "allergyDetails",
   resume: "resume-upload",
-  MLHcodeOfConductAgreed: "MLHcodeOfConductAgreed",
+  mlhCodeOfConductAgreed: "mlhCodeOfConductAgreed",
   mlhDataSharingConsent: "mlhDataSharingConsent",
   foodAllergyWaiverAgreed: "foodAllergyWaiverAgreed",
 };

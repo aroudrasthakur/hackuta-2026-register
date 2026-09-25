@@ -1,5 +1,6 @@
 import type { ZodError } from "zod";
 import {
+  GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
@@ -29,27 +30,6 @@ function zodErrorToFieldErrors(error: ZodError): FieldErrors {
   return errors;
 }
 
-function resolveMajor(form: ApplicationFormData) {
-  if (form.major === MAJOR_OTHER_OPTION) {
-    return form.otherMajor.trim();
-  }
-  return form.major;
-}
-
-function resolveSchool(form: ApplicationFormData) {
-  if (form.school === SCHOOL_OTHER_OPTION) {
-    return form.otherSchool.trim();
-  }
-  return form.school;
-}
-
-function resolveHearAbout(form: ApplicationFormData) {
-  if (form.hearAbout === HEAR_ABOUT_OTHER_OPTION) {
-    return form.otherHearAbout.trim();
-  }
-  return form.hearAbout;
-}
-
 function buildRegistrationCandidate(form: ApplicationFormData) {
   return {
     firstName: form.firstName,
@@ -57,7 +37,9 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     phone: form.phone,
     phoneCountry: form.phoneCountry || undefined,
     age: form.age.trim() === "" ? Number.NaN : Number(form.age.trim()),
-    school: resolveSchool(form),
+    school: form.school,
+    otherSchool:
+      form.school === SCHOOL_OTHER_OPTION ? form.otherSchool.trim() : "",
     studentEmail: form.studentEmail,
     countryOfResidence: form.countryOfResidence,
     stateOfResidence: stateForRegistrationPayload(
@@ -66,12 +48,16 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     ),
     internationalStudent: form.internationalStudent ?? undefined,
     levelOfStudy: form.levelOfStudy || undefined,
-    major: resolveMajor(form),
+    major: form.major,
+    otherMajor:
+      form.major === MAJOR_OTHER_OPTION ? form.otherMajor.trim() : "",
     graduationYear:
       form.graduationYear.trim() === ""
         ? Number.NaN
         : Number(form.graduationYear.trim()),
     gender: form.gender || undefined,
+    otherGender:
+      form.gender === GENDER_SELF_DESCRIBE_OPTION ? form.otherGender.trim() : "",
     raceEthnicity: form.raceEthnicity,
     otherRaceEthnicity: form.otherRaceEthnicity,
     dietaryRestrictions: form.dietaryRestrictions,
@@ -83,7 +69,9 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
       form.hackathonsAttended.trim() === ""
         ? Number.NaN
         : Number(form.hackathonsAttended.trim()),
-    hearAbout: resolveHearAbout(form) || undefined,
+    hearAbout: form.hearAbout,
+    otherHearAbout:
+      form.hearAbout === HEAR_ABOUT_OTHER_OPTION ? form.otherHearAbout.trim() : "",
     linkedin: form.linkedin,
     github: form.github,
     portfolio: form.portfolio,
@@ -94,7 +82,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     emergencyContactName: form.emergencyContactName,
     emergencyContactPhone: form.emergencyContactPhone,
     emergencyContactPhoneCountry: form.emergencyContactPhoneCountry || undefined,
-    MLHcodeOfConductAgreed: form.MLHcodeOfConductAgreed ? true : undefined,
+    mlhCodeOfConductAgreed: form.mlhCodeOfConductAgreed ? true : undefined,
     mlhDataSharingConsent: form.mlhDataSharingConsent ? true : undefined,
     mlhCommunicationsConsent: form.mlhCommunicationsConsent,
     sponsorSharingConsent: form.sponsorSharingConsent,
@@ -127,6 +115,10 @@ function collectClientFieldErrors(form: ApplicationFormData): FieldErrors {
 
   if (form.hearAbout === HEAR_ABOUT_OTHER_OPTION && !form.otherHearAbout.trim()) {
     errors.otherHearAbout = "Please tell us how you heard about HackUTA.";
+  }
+
+  if (form.gender === GENDER_SELF_DESCRIBE_OPTION && !form.otherGender.trim()) {
+    errors.otherGender = "Please describe your gender.";
   }
 
   return errors;

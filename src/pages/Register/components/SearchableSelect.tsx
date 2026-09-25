@@ -76,16 +76,16 @@ export const SearchableSelect = memo(function SearchableSelect({
 
     if (!normalized) {
       if (featuredOptions?.length) {
-        return dedupeOptions([...featuredOptions, ...matchingExtras]);
+        return dedupeOptions([...matchingExtras, ...featuredOptions]);
       }
-      return dedupeOptions([...options.slice(0, MAX_RESULTS), ...matchingExtras]);
+      return dedupeOptions([...matchingExtras, ...options.slice(0, MAX_RESULTS)]);
     }
 
     return dedupeOptions([
+      ...matchingExtras,
       ...options
         .filter((option) => option.toLowerCase().includes(normalized))
         .slice(0, MAX_RESULTS),
-      ...matchingExtras,
     ]);
   }, [extraOptions, featuredOptions, options, query]);
 

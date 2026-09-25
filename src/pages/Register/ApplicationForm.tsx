@@ -37,6 +37,7 @@ import {
   FIELD_LIMITS,
   FOOD_ALLERGY_WAIVER_TEXT,
   GENDERS,
+  GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OPTIONS,
   HEAR_ABOUT_OTHER_OPTION,
   LEVELS_OF_STUDY,
@@ -61,7 +62,8 @@ import {
   TextAreaField,
   TextField,
 } from "./components/FormFields";
-import { SearchableSelect } from "./components/SearchableSelect";
+import { OtherSpecifyInput } from "./components/OtherSpecifyInput";
+import { SelectWithOther } from "./components/SelectWithOther";
 import { CustomCheckbox, CustomRadio } from "./components/CustomCheckbox";
 import { ResumeUpload } from "./components/ResumeUpload";
 import {
@@ -518,31 +520,27 @@ function ApplicationFormContent({
             autoComplete="off"
             error={errors.age}
           />
-          <SearchableSelect
+          <SelectWithOther
             id="school"
+            otherId="otherSchool"
+            variant="searchable"
             label="School / university"
             required
             placeholder="Search schools"
             value={form.school}
+            otherValue={form.otherSchool}
             options={MLH_SCHOOLS}
             featuredOptions={MLH_TEXAS_SCHOOLS}
-            extraOptions={[SCHOOL_OTHER_OPTION]}
-            onChange={(value) =>
+            otherOption={SCHOOL_OTHER_OPTION}
+            otherPlaceholder="Enter your school / university"
+            onValueChange={(value) =>
               updateField("school", value as ApplicationFormData["school"])
             }
+            onOtherValueChange={(value) => updateField("otherSchool", value)}
             error={errors.school}
+            otherError={errors.otherSchool}
+            maxLength={FIELD_LIMITS.otherSchool}
           />
-          {form.school === SCHOOL_OTHER_OPTION ? (
-            <TextField
-              id="otherSchool"
-              label="Enter your school / university"
-              required
-              value={form.otherSchool}
-              onChange={(e) => updateField("otherSchool", e.target.value)}
-              maxLength={FIELD_LIMITS.otherSchool}
-              error={errors.otherSchool}
-            />
-          ) : null}
           <TextField
             id="studentEmail"
             label="Student email (optional)"
@@ -630,28 +628,25 @@ function ApplicationFormContent({
             }
             error={errors.levelOfStudy}
           />
-          <SelectField
+          <SelectWithOther
             id="major"
+            otherId="otherMajor"
+            variant="listbox"
             label="Major / field of study"
             required
             value={form.major}
+            otherValue={form.otherMajor}
             options={MAJORS}
-            onChange={(value) =>
+            otherOption={MAJOR_OTHER_OPTION}
+            otherPlaceholder="Describe your major / field of study"
+            onValueChange={(value) =>
               updateField("major", value as ApplicationFormData["major"])
             }
+            onOtherValueChange={(value) => updateField("otherMajor", value)}
             error={errors.major}
+            otherError={errors.otherMajor}
+            maxLength={FIELD_LIMITS.otherMajor}
           />
-          {form.major === MAJOR_OTHER_OPTION ? (
-            <TextField
-              id="otherMajor"
-              label="Describe your major / field of study"
-              required
-              value={form.otherMajor}
-              onChange={(e) => updateField("otherMajor", e.target.value)}
-              maxLength={FIELD_LIMITS.otherMajor}
-              error={errors.otherMajor}
-            />
-          ) : null}
           <TextField
             id="graduationYear"
             label="Expected graduation year"
@@ -678,16 +673,24 @@ function ApplicationFormContent({
           Demographics
         </h3>
 
-        <SelectField
+        <SelectWithOther
           id="gender"
+          otherId="otherGender"
+          variant="listbox"
           label="Gender"
           required
           value={form.gender}
+          otherValue={form.otherGender}
           options={GENDERS}
-          onChange={(value) =>
+          otherOption={GENDER_SELF_DESCRIBE_OPTION}
+          otherPlaceholder="Describe your gender"
+          onValueChange={(value) =>
             updateField("gender", value as ApplicationFormData["gender"])
           }
+          onOtherValueChange={(value) => updateField("otherGender", value)}
           error={errors.gender}
+          otherError={errors.otherGender}
+          maxLength={FIELD_LIMITS.otherGender}
         />
 
         <fieldset
@@ -713,28 +716,14 @@ function ApplicationFormContent({
             ))}
           </div>
           {form.raceEthnicity.includes("Other (Please Specify)") ? (
-            <>
-              <input
-                id="otherRaceEthnicity"
-                value={form.otherRaceEthnicity}
-                onChange={(e) =>
-                  updateField("otherRaceEthnicity", e.target.value)
-                }
-                placeholder="Please specify your race or ethnicity"
-                aria-invalid={!!errors.otherRaceEthnicity}
-                aria-describedby={
-                  errors.otherRaceEthnicity
-                    ? "otherRaceEthnicity-error"
-                    : undefined
-                }
-                maxLength={FIELD_LIMITS.otherRaceEthnicity}
-                className={fieldClass(errors.otherRaceEthnicity)}
-              />
-              <FieldError
-                id="otherRaceEthnicity-error"
-                message={errors.otherRaceEthnicity}
-              />
-            </>
+            <OtherSpecifyInput
+              id="otherRaceEthnicity"
+              placeholder="Please specify your race or ethnicity"
+              value={form.otherRaceEthnicity}
+              onChange={(value) => updateField("otherRaceEthnicity", value)}
+              error={errors.otherRaceEthnicity}
+              maxLength={FIELD_LIMITS.otherRaceEthnicity}
+            />
           ) : null}
         </fieldset>
       </section>
@@ -919,31 +908,28 @@ function ApplicationFormContent({
         </h3>
 
         <div className="space-y-5">
-          <SelectField
+          <SelectWithOther
             id="hearAbout"
+            otherId="otherHearAbout"
+            variant="listbox"
             label="How did you hear about HackUTA?"
             required
             value={form.hearAbout}
+            otherValue={form.otherHearAbout}
             options={HEAR_ABOUT_OPTIONS}
-            onChange={(value) =>
+            otherOption={HEAR_ABOUT_OTHER_OPTION}
+            otherPlaceholder="Tell us how you heard about HackUTA"
+            onValueChange={(value) =>
               updateField(
                 "hearAbout",
                 value as ApplicationFormData["hearAbout"],
               )
             }
+            onOtherValueChange={(value) => updateField("otherHearAbout", value)}
             error={errors.hearAbout}
+            otherError={errors.otherHearAbout}
+            maxLength={FIELD_LIMITS.otherHearAbout}
           />
-          {form.hearAbout === HEAR_ABOUT_OTHER_OPTION ? (
-            <TextField
-              id="otherHearAbout"
-              label="Tell us how you heard about HackUTA"
-              required
-              value={form.otherHearAbout}
-              onChange={(e) => updateField("otherHearAbout", e.target.value)}
-              maxLength={FIELD_LIMITS.otherHearAbout}
-              error={errors.otherHearAbout}
-            />
-          ) : null}
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -1090,14 +1076,14 @@ function ApplicationFormContent({
 
         <div
           className={`flex flex-col gap-4 rounded-xl border-2 bg-white p-5 text-sm ${
-            errors.MLHcodeOfConductAgreed || errors.mlhDataSharingConsent
+            errors.mlhCodeOfConductAgreed || errors.mlhDataSharingConsent
               ? "border-red-400 bg-red-50"
               : "border-(--sand)"
           }`}
         >
           <div className="flex flex-col gap-1">
             <CustomCheckbox
-              id="MLHcodeOfConductAgreed"
+              id="mlhCodeOfConductAgreed"
               label={
                 <>
                   I have read and agree to the{" "}
@@ -1113,20 +1099,20 @@ function ApplicationFormContent({
                 </>
               }
               required
-              checked={form.MLHcodeOfConductAgreed}
+              checked={form.mlhCodeOfConductAgreed}
               onChange={(e) =>
-                updateField("MLHcodeOfConductAgreed", e.target.checked)
+                updateField("mlhCodeOfConductAgreed", e.target.checked)
               }
-              aria-invalid={!!errors.MLHcodeOfConductAgreed}
+              aria-invalid={!!errors.mlhCodeOfConductAgreed}
               aria-describedby={
-                errors.MLHcodeOfConductAgreed
-                  ? "MLHcodeOfConductAgreed-error"
+                errors.mlhCodeOfConductAgreed
+                  ? "mlhCodeOfConductAgreed-error"
                   : undefined
               }
             />
             <FieldError
-              id="MLHcodeOfConductAgreed-error"
-              message={errors.MLHcodeOfConductAgreed}
+              id="mlhCodeOfConductAgreed-error"
+              message={errors.mlhCodeOfConductAgreed}
             />
           </div>
           <div className="flex flex-col gap-1">

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   APPLICATION_QUESTIONS,
+  GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   MAX_HACKATHONS_ATTENDED,
@@ -27,6 +28,7 @@ import {
   uploadResume,
 } from "../../src/pages/Register/registerApi";
 import { fillValidApplicationForm, selectListboxOption } from "../fixtures/fillApplicationForm";
+import { OTHER_OPTION_FIXTURES } from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
 
 const env = vi.hoisted(() => ({
@@ -511,16 +513,23 @@ describe("ApplicationForm conditional answers", () => {
     fireEvent.focus(school);
     fireEvent.change(school, { target: { value: SCHOOL_OTHER_OPTION } });
     fireEvent.click(screen.getByRole("button", { name: SCHOOL_OTHER_OPTION }));
-    fireEvent.change(screen.getByLabelText(/Enter your school \/ university/), {
+    fireEvent.change(screen.getByPlaceholderText(/Enter your school \/ university/), {
       target: { value: "Mars Academy" },
     });
 
+    selectListboxOption(/Gender/, GENDER_SELF_DESCRIBE_OPTION);
+    fireEvent.change(screen.getByPlaceholderText(/Describe your gender/), {
+      target: { value: "Genderfluid" },
+    });
+
     selectListboxOption(/Major \/ field of study/, MAJOR_OTHER_OPTION);
-    fireEvent.change(screen.getByLabelText(/Describe your major/), { target: { value: "Space Law" } });
+    fireEvent.change(screen.getByPlaceholderText(/Describe your major/), {
+      target: { value: "Space Law" },
+    });
 
     selectListboxOption(/How did you hear about HackUTA/, HEAR_ABOUT_OTHER_OPTION);
-    fireEvent.change(screen.getByLabelText(/Tell us how you heard about HackUTA/), {
-      target: { value: "A friend" },
+    fireEvent.change(screen.getByPlaceholderText(/Tell us how you heard about HackUTA/), {
+      target: { value: "Professor announcement" },
     });
 
     fireEvent.click(
@@ -537,9 +546,15 @@ describe("ApplicationForm conditional answers", () => {
     await waitFor(() => expect(onSubmitted).toHaveBeenCalledOnce());
     expect(submitRegistration).toHaveBeenCalledWith(
       expect.objectContaining({
-        school: "Mars Academy",
-        major: "Space Law",
-        hearAbout: "A friend",
+        school: SCHOOL_OTHER_OPTION,
+        otherSchool: "Mars Academy",
+        gender: GENDER_SELF_DESCRIBE_OPTION,
+        otherGender: "Genderfluid",
+        major: MAJOR_OTHER_OPTION,
+        otherMajor: "Space Law",
+        hearAbout: HEAR_ABOUT_OTHER_OPTION,
+        otherHearAbout: OTHER_OPTION_FIXTURES.hearAbout,
+        mlhCodeOfConductAgreed: true,
         otherRaceEthnicity: "Custom",
         github: "https://github.com/sam",
         mlhCommunicationsConsent: true,

@@ -34,8 +34,8 @@ export function validRegistrationForm(): ApplicationFormData {
       "Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.",
     hearAbout: "Discord",
     emergencyContactName: "Jane Test",
-    emergencyContactPhone: "+442079460958",
-    MLHcodeOfConductAgreed: true,
+  emergencyContactPhone: "+442079460958",
+  mlhCodeOfConductAgreed: true,
     mlhDataSharingConsent: true,
     foodAllergyWaiverAgreed: true,
   };
