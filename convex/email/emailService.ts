@@ -32,6 +32,19 @@ const REQUEST_TIMEOUT_MS = 10_000;
 const recordEmailDeliveryRef = makeFunctionReference<"mutation">(
   "emailDeliveries:recordEmailDelivery",
 );
+const recordEmailDeliveryRecordingFailureRef = makeFunctionReference<"mutation">(
+  "emailDeliveries:recordEmailDeliveryRecordingFailure",
+);
+
+const MAX_TRACKING_ERROR_LENGTH = 500;
+
+/** Safe, support-facing detail when emailDeliveries persistence fails. */
+export function formatEmailTrackingError(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim().slice(0, MAX_TRACKING_ERROR_LENGTH);
+  }
+  return "unknown error";
+}
 
 function parseServiceUrl(raw: string | undefined): string | null {
   if (!raw) return null;
@@ -125,8 +138,9 @@ export async function getEmailStatus(id: string): Promise<EmailStatusResult> {
 
 /**
  * Queues an email and records its queue ID in emailDeliveries. A tracking
- * failure is logged but not thrown: the email is already queued, and failing
- * here would prompt the applicant to request a duplicate.
+ * failure is logged and persisted in emailDeliveryRecordingFailures but not
+ * thrown: the email is already queued, and failing here would prompt the
+ * applicant to request a duplicate.
  */
 export async function sendTrackedEmail(
   ctx: Pick<GenericActionCtx<GenericDataModel>, "runMutation">,
@@ -140,8 +154,23 @@ export async function sendTrackedEmail(
       kind,
       recipient: input.to,
     });
-  } catch {
-    console.error(`Failed to record email delivery ${result.id} (${kind}).`);
+  } catch (error) {
+    const detail = formatEmailTrackingError(error);
+    console.error(
+      `Failed to record email delivery ${result.id} (${kind}): ${detail}`,
+    );
+    try {
+      await ctx.runMutation(recordEmailDeliveryRecordingFailureRef, {
+        serviceId: result.id,
+        kind,
+        recipient: input.to,
+        errorMessage: detail,
+      });
+    } catch (failureError) {
+      console.error(
+        `Failed to persist email delivery recording failure for ${result.id} (${kind}): ${formatEmailTrackingError(failureError)}`,
+      );
+    }
   }
   return result;
 }

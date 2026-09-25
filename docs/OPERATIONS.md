@@ -74,13 +74,14 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 - **Convex dashboard:** function error rates, HTTP action 4xx/5xx on `/resume-upload`
 - **Vercel:** deployment status, edge 5xx
 - **Email service:** Sign-up OTP, password-reset OTP, and confirmation email delivery (`emailservice.hackuta.com/health`, `/queue-size`; per-email status via `email/checkEmailStatus`)
+- **Email tracking gaps:** rows in `emailDeliveryRecordingFailures` (Convex dashboard → **Data**) — queued emails whose `emailDeliveries` row failed to save; use `serviceId` with `email/checkEmailStatus`
 - **CI:** GitHub Actions on `main` / `dev`
 
 ### Symptom → likely cause
 
 | Symptom | Check |
 | --- | --- |
-| OTP not received | `EMAIL_SERVICE_URL` / `EMAIL_SERVICE_API_KEY`, email service `/health`, the email's status (`emailDeliveries` → `checkEmailStatus`), spam folder, rate limit (5/hour per bucket: `otp_send`, `password_reset_send`) |
+| OTP not received | `EMAIL_SERVICE_URL` / `EMAIL_SERVICE_API_KEY`, email service `/health`, the email's status (`emailDeliveries` or `emailDeliveryRecordingFailures` → `checkEmailStatus`), spam folder, rate limit (5/hour per bucket: `otp_send`, `password_reset_send`) |
 | Resume upload 403 | `REGISTRATION_ALLOWED_ORIGINS` vs actual frontend URL |
 | Resume upload 429 | IP or global upload rate limit; possible abuse |
 | Submit fails “already submitted” | Expected — one submission per user |

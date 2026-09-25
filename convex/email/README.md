@@ -19,6 +19,7 @@ Sign-up and password-reset emails use separate templates and subjects. Both OTP 
 
 - Emails are queued with `POST /send-email`. The service sends `body` as plain text, so the plain-text template is used.
 - A returned ID confirms queueing, not delivery. Each ID is recorded in `emailDeliveries` ([../emailDeliveries.ts](../emailDeliveries.ts)) with the email kind (also sent as `note`), recipient, and time — never the content or code.
+- If that row cannot be written, the queue ID is persisted in `emailDeliveryRecordingFailures` instead so support can still look it up. The send is not retried.
 - Requests time out after 10 seconds and are never retried: a failed request may already be queued, and duplicate-send behavior is not defined.
 - Errors never include the API key or email body. The key is only sent over HTTPS (plain HTTP only for `localhost` test services).
 

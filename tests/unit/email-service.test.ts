@@ -3,6 +3,7 @@ import {
   getEmailServiceConfig,
   getEmailStatus,
   sendMailMessage,
+  formatEmailTrackingError,
   sendTrackedEmail,
 } from "../../convex/email/emailService";
 import {
@@ -274,6 +275,20 @@ describe("getEmailStatus", () => {
   });
 });
 
+describe("formatEmailTrackingError", () => {
+  it("returns trimmed Error messages capped at 500 characters", () => {
+    expect(formatEmailTrackingError(new Error("  database unavailable  "))).toBe(
+      "database unavailable",
+    );
+    expect(formatEmailTrackingError(new Error("x".repeat(600)))).toHaveLength(500);
+  });
+
+  it("falls back to a generic message for non-Error values", () => {
+    expect(formatEmailTrackingError("boom")).toBe("unknown error");
+    expect(formatEmailTrackingError(new Error("   "))).toBe("unknown error");
+  });
+});
+
 describe("sendTrackedEmail", () => {
   const message = {
     to: "applicant@example.com",
@@ -312,7 +327,33 @@ describe("sendTrackedEmail", () => {
     });
   });
 
-  it("does not fail an already-queued email when tracking fails", async () => {
+  it("persists a durable tracking failure without failing the queued email", async () => {
+    const runMutation = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("database unavailable"))
+      .mockResolvedValueOnce(null);
+    const logError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(sendTrackedEmail(fakeCtx(runMutation), "otp", message)).resolves.toEqual({
+      id: "queued-1",
+    });
+
+    expect(runMutation).toHaveBeenCalledTimes(2);
+    expect(runMutation.mock.calls[1]![1]).toEqual({
+      serviceId: "queued-1",
+      kind: "otp",
+      recipient: "applicant@example.com",
+      errorMessage: "database unavailable",
+    });
+    expect(logError).toHaveBeenCalledWith(
+      "Failed to record email delivery queued-1 (otp): database unavailable",
+    );
+    const logged = logError.mock.calls.flat().join(" ");
+    expect(logged).not.toContain(API_KEY);
+    expect(logged).not.toContain("042681");
+  });
+
+  it("logs again when the durable tracking failure row cannot be saved", async () => {
     const runMutation = vi.fn().mockRejectedValue(new Error("database unavailable"));
     const logError = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -320,10 +361,11 @@ describe("sendTrackedEmail", () => {
       id: "queued-1",
     });
 
-    expect(logError).toHaveBeenCalledWith("Failed to record email delivery queued-1 (otp).");
-    const logged = logError.mock.calls.flat().join(" ");
-    expect(logged).not.toContain(API_KEY);
-    expect(logged).not.toContain("042681");
+    expect(runMutation).toHaveBeenCalledTimes(2);
+    expect(logError).toHaveBeenCalledTimes(2);
+    expect(logError.mock.calls[1]![0]).toBe(
+      "Failed to persist email delivery recording failure for queued-1 (otp): database unavailable",
+    );
   });
 
   it("does not record anything when the send fails", async () => {
