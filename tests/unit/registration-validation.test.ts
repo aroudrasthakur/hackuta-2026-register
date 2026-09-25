@@ -23,33 +23,28 @@ describe("validateApplicationForm", () => {
   it.each([
     ["phone", "phoneCountry"],
     ["emergencyContactPhone", "emergencyContactPhoneCountry"],
-  ] as const)("validates %s against its selected country even with a shared calling code", (field, countryField) => {
-    const mismatch = validateApplicationForm({
+  ] as const)("accepts local %s regardless of the selected country", (field, countryField) => {
+    const result = validateApplicationForm({
       ...validRegistrationForm(),
-      [field]: "+12025550123",
+      [field]: "2025550123",
       [countryField]: "CA",
     });
-    expect(mismatch.success).toBe(false);
-    if (!mismatch.success) expect(mismatch.errors[field]).toBe("Enter a valid phone number.");
-
-    const matched = validateApplicationForm({
-      ...validRegistrationForm(),
-      [field]: "+14165550123",
-      [countryField]: "CA",
-    });
-    expect(matched.success).toBe(true);
-    if (matched.success) expect(matched.payload[countryField]).toBe("CA");
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload[field]).toBe("2025550123");
+      expect(result.payload[countryField]).toBe("CA");
+    }
   });
 
   it("checks both countries on server submissions and accepts older payloads without them", () => {
     const payload = validPayloadFromForm();
-    expect(validateRegistrationPayload({ ...payload, phoneCountry: "CA" }).success).toBe(false);
-    expect(validateRegistrationPayload({ ...payload, emergencyContactPhoneCountry: "US" }).success).toBe(false);
+    expect(validateRegistrationPayload({ ...payload, phoneCountry: "CA" }).success).toBe(true);
+    expect(validateRegistrationPayload({ ...payload, emergencyContactPhoneCountry: "US" }).success).toBe(true);
     expect(validateRegistrationPayload({ ...payload, phoneCountry: "XX" }).success).toBe(false);
     expect(validateRegistrationPayload(payload).success).toBe(true);
   });
 
-  it("rejects impossible international numbers in both phone fields", () => {
+  it("rejects fewer than 10 digits in both phone fields", () => {
     for (const field of ["phone", "emergencyContactPhone"] as const) {
       const result = validateApplicationForm({
         ...validRegistrationForm(),
@@ -77,14 +72,28 @@ describe("validateApplicationForm", () => {
     }
   });
 
-  it("accepts international numbers with fewer than 10 digits", () => {
+  it("formats 10-digit US numbers before submission in both phone fields", () => {
     const result = validateApplicationForm({
       ...validRegistrationForm(),
-      phone: "+354 555 1234",
+      phone: "5551234567",
+      emergencyContactPhone: "202-555-0123",
+      emergencyContactPhoneCountry: "US",
     });
 
     expect(result.success).toBe(true);
-    if (result.success) expect(result.payload.phone).toBe("+3545551234");
+    if (result.success) {
+      expect(result.payload.phone).toBe("(555)-123-4567");
+      expect(result.payload.emergencyContactPhone).toBe("(202)-555-0123");
+    }
+  });
+
+  it("rejects international numbers with fewer than 10 digits", () => {
+    const result = validateApplicationForm({
+      ...validRegistrationForm(),
+      phone: "+354 555 123",
+    });
+
+    expect(result.success).toBe(false);
   });
 
   it.each([
@@ -839,9 +848,12 @@ describe("normalizeHttpUrl", () => {
 });
 
 describe("isValidPhone", () => {
-  it("accepts normalized phone numbers", async () => {
+  it("accepts local and international numbers with 10 to 15 digits", async () => {
     const { isValidPhone } = await import("../../shared/registration/schema");
+    expect(isValidPhone("5551234567")).toBe(true);
+    expect(isValidPhone("202-555-0123")).toBe(true);
     expect(isValidPhone("+1 202-555-0123")).toBe(true);
+    expect(isValidPhone("123456789012345")).toBe(true);
   });
 
   it("rejects too-short numbers", async () => {
@@ -849,13 +861,14 @@ describe("isValidPhone", () => {
     expect(isValidPhone("123")).toBe(false);
   });
 
-  it("uses country-specific possible lengths and requires a calling code", async () => {
+  it("enforces digit count after stripping formatting", async () => {
     const { isValidPhone } = await import("../../shared/registration/schema");
-    expect(isValidPhone("+354 555 1234")).toBe(true);
-    expect(isValidPhone("202-555-0123")).toBe(false);
-    expect(isValidPhone("+1 202-555-012")).toBe(false);
-    expect(isValidPhone("+1 (234) 567-8901-234")).toBe(false);
+    expect(isValidPhone("+354 555 123")).toBe(false);
+    expect(isValidPhone("+1 202-555-01")).toBe(false);
+    expect(isValidPhone("+1 (234) 567-8901-234")).toBe(true);
+    expect(isValidPhone("1234567890123456")).toBe(false);
   });
+
 });
 
 describe("validateApplicationForm resume and error reporting", () => {

@@ -4,24 +4,13 @@ import {
   parsePhoneNumberFromString,
   type CountryCode,
 } from "libphonenumber-js/max";
+import { formatUsPhone } from "../../../../shared/registration/schema";
+import { FIELD_LIMITS } from "../../../../shared/registration/constants";
 import { FieldError, RequiredMark } from "./FormFields";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
 
 const countries = getCountries();
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
-
-function countryForNumber(phone: NonNullable<ReturnType<typeof parsePhoneNumberFromString>>) {
-  return phone.country ?? countries.find(
-    (candidate) => getCountryCallingCode(candidate) === phone.countryCallingCode,
-  );
-}
-
-function fromStored(value: string, selectedCountry: CountryCode | "") {
-  const parsed = parsePhoneNumberFromString(value);
-  const country = selectedCountry || (parsed && countryForNumber(parsed)) || "US";
-  const prefix = `+${getCountryCallingCode(country)}`;
-  return { country, national: value.startsWith(prefix) ? value.slice(prefix.length) : value };
-}
 
 export function PhoneField({
   id,
@@ -40,33 +29,21 @@ export function PhoneField({
   error?: string | undefined;
   autoComplete?: string;
 }) {
-  const entry = fromStored(value, country);
+  const selectedCountry = country || "US";
 
-  function emit(country: CountryCode, national: string) {
-    const next = national.trim()
-      ? `+${getCountryCallingCode(country)}${national}`
-      : "";
-    onChange(next, country);
-  }
-
-  function changeNumber(raw: string) {
-    raw = raw.replace(/[^\d\s().+-]/g, "");
-    if (raw.trim().startsWith("+")) {
-      const parsed = parsePhoneNumberFromString(raw);
-      const country = parsed && countryForNumber(parsed);
-      if (country) {
-        const national = raw.trim().slice(parsed.countryCallingCode.length + 1).trim();
-        emit(country, national);
-        return;
-      }
+  function blurNumber() {
+    const digits = value.replace(/\D/g, "");
+    if (!value.trim().startsWith("+") && selectedCountry === "US" && digits.length === 10) {
+      onChange(formatUsPhone(value), selectedCountry);
+      return;
     }
-    emit(entry.country, raw);
+    if (value.trim().startsWith("+")) {
+      const parsed = parsePhoneNumberFromString(value);
+      if (parsed?.country) onChange(value, parsed.country);
+    }
   }
 
   const errorId = `${id}-error`;
-  const displayError = error === "Enter a valid phone number."
-    ? `Enter a valid phone number for ${countryNames.of(entry.country)} (+${getCountryCallingCode(entry.country)}).`
-    : error;
   return (
     <div className={labelClass}>
       <label className={legendClass} htmlFor={id}>
@@ -78,16 +55,13 @@ export function PhoneField({
         </label>
         <select
           id={`${id}-country`}
-          className={`${fieldClass(displayError)} w-32 shrink-0 px-2 sm:w-40`}
-          value={entry.country}
-          onChange={(event) => {
-            const country = event.target.value as CountryCode;
-            emit(country, entry.national);
-          }}
+          className={`${fieldClass(error)} w-32 shrink-0 px-2 sm:w-40`}
+          value={selectedCountry}
+          onChange={(event) => onChange(value, event.target.value as CountryCode)}
         >
-          {countries.map((country) => (
-            <option key={country} value={country}>
-              +{getCountryCallingCode(country)} {countryNames.of(country)}
+          {countries.map((option) => (
+            <option key={option} value={option}>
+              +{getCountryCallingCode(option)} {countryNames.of(option)}
             </option>
           ))}
         </select>
@@ -96,15 +70,17 @@ export function PhoneField({
           type="tel"
           inputMode="tel"
           required
+          maxLength={FIELD_LIMITS.phone}
           autoComplete={autoComplete}
-          aria-invalid={!!displayError}
-          aria-describedby={displayError ? errorId : undefined}
-          className={fieldClass(displayError)}
-          value={entry.national}
-          onChange={(event) => changeNumber(event.target.value)}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          className={fieldClass(error)}
+          value={value}
+          onChange={(event) => onChange(event.target.value, selectedCountry)}
+          onBlur={blurNumber}
         />
       </div>
-      <FieldError id={errorId} message={displayError} />
+      <FieldError id={errorId} message={error} />
     </div>
   );
 }

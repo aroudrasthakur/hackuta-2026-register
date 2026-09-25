@@ -137,13 +137,14 @@ describe("ApplicationForm", () => {
     vi.unstubAllEnvs();
   });
 
-  it("keeps typed formatting and lets each contact use a separate calling code", async () => {
+  it("formats US numbers on blur and lets each contact use a separate calling code", async () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
 
     const phone = screen.getByLabelText(/Phone number/);
-    await userEvent.type(phone, "(202) 555-0123");
+    await userEvent.type(phone, "2025550123");
+    expect(phone).toHaveValue("2025550123");
     fireEvent.blur(phone);
-    expect(phone).toHaveValue("(202) 555-0123");
+    expect(phone).toHaveValue("(202)-555-0123");
 
     const emergencyPhone = screen.getByLabelText(/Emergency contact phone/);
     fireEvent.change(screen.getByLabelText("Emergency contact calling code"), {
@@ -155,14 +156,16 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("Emergency contact calling code")).toHaveValue("GB");
   });
 
-  it("recognizes a pasted international number without duplicating its calling code", () => {
+  it("recognizes a pasted international number on blur", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
 
     const phone = screen.getByLabelText(/Phone number/);
     fireEvent.change(phone, { target: { value: "+44 20 7946 0958" } });
 
+    expect(screen.getByLabelText("Applicant calling code")).toHaveValue("US");
+    fireEvent.blur(phone);
     expect(screen.getByLabelText("Applicant calling code")).toHaveValue("GB");
-    expect(phone).toHaveValue("20 7946 0958");
+    expect(phone).toHaveValue("+44 20 7946 0958");
   });
 
   it("submits a restored legacy draft without editing either phone field", async () => {
@@ -182,8 +185,8 @@ describe("ApplicationForm", () => {
 
     await waitFor(() => expect(submitRegistration).toHaveBeenCalledWith(
       expect.objectContaining({
-        phone: "+12025550123",
-        emergencyContactPhone: "+12025550124",
+        phone: "(202)-555-0123",
+        emergencyContactPhone: "(202)-555-0124",
       }),
       null,
     ));
@@ -225,8 +228,8 @@ describe("ApplicationForm", () => {
       expect(patch).toMatchObject({
         phoneCountry: "CA",
         emergencyContactPhoneCountry: "GB",
-        phone: withNumbers ? "+1202 555 0123" : "",
-        emergencyContactPhone: withNumbers ? "+4420 7946 0958" : "",
+        phone: withNumbers ? "202 555 0123" : "",
+        emergencyContactPhone: withNumbers ? "20 7946 0958" : "",
       });
 
       view.unmount();
@@ -237,15 +240,10 @@ describe("ApplicationForm", () => {
       expect(screen.getByLabelText(/Phone number/)).toHaveValue(withNumbers ? "202 555 0123" : "");
 
       if (withNumbers) {
-        fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
-        expect(screen.getByText("Enter a valid phone number for Canada (+1).")).toBeInTheDocument();
-        fireEvent.change(screen.getByLabelText("Applicant calling code"), {
-          target: { value: "US" },
-        });
         await act(async () => {
           fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
         });
-        expect(screen.getByLabelText(/Phone number/)).toHaveAttribute("aria-invalid", "false");
+        expect(screen.queryByText("Enter a valid phone number.")).not.toBeInTheDocument();
       }
     },
   );

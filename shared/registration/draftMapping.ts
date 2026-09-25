@@ -41,12 +41,6 @@ function parseOptionalInt(raw: string): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-/** Convert the domestic format used by drafts before international phone entry. */
-function normalizeLegacyPhone(value: string): string {
-  const digits = value.replace(/\D/g, "");
-  return /^[\d\s().-]+$/.test(value) && digits.length === 10 ? `+1${digits}` : value;
-}
-
 /** Application columns needed to hydrate the registration form (excludes resume blob). */
 export type StoredApplicantApplication = Partial<
   Record<
@@ -129,9 +123,7 @@ export function applicationToDraftForm(
 
   for (const key of TRIMMED_STRING_FIELDS) {
     const value = (application[key] as string | undefined) ?? "";
-    values[key] = key === "phone" || key === "emergencyContactPhone"
-      ? normalizeLegacyPhone(value)
-      : value;
+    values[key] = value;
   }
 
   const legacyOtherDietary = (application as { otherDietary?: string }).otherDietary;

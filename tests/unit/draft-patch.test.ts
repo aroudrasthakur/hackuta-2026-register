@@ -120,11 +120,11 @@ describe("formToDraftPatch conditional fields", () => {
 
 describe("applicationToDraftForm", () => {
   it.each(["2025550123", "(202) 555-0123", "202-555-0123"])(
-    "restores legacy domestic phone numbers as international numbers (%s)",
+    "preserves legacy domestic phone numbers (%s)",
     (phone) => {
       expect(applicationToDraftForm({ phone, emergencyContactPhone: phone })).toMatchObject({
-        phone: "+12025550123",
-        emergencyContactPhone: "+12025550123",
+        phone,
+        emergencyContactPhone: phone,
       });
     },
   );
