@@ -336,7 +336,9 @@ describe("convex registrations", () => {
       stateOfResidence: "Texas",
       internationalStudent: false,
       dietaryRestrictions: [],
+      MLHcodeOfConductAgreed: true,
     });
+    expect(stored).not.toHaveProperty("codeOfConductAgreed");
     await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       registration: { answers: { stateOfResidence: "Texas" } },
     });
@@ -347,6 +349,16 @@ describe("convex registrations", () => {
       data: validRegistrationPayload(),
     })).rejects.toThrow("already submitted");
   }, 15_000);
+
+  it("rejects registration without MLH Code of Conduct agreement", async () => {
+    const t = await authTest();
+
+    await expect(t.mutation("registrations:submitRegistration", {
+      data: { ...validRegistrationPayload(), MLHcodeOfConductAgreed: false },
+    })).rejects.toThrow("Invalid registration data.");
+
+    expect(await t.run((ctx) => ctx.db.query("applications").first())).toBeNull();
+  });
 
   it("records submitted consent metadata and preserves an optional sponsor decline", async () => {
     const t = await authTest();
