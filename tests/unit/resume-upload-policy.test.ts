@@ -4,12 +4,18 @@ import {
   hasPdfMagicBytes,
   isAllowedResumeFilename,
   MAX_RESUME_BYTES,
+  MAX_RESUME_FILENAME_LENGTH,
   parseResumeContentLength,
   RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
+  RESUME_UPLOAD_EXPIRED_MESSAGE,
   resumeFileKey,
   validateResume,
 } from "../../shared/registration/resume";
+import {
+  isResumeFieldMessage,
+  mapConvexErrorToUserMessage,
+} from "../../shared/registration/submitErrors";
 
 describe("resume upload policy", () => {
   it("allows only PDF extensions", () => {
@@ -60,6 +66,20 @@ describe("resume upload policy", () => {
     expect(isAllowedResumeFilename("dir\\resume.pdf")).toBe(false);
     expect(isAllowedResumeFilename("resume\0.pdf")).toBe(false);
     expect(isAllowedResumeFilename("  resume.pdf  ")).toBe(true);
+  });
+
+  it("caps resume filename length", () => {
+    const atLimit = `${"a".repeat(MAX_RESUME_FILENAME_LENGTH - 4)}.pdf`;
+    expect(isAllowedResumeFilename(atLimit)).toBe(true);
+    expect(isAllowedResumeFilename(`a${atLimit}`)).toBe(false);
+  });
+
+  it("maps expired draft resume uploads to a resume-field message", () => {
+    const message = mapConvexErrorToUserMessage(
+      new Error(`[CONVEX M(applications:saveApplicationDraft)] Uncaught Error: ${RESUME_UPLOAD_EXPIRED_MESSAGE}`),
+    );
+    expect(message).toBe(RESUME_UPLOAD_EXPIRED_MESSAGE);
+    expect(isResumeFieldMessage(message)).toBe(true);
   });
 
   it("rejects Content-Length values that are not safe positive integers", () => {

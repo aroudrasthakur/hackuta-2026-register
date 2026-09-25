@@ -66,12 +66,17 @@ import {
   US_STATE_OPTIONS,
 } from "../../../shared/registration/residence";
 import { INITIAL_FORM } from "../../../shared/registration/types";
-import { resumeFileKey } from "../../../shared/registration/resume";
+import {
+  RESUME_MISSING_MESSAGE,
+  resumeFileKey,
+} from "../../../shared/registration/resume";
 import {
   DRAFT_SAVE_ERROR_MESSAGE,
   isResumeFieldMessage,
   mapConvexErrorToUserMessage,
   mapUploadError,
+  RESUME_REMOVE_ERROR_MESSAGE,
+  RESUME_UPLOAD_ERROR_MESSAGE,
   SIGN_IN_REQUIRED_MESSAGE,
 } from "../../../shared/registration/submitErrors";
 import {
@@ -86,6 +91,7 @@ type SavedDraft =
       draft?: Partial<ApplicationFormData>;
       status?: string;
       savedResume?: SavedResumeDraft | null;
+      resumeMissing?: boolean;
     }
   | null
   | undefined;
@@ -111,8 +117,10 @@ function ApplicationFormContent({
 }) {
   const [form, setForm] = useState<ApplicationFormData>(initialForm);
   const [savedResume, setSavedResume] = useState<SavedResumeDraft | null>(initialSavedResume);
-  const [resumeUploading, setResumeUploading] = useState(false);
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [resumeStatus, setResumeStatus] = useState<"idle" | "uploading" | "removing">("idle");
+  const [errors, setErrors] = useState<FieldErrors>(() =>
+    savedDraft?.resumeMissing ? { resume: RESUME_MISSING_MESSAGE } : {},
+  );
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -123,14 +131,14 @@ function ApplicationFormContent({
     session: ResumeUploadSession;
   } | null>(null);
   const resumeUploadRef = useRef(resumeUpload);
-  const savedResumeRef = useRef(savedResume);
-  const resumePersistedToDraftRef = useRef(Boolean(initialSavedResume));
+  const formRef = useRef(form);
   const savedDraftStatus = savedDraft?.status;
+  const canSaveDraft = Boolean(saveDraft && routing.isAuthenticated);
 
   const saveDraftWithStatus = useCallback(async () => {
     if (!saveDraft || !routing.isAuthenticated) return;
     try {
-      await saveDraft({ patch: formToDraftPatch(form, savedResume) });
+      await saveDraft({ patch: formToDraftPatch(form) });
       setDraftError(null);
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -139,15 +147,15 @@ function ApplicationFormContent({
       setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
       throw error;
     }
-  }, [form, routing.isAuthenticated, saveDraft, savedResume]);
+  }, [form, routing.isAuthenticated, saveDraft]);
 
   useEffect(() => {
     resumeUploadRef.current = resumeUpload;
   }, [resumeUpload]);
 
   useEffect(() => {
-    savedResumeRef.current = savedResume;
-  }, [savedResume]);
+    formRef.current = form;
+  }, [form]);
 
   useEffect(() => {
     if (!hasConvexClient || !saveDraft || !routing.isAuthenticated || !draftHydrated) {
@@ -168,19 +176,12 @@ function ApplicationFormContent({
     saveDraft,
     saveDraftWithStatus,
     savedDraftStatus,
-    savedResume,
   ]);
 
   const discardUnsavedUpload = useCallback(async () => {
     const pending = resumeUploadRef.current;
     if (!pending) return;
     setResumeUpload(null);
-    if (
-      resumePersistedToDraftRef.current &&
-      savedResumeRef.current?.storageId === pending.session.storageId
-    ) {
-      return;
-    }
     await discardResumeUpload(pending.session.uploadToken);
   }, []);
 
@@ -188,12 +189,6 @@ function ApplicationFormContent({
     const cleanupPendingUpload = () => {
       const pending = resumeUploadRef.current;
       if (!pending) return;
-      if (
-        resumePersistedToDraftRef.current &&
-        savedResumeRef.current?.storageId === pending.session.storageId
-      ) {
-        return;
-      }
       void discardResumeUpload(pending.session.uploadToken);
     };
     window.addEventListener("beforeunload", cleanupPendingUpload);
@@ -205,22 +200,30 @@ function ApplicationFormContent({
 
   const handleResumeChange = useCallback(
     async (file: File | null) => {
+      const showResumeError = (message: string) => {
+        setErrors((prev) => ({ ...prev, resume: message }));
+        focusFirstInvalidField({ resume: message });
+      };
+
       if (!file) {
         await discardUnsavedUpload();
         setForm((prev) => ({ ...prev, resume: null }));
-        const hadSavedResume = savedResumeRef.current !== null;
-        setSavedResume(null);
-        resumePersistedToDraftRef.current = false;
-        if (hadSavedResume && saveDraft && routing.isAuthenticated) {
-          try {
-            await saveDraft({ patch: formToDraftPatch(form, null) });
-            setDraftError(null);
-          } catch (error) {
-            if (import.meta.env.DEV) {
-              console.error("Draft save failed:", error);
-            }
-            setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
+        if (!savedResume || !saveDraft || !canSaveDraft) {
+          setSavedResume(null);
+          return;
+        }
+        setResumeStatus("removing");
+        try {
+          await saveDraft({ patch: formToDraftPatch(formRef.current, null) });
+          setSavedResume(null);
+          setDraftError(null);
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.error("Removing saved resume failed:", error);
           }
+          showResumeError(RESUME_REMOVE_ERROR_MESSAGE);
+        } finally {
+          setResumeStatus("idle");
         }
         return;
       }
@@ -234,7 +237,7 @@ function ApplicationFormContent({
       });
       if (!getUploadAuthToken) return;
 
-      setResumeUploading(true);
+      setResumeStatus("uploading");
       let uploadedSession: ResumeUploadSession | null = null;
       try {
         await discardUnsavedUpload();
@@ -244,46 +247,44 @@ function ApplicationFormContent({
           storageId: uploadedSession.storageId,
           filename: file.name,
         };
-        setSavedResume(nextSavedResume);
-        setForm((prev) => ({ ...prev, resume: null }));
 
-        if (saveDraft && routing.isAuthenticated) {
+        if (saveDraft && canSaveDraft) {
           try {
-            await saveDraft({ patch: formToDraftPatch(form, nextSavedResume) });
-            setDraftError(null);
-            resumePersistedToDraftRef.current = true;
-            await discardResumeUpload(uploadedSession.uploadToken);
-            uploadedSession = null;
+            await saveDraft({ patch: formToDraftPatch(formRef.current, nextSavedResume) });
           } catch (error) {
             await discardResumeUpload(uploadedSession.uploadToken);
             uploadedSession = null;
-            setSavedResume(null);
-            resumePersistedToDraftRef.current = false;
+            setForm((prev) => ({ ...prev, resume: null }));
             if (import.meta.env.DEV) {
-              console.error("Draft save failed:", error);
+              console.error("Saving resume to draft failed:", error);
             }
-            setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
+            const mapped = mapConvexErrorToUserMessage(error);
+            showResumeError(isResumeFieldMessage(mapped) ? mapped : RESUME_UPLOAD_ERROR_MESSAGE);
             return;
           }
+          setDraftError(null);
+          await discardResumeUpload(uploadedSession.uploadToken);
+          uploadedSession = null;
         } else {
           setResumeUpload({ fileKey: resumeFileKey(file), session: uploadedSession });
         }
+        setSavedResume(nextSavedResume);
+        setForm((prev) => ({ ...prev, resume: null }));
       } catch (err) {
         if (uploadedSession) {
           await discardResumeUpload(uploadedSession.uploadToken);
         }
         setResumeUpload(null);
         setForm((prev) => ({ ...prev, resume: null }));
-        setSavedResume(null);
-        resumePersistedToDraftRef.current = false;
-        const message = mapUploadError(err);
-        setErrors((prev) => ({ ...prev, resume: message }));
-        focusFirstInvalidField({ resume: message });
+        if (!canSaveDraft) {
+          setSavedResume(null);
+        }
+        showResumeError(mapUploadError(err));
       } finally {
-        setResumeUploading(false);
+        setResumeStatus("idle");
       }
     },
-    [discardUnsavedUpload, form, getUploadAuthToken, routing.isAuthenticated, saveDraft],
+    [canSaveDraft, discardUnsavedUpload, getUploadAuthToken, saveDraft, savedResume],
   );
 
   const updateField = useCallback(
@@ -848,9 +849,9 @@ function ApplicationFormContent({
               <ResumeUpload
                 file={form.resume}
                 savedFilename={savedResume?.filename ?? null}
-                uploading={resumeUploading}
+                uploading={resumeStatus === "uploading"}
                 error={errors.resume}
-                disabled={submitting}
+                disabled={submitting || resumeStatus === "removing"}
                 onChange={(file) => {
                   void handleResumeChange(file);
                 }}
@@ -1101,7 +1102,7 @@ function ApplicationFormContent({
       )}
 
       <div className="flex justify-center pt-2">
-        <OdysseyButton type="submit" disabled={submitting || resumeUploading}>
+        <OdysseyButton type="submit" disabled={submitting || resumeStatus !== "idle"}>
           {submitting ? "Submitting your application…" : "Submit application"}
         </OdysseyButton>
       </div>

@@ -12,8 +12,10 @@ import {
   MAX_RESUME_PAGES,
   RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_FILENAME_HEADER,
+  RESUME_MISSING_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
   RESUME_TEST_CONTENT_LENGTH_HEADER,
+  RESUME_UPLOAD_EXPIRED_MESSAGE,
 } from "../../shared/registration/resume";
 import { RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE } from "../../shared/registration/submitErrors";
 import { HACKATHON_SCHEDULE } from "../../shared/hackathon/schedule";
@@ -1060,6 +1062,196 @@ describe("convex applicant auth flows", () => {
     expect(stored).not.toHaveProperty("resumeStorageId");
     expect(stored).not.toHaveProperty("resumeFilename");
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).toBeNull();
+  });
+
+  it("keeps a resume attached through upload, session cleanup, reload, and submit", async () => {
+    const t = await authTest();
+    const body = new Uint8Array(await pdfBytes());
+    const response = await t.fetch("/resume-upload", {
+      method: "POST",
+      headers: buildUploadHeaders(body, { [RESUME_FILENAME_HEADER]: "flow.pdf" }),
+      body,
+    });
+    expect(response.status).toBe(201);
+    const upload = await response.json() as { storageId: string; uploadToken: string };
+    // convex-test does not record Blob content types; production storage does.
+    await t.run((ctx) => (ctx.db.patch as unknown as (
+      id: string,
+      value: { contentType: string },
+    ) => Promise<void>)(upload.storageId, { contentType: "application/pdf" }));
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: upload.storageId,
+        filename: "flow.pdf",
+      }),
+    });
+    await t.mutation("resumeUploads:discardUploadSession", { uploadToken: upload.uploadToken });
+    await t.mutation("resumeUploads:cleanupExpiredUploadSessions", {});
+
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      savedResume: { storageId: upload.storageId, filename: "flow.pdf" },
+      resumeMissing: false,
+    });
+
+    await t.mutation("registrations:register", {
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
+    });
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).toMatchObject({
+      status: "submitted",
+      resumeStorageId: upload.storageId,
+      resumeFilename: "flow.pdf",
+    });
+    await drainScheduledFunctions(t);
+  });
+
+  it("does not detach a saved resume when autosave omits resume fields", async () => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: upload.storageId,
+        filename: "saved.pdf",
+      }),
+    });
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({ ...validRegistrationForm(), firstName: "Updated" }),
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).toMatchObject({
+      firstName: "Updated",
+      resumeStorageId: upload.storageId,
+      resumeFilename: "saved.pdf",
+    });
+  });
+
+  it("replaces a saved draft resume and deletes the previous file", async () => {
+    const t = await authTest();
+    const first = await verifiedUpload(t);
+    const second = await verifiedUpload(t);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: first.storageId,
+        filename: "first.pdf",
+      }),
+    });
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: second.storageId,
+        filename: "second.pdf",
+      }),
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).toMatchObject({ resumeStorageId: second.storageId, resumeFilename: "second.pdf" });
+    expect(await t.run((ctx) => ctx.db.system.get("_storage", first.storageId))).toBeNull();
+  });
+
+  it("rejects attaching a draft resume whose upload session expired", async () => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    const expiredAt = Date.now() - 31 * 60 * 1000;
+    await t.run(async (ctx) => {
+      const session = await ctx.db.query("resumeUploadSessions").first();
+      if (session) {
+        await ctx.db.patch(session._id, { createdAt: expiredAt, verifiedAt: expiredAt });
+      }
+    });
+
+    await expect(t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: upload.storageId,
+        filename: "late.pdf",
+      }),
+    })).rejects.toThrow(RESUME_UPLOAD_EXPIRED_MESSAGE);
+  });
+
+  it("rejects attaching another applicant's upload to a draft", async () => {
+    const t = await authTest();
+    const otherUserId = await t.run((ctx) => ctx.db.insert("users", {
+      email: "someone-else@example.com",
+      emailVerificationTime: Date.now(),
+    }));
+    const storageId = await storeFile(t, await pdfBytes());
+    await t.run((ctx) => ctx.db.insert("resumeUploadSessions", {
+      token: crypto.randomUUID(),
+      authUserId: otherUserId,
+      storageId,
+      createdAt: Date.now(),
+      verifiedAt: Date.now(),
+    }));
+
+    await expect(t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), { storageId, filename: "theirs.pdf" }),
+    })).rejects.toThrow(RESUME_UPLOAD_EXPIRED_MESSAGE);
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.resumeStorageId).toBeUndefined();
+  });
+
+  it.each([
+    ["a non-PDF name", "resume.exe"],
+    ["a path", "../resume.pdf"],
+    ["an overly long name", `${"a".repeat(260)}.pdf`],
+  ])("rejects a draft resume with %s", async (_label, filename) => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    await expect(t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), { storageId: upload.storageId, filename }),
+    })).rejects.toThrow("Please select a PDF file.");
+  });
+
+  it("reports a saved resume whose file is missing and still allows removal and submit", async () => {
+    const t = await authTest();
+    const upload = await verifiedUpload(t);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: upload.storageId,
+        filename: "gone.pdf",
+      }),
+    });
+    await t.run((ctx) => ctx.storage.delete(upload.storageId));
+
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      savedResume: null,
+      resumeMissing: true,
+    });
+    await expect(t.mutation("registrations:register", {
+      data: { ...validRegistrationPayload(), resumeStorageId: upload.storageId },
+    })).rejects.toThrow(RESUME_MISSING_MESSAGE);
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), null),
+    });
+    await t.mutation("registrations:register", { data: validRegistrationPayload() });
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.status).toBe("submitted");
+    expect(stored).not.toHaveProperty("resumeStorageId");
+    expect(stored).not.toHaveProperty("resumeFilename");
+    await drainScheduledFunctions(t);
+  });
+
+  it("clears the saved filename when submitting with a different resume", async () => {
+    const t = await authTest();
+    const draftResume = await verifiedUpload(t);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm(), {
+        storageId: draftResume.storageId,
+        filename: "draft.pdf",
+      }),
+    });
+    const fresh = await verifiedUpload(t);
+
+    await t.mutation("registrations:register", {
+      data: { ...validRegistrationPayload(), resumeStorageId: fresh.storageId },
+      resumeUploadToken: fresh.token,
+    });
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.resumeStorageId).toBe(fresh.storageId);
+    expect(stored).not.toHaveProperty("resumeFilename");
+    expect(await t.run((ctx) => ctx.db.system.get("_storage", draftResume.storageId))).toBeNull();
+    await drainScheduledFunctions(t);
   });
 
   it("reloads student email from the saved draft query", async () => {

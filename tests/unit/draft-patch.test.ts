@@ -171,6 +171,26 @@ describe("applicationToDraftForm", () => {
     const cleared = formToDraftPatch(validRegistrationForm(), null);
     expect(cleared.resumeStorageId).toBeNull();
     expect(cleared.resumeFilename).toBe("");
+
+    const autosave = formToDraftPatch(validRegistrationForm());
+    expect(autosave).not.toHaveProperty("resumeStorageId");
+    expect(autosave).not.toHaveProperty("resumeFilename");
+  });
+
+  it("only writes a resume filename together with its storage reference", () => {
+    const meta = { email: "a@example.com", updatedAt: 1 };
+    const existing = { resumeStorageId: "resume-1", resumeFilename: "keep.pdf" };
+
+    expect(
+      mergeDraftPatchIntoApplication(existing, { resumeFilename: "hijack.pdf" } as never, meta),
+    ).toMatchObject({ resumeStorageId: "resume-1", resumeFilename: "keep.pdf" });
+    expect(
+      mergeDraftPatchIntoApplication(
+        existing,
+        { resumeStorageId: "resume-2", resumeFilename: "  new.pdf  " } as never,
+        meta,
+      ),
+    ).toMatchObject({ resumeStorageId: "resume-2", resumeFilename: "new.pdf" });
   });
 
   it("clears state in draft patches and restored forms when the country is not the United States", () => {

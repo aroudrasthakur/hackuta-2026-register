@@ -50,10 +50,17 @@ export const getMyApplicationDraft = query({
         : null;
     }
 
+    const storedResume = savedResumeFromStoredApplication(application);
+    const resumeFileExists =
+      storedResume !== null &&
+      application.resumeStorageId !== undefined &&
+      (await ctx.db.system.get("_storage", application.resumeStorageId)) !== null;
+
     return {
       status: application.status,
       draft: applicationToDraftForm(application),
-      savedResume: savedResumeFromStoredApplication(application),
+      savedResume: resumeFileExists ? storedResume : null,
+      resumeMissing: storedResume !== null && !resumeFileExists,
       updatedAt: application.updatedAt,
     };
   },

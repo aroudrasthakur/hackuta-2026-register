@@ -4,7 +4,11 @@ import type {
   GenericMutationCtx,
 } from "convex/server";
 import type { GenericId } from "convex/values";
-import { MAX_RESUME_BYTES } from "../../shared/registration/resume";
+import {
+  isAllowedResumeFilename,
+  MAX_RESUME_BYTES,
+  RESUME_UPLOAD_EXPIRED_MESSAGE,
+} from "../../shared/registration/resume";
 import type { DraftPatchPayload } from "../../shared/registration/draftPatch";
 import type schema from "../schema";
 import { findApplicationByResume } from "./applications";
@@ -17,6 +21,15 @@ type DataModel = DataModelFromSchemaDefinition<typeof schema>;
 type ApplicationDoc = DocumentByName<DataModel, "applications">;
 type MutationCtx = GenericMutationCtx<DataModel>;
 type StorageId = GenericId<"_storage">;
+
+const INVALID_RESUME_MESSAGE = "Please upload a valid PDF resume of 2 MB or smaller.";
+
+/** Deletes a stored file, ignoring files that were already removed. */
+export async function deleteStorageIfExists(ctx: MutationCtx, storageId: StorageId) {
+  const metadata = await ctx.db.system.get("_storage", storageId);
+  if (!metadata) return;
+  await ctx.storage.delete(storageId);
+}
 
 export async function prepareResumeDraftPatch(
   ctx: MutationCtx,
@@ -38,9 +51,13 @@ export async function prepareResumeDraftPatch(
     return {};
   }
 
+  if (!isAllowedResumeFilename(patch.resumeFilename)) {
+    throw new Error("Please select a PDF file.");
+  }
+
   const nextStorageId = ctx.db.system.normalizeId("_storage", patch.resumeStorageId);
   if (!nextStorageId) {
-    throw new Error("Please upload a valid PDF resume of 2 MB or smaller.");
+    throw new Error(INVALID_RESUME_MESSAGE);
   }
 
   if (nextStorageId === application.resumeStorageId) {
@@ -54,26 +71,23 @@ export async function prepareResumeDraftPatch(
     metadata.size === 0 ||
     metadata.size > MAX_RESUME_BYTES
   ) {
-    throw new Error("Please upload a valid PDF resume of 2 MB or smaller.");
+    throw new Error(INVALID_RESUME_MESSAGE);
   }
 
   const attachment = await findApplicationByResume(ctx, nextStorageId);
-  if (attachment && attachment._id !== application._id) {
+  if (attachment) {
     throw new Error("This resume is already attached to another application.");
   }
 
-  if (attachment?._id !== application._id) {
-    const session = await ctx.db
-      .query("resumeUploadSessions")
-      .withIndex("by_storage", (q) => q.eq("storageId", nextStorageId))
-      .first();
-    const now = Date.now();
-    if (
-      !uploadSessionOwnedByUser(session, authUserId) ||
-      !isVerifiedUploadSessionValid(session, nextStorageId, now)
-    ) {
-      throw new Error("Your resume upload expired. Please upload your resume again.");
-    }
+  const session = await ctx.db
+    .query("resumeUploadSessions")
+    .withIndex("by_storage", (q) => q.eq("storageId", nextStorageId))
+    .first();
+  if (
+    !uploadSessionOwnedByUser(session, authUserId) ||
+    !isVerifiedUploadSessionValid(session, nextStorageId, Date.now())
+  ) {
+    throw new Error(RESUME_UPLOAD_EXPIRED_MESSAGE);
   }
 
   return application.resumeStorageId

@@ -181,19 +181,12 @@ export function mergeDraftPatchIntoApplication<T extends Record<string, unknown>
       delete next.resumeFilename;
     } else if (patch.resumeStorageId !== undefined) {
       next.resumeStorageId = patch.resumeStorageId;
-      if ("resumeFilename" in patch) {
-        if (isClearedDraftValue(patch.resumeFilename)) {
-          delete next.resumeFilename;
-        } else if (patch.resumeFilename !== undefined) {
-          next.resumeFilename = patch.resumeFilename;
-        }
+      const filename = patch.resumeFilename?.trim();
+      if (filename) {
+        next.resumeFilename = filename;
+      } else {
+        delete next.resumeFilename;
       }
-    }
-  } else if ("resumeFilename" in patch) {
-    if (isClearedDraftValue(patch.resumeFilename)) {
-      delete next.resumeFilename;
-    } else if (patch.resumeFilename !== undefined) {
-      next.resumeFilename = patch.resumeFilename;
     }
   }
 
