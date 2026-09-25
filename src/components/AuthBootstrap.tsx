@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useSessionAuth } from "../hooks/useSessionAuth";
 
 function AuthLoadingScreen() {
@@ -16,13 +16,12 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
   const { isLoading } = useSessionAuth();
   const [sessionReady, setSessionReady] = useState(false);
 
-  useEffect(() => {
-    if (sessionReady || isLoading) return;
+  // Latch after the first completed auth read. Do not unmount the tree when
+  // isLoading flips during sign-in actions — that would reset SignInPage step state.
+  if (!sessionReady && !isLoading) {
     setSessionReady(true);
-  }, [isLoading, sessionReady]);
+  }
 
-  // Only block the initial auth read. Do not unmount the tree when isLoading
-  // flips during sign-in actions — that would reset SignInPage step state.
   if (!sessionReady) {
     return <AuthLoadingScreen />;
   }

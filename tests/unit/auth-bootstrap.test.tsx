@@ -25,7 +25,7 @@ describe("AuthBootstrap", () => {
       </AuthBootstrap>,
     );
 
-    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
 
     mockUseSessionAuth.mockReturnValue({
       isLoading: false,
