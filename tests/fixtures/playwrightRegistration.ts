@@ -7,7 +7,7 @@ async function dismissOpenListboxes(page: Page) {
   await page.keyboard.press("Escape");
 }
 
-async function selectListboxOption(page: Page, triggerId: string, optionName: string) {
+export async function selectListboxOption(page: Page, triggerId: string, optionName: string) {
   const trigger = page.locator(`#${triggerId}`);
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();

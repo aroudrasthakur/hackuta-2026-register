@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AGE_TOO_HIGH_MESSAGE } from "../../shared/registration/constants";
 import type { ApplicationFormData } from "../../shared/registration/types";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
 import { fillValidApplicationForm, selectListboxOption } from "../fixtures/fillApplicationForm";
@@ -132,7 +133,7 @@ describe("ApplicationForm", () => {
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     vi.useFakeTimers();
     const view = render(<ApplicationForm onSubmitted={vi.fn()} />);
-    selectListboxOption(/State of residence/, "Outside the United States");
+    selectListboxOption(/Country of residence/, "Canada");
     fireEvent.click(
       within(screen.getByRole("group", { name: /Are you an international student/ })).getByLabelText(
         answer ? "Yes" : "No",
@@ -153,7 +154,8 @@ describe("ApplicationForm", () => {
     if (!savedCall) throw new Error("Expected autosave to capture the form");
     const { patch } = savedCall[0];
     expect(patch).toMatchObject({
-      stateOfResidence: "Outside the United States",
+      countryOfResidence: "Canada",
+      stateOfResidence: "",
       internationalStudent: answer,
       dietaryRestrictions: answer ? ["Halal"] : ["Halal", "No Beef", "No Pork"],
     });
@@ -166,9 +168,9 @@ describe("ApplicationForm", () => {
     expect(draftApi.save).toHaveBeenCalledOnce();
     draftApi.result = { status: "draft", draft: patch };
     refreshed.rerender(<ApplicationForm onSubmitted={vi.fn()} />);
-    expect(screen.getByLabelText(/State of residence/)).toHaveTextContent(
-      "Outside the United States",
-    );
+    expect(screen.getByLabelText(/Country of residence/)).toHaveTextContent("Canada");
+    expect(screen.getByLabelText(/State of residence/)).toHaveTextContent("Select one");
+    expect(screen.getByLabelText(/State of residence/)).toBeDisabled();
     const international = within(screen.getByRole("group", { name: /Are you an international student/ }));
     expect(international.getByLabelText(answer ? "Yes" : "No")).toBeChecked();
     expect(international.getByLabelText(answer ? "No" : "Yes")).not.toBeChecked();
@@ -300,6 +302,7 @@ describe("ApplicationForm", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
     const state = screen.getByLabelText(/State of residence/);
     expect(state).toHaveTextContent("Select one");
+    expect(state).toBeDisabled();
     expect(state).not.toHaveAttribute("aria-describedby");
     expect(
       screen.queryByText("Select the state or territory where you currently live."),
@@ -312,12 +315,56 @@ describe("ApplicationForm", () => {
     expect(screen.getByLabelText("No Beef")).not.toBeChecked();
     expect(screen.getByLabelText("No Pork")).not.toBeChecked();
 
+    selectListboxOption(/Country of residence/, "Canada");
+    expect(state).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+    expect(state).not.toHaveAttribute("aria-describedby");
+    expect(
+      screen.queryByText("Please select your state or territory of residence."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Please let us know if you are an international student."))
+      .toBeInTheDocument();
+  });
+
+  it("requires state when the United States is selected", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    selectListboxOption(/Country of residence/, "United States of America");
+    const state = screen.getByLabelText(/State of residence/);
+    expect(state).not.toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
     expect(state).toHaveAttribute("aria-describedby", "stateOfResidence-error");
     expect(screen.getByText("Please select your state or territory of residence."))
       .toBeInTheDocument();
-    expect(screen.getByText("Please let us know if you are an international student."))
-      .toBeInTheDocument();
+  });
+
+  it("clears state and state errors when switching away from the United States", () => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    selectListboxOption(/Country of residence/, "United States of America");
+    selectListboxOption(/State of residence/, "Texas");
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+    expect(
+      screen.queryByText("Please select your state or territory of residence."),
+    ).not.toBeInTheDocument();
+
+    selectListboxOption(/Country of residence/, "Canada");
+    const state = screen.getByLabelText(/State of residence/);
+    expect(state).toHaveTextContent("Select one");
+    expect(state).toBeDisabled();
+    expect(state).not.toHaveAttribute("aria-describedby");
+    expect(
+      screen.queryByText("Please select your state or territory of residence."),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([119, 120, 121])("validates age against the 120 upper limit (%i)", (age) => {
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    setInputValue(/Age/i, String(age));
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+    if (age < 120) {
+      expect(screen.queryByText(AGE_TOO_HIGH_MESSAGE)).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByText(AGE_TOO_HIGH_MESSAGE)).toBeInTheDocument();
+    }
   });
 
   it("allows independent No Beef and No Pork dietary selections", () => {

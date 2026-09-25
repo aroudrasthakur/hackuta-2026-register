@@ -5,6 +5,7 @@ import {
   SCHOOL_OTHER_OPTION,
 } from "./constants";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
+import { requiresUsState, stateForRegistrationPayload } from "./residence";
 import { registrationPayloadSchema } from "./schema";
 import { validateResume } from "./resume";
 import type {
@@ -58,7 +59,10 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     school: resolveSchool(form),
     studentEmail: form.studentEmail,
     countryOfResidence: form.countryOfResidence,
-    stateOfResidence: form.stateOfResidence,
+    stateOfResidence: stateForRegistrationPayload(
+      form.countryOfResidence,
+      form.stateOfResidence,
+    ),
     internationalStudent: form.internationalStudent ?? undefined,
     levelOfStudy: form.levelOfStudy || undefined,
     major: resolveMajor(form),
@@ -92,6 +96,10 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
 
 function collectClientFieldErrors(form: ApplicationFormData): FieldErrors {
   const errors: FieldErrors = {};
+
+  if (requiresUsState(form.countryOfResidence) && !form.stateOfResidence) {
+    errors.stateOfResidence = "Please select your state or territory of residence.";
+  }
 
   if (form.major === MAJOR_OTHER_OPTION && !form.otherMajor.trim()) {
     errors.otherMajor = "Please describe your major or field of study.";

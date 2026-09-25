@@ -17,6 +17,7 @@ import {
   type DraftPatchPayload,
 } from "./applicantFields";
 import { normalizeEmail } from "../lib/normalizeEmail";
+import { normalizeResidenceFormFields, requiresUsState } from "./residence";
 import type { ApplicationFormData } from "./types";
 
 function parseOptionalInt(raw: string): number | null {
@@ -49,6 +50,12 @@ export function formToDraftPatch(form: ApplicationFormData): DraftPatchPayload {
   }
 
   for (const key of PLAIN_STRING_FIELDS) {
+    if (key === "stateOfResidence") {
+      patch.stateOfResidence = requiresUsState(form.countryOfResidence)
+        ? form.stateOfResidence
+        : "";
+      continue;
+    }
     patch[key] = form[key];
   }
 
@@ -113,7 +120,9 @@ export function applicationToDraftForm(
     values[key] = (application[key] as boolean | undefined) ?? false;
   }
 
-  return values as Omit<ApplicationFormData, "resume">;
+  return normalizeResidenceFormFields(
+    values as Omit<ApplicationFormData, "resume">,
+  );
 }
 
 /** Apply a full draft snapshot, removing cleared fields from the stored application. */
