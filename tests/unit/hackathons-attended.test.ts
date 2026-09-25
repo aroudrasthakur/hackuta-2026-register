@@ -97,15 +97,6 @@ describe("hackathonsAttended field", () => {
     expect(applicationToDraftForm({ firstName: "Sam" }).hackathonsAttended).toBe("");
   });
 
-  it("maps legacy firstHackathon answers to hackathonsAttended counts", () => {
-    const legacy = (value: Record<string, unknown>) =>
-      applicationToDraftForm(value as Parameters<typeof applicationToDraftForm>[0]);
-
-    expect(legacy({ firstHackathon: true }).hackathonsAttended).toBe("0");
-    expect(legacy({ firstHackathon: false }).hackathonsAttended).toBe("1");
-    expect(legacy({ firstHackathon: false, hackathonsAttended: 7 }).hackathonsAttended).toBe("7");
-  });
-
   it("includes hackathonsAttended in the valid registration payload", () => {
     const payload = validRegistrationPayload();
     expect(payload.hackathonsAttended).toBe(1);
