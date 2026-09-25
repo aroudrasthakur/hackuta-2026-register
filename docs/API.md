@@ -38,7 +38,7 @@ Sign-up OTP provider: `email-verification`. Resend cooldown **30 s**; max **5 se
 
 Reset OTP provider: `password-reset` (separate from sign-up verification). Resend cooldown **30 s**; max **5 sends/hour** (bucket `password_reset_send`). Sign-up OTPs cannot authorize password reset.
 
-Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Reused passwords are rejected before OTP consumption.
+Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Password reuse is checked only after the code is verified, so an invalid code cannot reveal whether a password guess matches. A valid code is consumed if the proposed password is reused; the user must request a new reset code to try again.
 
 ### Sign out (action)
 

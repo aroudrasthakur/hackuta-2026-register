@@ -45,7 +45,7 @@ type TestProvider = {
   extraProviders: unknown[];
 };
 
-const ctx = { marker: "ctx" };
+const ctx = { marker: "ctx", runMutation: vi.fn() };
 const verify = { id: "email-verification" };
 const reset = { id: "password-reset" };
 
@@ -64,6 +64,7 @@ beforeEach(() => {
   vi.mocked(modifyAccountCredentials).mockReset();
   vi.mocked(retrieveAccount).mockReset();
   vi.mocked(signInViaProvider).mockReset();
+  ctx.runMutation.mockReset();
 });
 
 describe("HackutaPassword provider configuration", () => {
@@ -97,7 +98,8 @@ describe("HackutaPassword password requirements", () => {
   it("validates the new password (not the old one) during reset verification", async () => {
     const validatePasswordRequirements = vi.fn();
     const p = provider({ validatePasswordRequirements, reset: reset as never });
-    vi.mocked(retrieveAccount).mockResolvedValueOnce(null as never).mockResolvedValueOnce(account() as never);
+    const currentHash = await p.crypto.hashSecret("OldPass1");
+    vi.mocked(retrieveAccount).mockResolvedValue(account({ secret: currentHash }) as never);
     vi.mocked(signInViaProvider).mockResolvedValue({ userId: "user1", sessionId: "s1" } as never);
 
     await p.authorize(
@@ -223,50 +225,103 @@ describe("HackutaPassword reset", () => {
 
 describe("HackutaPassword reset-verification", () => {
   const params = { flow: "reset-verification", email: "a@b.co", code: "123456", newPassword: "NewPass1" };
+  const currentHash = () => provider().crypto.hashSecret("OldPass1");
 
   it("updates credentials and revokes every other session on success", async () => {
-    vi.mocked(retrieveAccount)
-      .mockResolvedValueOnce(null as never) // reuse check: new password does not match
-      .mockResolvedValueOnce(account() as never);
+    vi.mocked(retrieveAccount).mockResolvedValue(
+      account({ secret: await currentHash() }) as never, // reuse check: new password does not match
+    );
     vi.mocked(signInViaProvider).mockResolvedValue({ userId: "user1", sessionId: "s1" } as never);
 
     await expect(provider({ reset: reset as never }).authorize(params, ctx)).resolves.toEqual({
       userId: "user1",
       sessionId: "s1",
     });
+    expect(retrieveAccount).toHaveBeenCalledTimes(1);
+    expect(retrieveAccount).toHaveBeenCalledWith(ctx, {
+      provider: "password",
+      account: { id: "a@b.co" },
+    });
     expect(modifyAccountCredentials).toHaveBeenCalledWith(ctx, {
       provider: "password",
       account: { id: "a@b.co", secret: "NewPass1" },
     });
     expect(invalidateSessions).toHaveBeenCalledWith(ctx, { userId: "user1", except: ["s1"] });
+    expect(ctx.runMutation).not.toHaveBeenCalled();
   });
 
-  it("refuses to reuse the current password", async () => {
-    vi.mocked(retrieveAccount).mockResolvedValueOnce(account() as never);
+  it("refuses a reused password only after validating the reset code", async () => {
+    vi.mocked(retrieveAccount).mockResolvedValue(
+      account({ secret: await provider().crypto.hashSecret("NewPass1") }) as never,
+    );
+    vi.mocked(signInViaProvider).mockResolvedValue({ userId: "user1", sessionId: "s1" } as never);
+
     await expect(provider({ reset: reset as never }).authorize(params, ctx)).rejects.toThrow(
       new ConvexError(PASSWORD_REUSE_MESSAGE),
     );
+    expect(signInViaProvider).toHaveBeenCalledWith(ctx, reset, { params });
+    expect(ctx.runMutation).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user1", sessionId: "s1",
+    });
     expect(modifyAccountCredentials).not.toHaveBeenCalled();
+    expect(invalidateSessions).not.toHaveBeenCalled();
   });
 
-  it("rejects an invalid or expired code without changing credentials", async () => {
-    vi.mocked(retrieveAccount)
-      .mockResolvedValueOnce(null as never)
-      .mockResolvedValueOnce(account() as never);
+  it("does not reveal password reuse when the code is invalid or expired", async () => {
+    vi.mocked(retrieveAccount).mockResolvedValue(
+      account({ secret: await provider().crypto.hashSecret("NewPass1") }) as never,
+    );
     vi.mocked(signInViaProvider).mockResolvedValue(null as never);
 
     await expect(provider({ reset: reset as never }).authorize(params, ctx)).rejects.toThrow("Invalid code");
     expect(modifyAccountCredentials).not.toHaveBeenCalled();
     expect(invalidateSessions).not.toHaveBeenCalled();
+    expect(ctx.runMutation).not.toHaveBeenCalled();
   });
 
-  it("rejects a code that belongs to a different user", async () => {
-    vi.mocked(retrieveAccount)
-      .mockResolvedValueOnce(null as never)
-      .mockResolvedValueOnce(account() as never);
+  it("rejects a code belonging to a different user and removes its new session", async () => {
+    vi.mocked(retrieveAccount).mockResolvedValue(account({ secret: await currentHash() }) as never);
     vi.mocked(signInViaProvider).mockResolvedValue({ userId: "attacker", sessionId: "s2" } as never);
 
     await expect(provider({ reset: reset as never }).authorize(params, ctx)).rejects.toThrow("Invalid code");
+    expect(ctx.runMutation).toHaveBeenCalledWith(expect.anything(), {
+      userId: "attacker", sessionId: "s2",
+    });
+    expect(modifyAccountCredentials).not.toHaveBeenCalled();
+  });
+
+  it("does not use the password login path even if sign-ins have been rate-limited", async () => {
+    vi.mocked(retrieveAccount).mockImplementation(async (_ctx, args) => {
+      if (args.account.secret !== undefined) throw new Error("TooManyFailedAttempts");
+      return account({ secret: await currentHash() }) as never;
+    });
+    vi.mocked(signInViaProvider).mockResolvedValue({ userId: "user1", sessionId: "s1" } as never);
+
+    await expect(provider({ reset: reset as never }).authorize(params, ctx)).resolves.toMatchObject({
+      userId: "user1", sessionId: "s1",
+    });
+    expect(modifyAccountCredentials).toHaveBeenCalledOnce();
+  });
+
+  it("removes the newly created session when credential modification fails", async () => {
+    vi.mocked(retrieveAccount).mockResolvedValue(account({ secret: await currentHash() }) as never);
+    vi.mocked(signInViaProvider).mockResolvedValue({ userId: "user1", sessionId: "s1" } as never);
+    vi.mocked(modifyAccountCredentials).mockRejectedValue(new Error("Update failed"));
+
+    await expect(provider({ reset: reset as never }).authorize(params, ctx)).rejects.toThrow("Update failed");
+    expect(ctx.runMutation).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user1", sessionId: "s1",
+    });
+  });
+
+  it("fails closed and removes the new session if the stored hash is missing", async () => {
+    vi.mocked(retrieveAccount).mockResolvedValue(account() as never);
+    vi.mocked(signInViaProvider).mockResolvedValue({ userId: "user1", sessionId: "s1" } as never);
+
+    await expect(provider({ reset: reset as never }).authorize(params, ctx)).rejects.toThrow();
+    expect(ctx.runMutation).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user1", sessionId: "s1",
+    });
     expect(modifyAccountCredentials).not.toHaveBeenCalled();
   });
 
