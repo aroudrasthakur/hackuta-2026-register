@@ -31,7 +31,7 @@ function answerYesNo(group: RegExp, answer: "Yes" | "No") {
 export function fillValidApplicationForm() {
   setInputValue(/First name/, "Sam");
   setInputValue(/Last name/, "Test");
-  setInputValue(/Phone number/, "5551234567");
+  setInputValue(/Phone number/, "2025550123");
   setInputValue(/Age/i, "20");
   setInputValue(/School \/ university/, "Texas at Arlington");
   fireEvent.click(screen.getByRole("button", { name: VALID_SCHOOL }));
@@ -61,7 +61,7 @@ export function fillValidApplicationForm() {
   );
   selectListboxOption(/How did you hear about HackUTA/, "Discord");
   setInputValue(/Emergency contact name/, "Jane Test");
-  setInputValue(/Emergency contact phone/, "5559876543");
+  setInputValue(/Emergency contact phone/, "2025550124");
   fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
   fireEvent.click(screen.getByLabelText(/authorize HackUTA to share my registration information/));
   fireEvent.click(

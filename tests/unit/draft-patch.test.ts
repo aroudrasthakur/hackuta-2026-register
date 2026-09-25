@@ -254,7 +254,7 @@ describe("mergeDraftPatchIntoApplication", () => {
       updatedAt: 1,
       firstName: "Old",
       lastName: "Name",
-      phone: "5551234567",
+      phone: "+12025550123",
       school: "Old School",
     };
 

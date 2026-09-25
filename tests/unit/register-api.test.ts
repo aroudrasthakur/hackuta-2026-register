@@ -22,7 +22,7 @@ vi.mock("../../src/convex/client", () => ({
 const payload: RegistrationPayload = {
   firstName: "Sam",
   lastName: "Test",
-  phone: "5551234567",
+  phone: "+12025550123",
   age: 20,
   school: "The University of Texas at Arlington",
   studentEmail: undefined,
@@ -52,7 +52,7 @@ const payload: RegistrationPayload = {
   shortDeadlineLearning:
     "Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.",
   emergencyContactName: "Jane Test",
-  emergencyContactPhone: "5559876543",
+  emergencyContactPhone: "+442079460958",
   MLHcodeOfConductAgreed: true,
   mlhDataSharingConsent: true,
   mlhCommunicationsConsent: false,
