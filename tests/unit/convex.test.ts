@@ -228,8 +228,8 @@ describe("convex registrations", () => {
   it("persists each selected phone country through draft reload and submission", async () => {
     const t = await authTest();
     const phones = {
-      phone: "+14165550123",
-      phoneCountry: "CA" as const,
+      phone: "20 7946 0958",
+      phoneCountry: "GB" as const,
       emergencyContactPhone: "+12025550123",
       emergencyContactPhoneCountry: "US" as const,
     };
@@ -245,6 +245,9 @@ describe("convex registrations", () => {
     expect(await t.run((ctx) => ctx.db.query("applications").first())).toMatchObject({
       ...phones,
       status: "submitted",
+    });
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { answers: phones },
     });
     await drainScheduledFunctions(t);
   });
