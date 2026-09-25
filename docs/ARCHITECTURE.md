@@ -53,12 +53,12 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 ```
 /sign-in → Password provider (email + password)
          → email-verification OTP (6 digits via the HackUTA email service)
-         → JWT session
+         → JWT session (sessionStorage in the browser tab)
          → ensureApplicantApplication
          → route to /register or /profile
 ```
 
-Sign-in mode skips OTP when the account is already verified.
+Sign-in mode skips OTP when the account is already verified. [AuthBootstrap](../src/components/AuthBootstrap.tsx) waits for the initial Convex Auth read on page load; it does not invalidate restored sessions, so refresh keeps the applicant signed in within the same tab.
 
 ### Forgot password
 
