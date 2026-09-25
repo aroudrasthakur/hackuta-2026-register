@@ -36,7 +36,6 @@ import {
   MAJOR_OTHER_OPTION,
   MAJORS,
   SCHOOL_OTHER_OPTION,
-  STATES_OF_RESIDENCE,
   MAX_GRADUATION_YEAR,
   MIN_GRADUATION_YEAR,
   MLH_CODE_OF_CONDUCT_URL,
@@ -60,6 +59,11 @@ import type {
   ApplicationFormData,
   FieldName,
 } from "../../../shared/registration/types";
+import {
+  normalizeResidenceFormFields,
+  requiresUsState,
+  US_STATE_OPTIONS,
+} from "../../../shared/registration/residence";
 import { INITIAL_FORM } from "../../../shared/registration/types";
 import { resumeFileKey } from "../../../shared/registration/resume";
 import {
@@ -189,6 +193,28 @@ function ApplicationFormContent({
     },
     [],
   );
+
+  const updateCountry = useCallback(
+    (country: ApplicationFormData["countryOfResidence"]) => {
+      setForm((prev) =>
+        normalizeResidenceFormFields({
+          ...prev,
+          countryOfResidence: country,
+          stateOfResidence: requiresUsState(country) ? prev.stateOfResidence : "",
+        }),
+      );
+      setErrors((prev) => {
+        if (!prev.stateOfResidence && !prev.countryOfResidence) return prev;
+        const next = { ...prev };
+        delete next.stateOfResidence;
+        if (country) delete next.countryOfResidence;
+        return next;
+      });
+    },
+    [],
+  );
+
+  const stateRequired = requiresUsState(form.countryOfResidence);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -333,7 +359,6 @@ function ApplicationFormContent({
             type="number"
             inputMode="numeric"
             min={18}
-            max={120}
             step={1}
             value={form.age}
             onChange={(e) => updateField("age", e.target.value)}
@@ -386,19 +411,17 @@ function ApplicationFormContent({
             value={form.countryOfResidence}
             options={COUNTRIES_OF_RESIDENCE}
             onChange={(value) =>
-              updateField(
-                "countryOfResidence",
-                value as ApplicationFormData["countryOfResidence"],
-              )
+              updateCountry(value as ApplicationFormData["countryOfResidence"])
             }
             error={errors.countryOfResidence}
           />
           <SelectField
             id="stateOfResidence"
             label="State of residence"
-            required
+            required={stateRequired}
+            disabled={!stateRequired}
             value={form.stateOfResidence}
-            options={STATES_OF_RESIDENCE}
+            options={US_STATE_OPTIONS}
             onChange={(value) =>
               updateField(
                 "stateOfResidence",
@@ -1008,7 +1031,10 @@ function ApplicationFormWithConvexDraft({ onSubmitted }: { onSubmitted: () => vo
   const isDraftLoading = savedDraft === undefined;
   const initialForm =
     !isDraftLoading && savedDraft?.draft
-      ? { ...INITIAL_FORM, ...savedDraft.draft }
+      ? normalizeResidenceFormFields({
+          ...INITIAL_FORM,
+          ...savedDraft.draft,
+        })
       : INITIAL_FORM;
 
   if (isDraftLoading) {

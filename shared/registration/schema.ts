@@ -2,6 +2,7 @@ import { z } from "zod";
 import { containsDangerousMarkup, sanitizePlainText } from "../lib/sanitizeInput";
 import { COUNTRIES_OF_RESIDENCE } from "./countries";
 import {
+  AGE_TOO_HIGH_MESSAGE,
   DIETARY_OPTIONS,
   FIELD_LIMITS,
   GENDERS,
@@ -16,11 +17,11 @@ import {
   MIN_GRADUATION_YEAR,
   RACE_ETHNICITY_OPTIONS,
   SCHOOL_OTHER_OPTION,
-  STATES_OF_RESIDENCE,
   TSHIRT_SIZES,
 } from "./constants";
 import { isValidEmailSyntax, normalizeEmail } from "../lib/normalizeEmail";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
+import { isUsaCountry, US_STATE_OPTIONS } from "./residence";
 
 export function isValidPhone(value: string) {
   const digits = value.replace(/\D/g, "");
@@ -142,6 +143,19 @@ const requiredInteger = (label: string, min: number, max: number) =>
         .max(max, `${label} must be between ${min} and ${max}.`),
     );
 
+const ageSchema = z
+  .number({ message: "Age is required." })
+  .refine((value) => !Number.isNaN(value), "Age is required.")
+  .pipe(
+    z
+      .number()
+      .int("Age must be a whole number.")
+      .min(MIN_AGE, `Age must be between ${MIN_AGE} and ${MAX_AGE}.`)
+      .refine((value) => value < MAX_AGE + 1, AGE_TOO_HIGH_MESSAGE),
+  );
+
+const usStateSchema = z.enum(US_STATE_OPTIONS);
+
 export const registrationPayloadSchema = z
   .object({
     firstName: safePlainText({
@@ -156,7 +170,7 @@ export const registrationPayloadSchema = z
       max: FIELD_LIMITS.phone,
       message: "Phone number is required.",
     }).refine(isValidPhone, "Enter a valid phone number."),
-    age: requiredInteger("Age", MIN_AGE, MAX_AGE),
+    age: ageSchema,
     school: safePlainText({
       max: FIELD_LIMITS.school,
       message: "Please select a school or university.",
@@ -171,9 +185,7 @@ export const registrationPayloadSchema = z
       max: 100,
       message: "Please select your country of residence.",
     }).refine((value) => COUNTRIES_SET.has(value), "Please select a country from the list."),
-    stateOfResidence: z.enum(STATES_OF_RESIDENCE, {
-      message: "Please select your state or territory of residence.",
-    }),
+    stateOfResidence: usStateSchema.optional(),
     internationalStudent: z.boolean({
       message: "Please let us know if you are an international student.",
     }),
@@ -246,6 +258,14 @@ export const registrationPayloadSchema = z
   })
   .strict()
   .superRefine((data, ctx) => {
+    if (isUsaCountry(data.countryOfResidence) && !data.stateOfResidence) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["stateOfResidence"],
+        message: "Please select your state or territory of residence.",
+      });
+    }
+
     if (data.dietaryRestrictions.includes("Allergies") && !data.otherDietary) {
       ctx.addIssue({
         code: "custom",
@@ -260,4 +280,10 @@ export const registrationPayloadSchema = z
         message: "Please specify your race or ethnicity.",
       });
     }
-  });
+  })
+  .transform((data) => ({
+    ...data,
+    stateOfResidence: isUsaCountry(data.countryOfResidence)
+      ? data.stateOfResidence
+      : undefined,
+  }));

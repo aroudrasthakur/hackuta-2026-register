@@ -219,7 +219,7 @@ describe("convex registrations", () => {
   ])("persists independent dietary restrictions through draft and submission (%j)", async (dietaryRestrictions) => {
     const t = await authTest();
     const answers = {
-      stateOfResidence: "Outside the United States" as const,
+      countryOfResidence: "Canada" as const,
       internationalStudent: false,
       dietaryRestrictions: [...dietaryRestrictions],
     };
@@ -239,7 +239,7 @@ describe("convex registrations", () => {
     const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
       registration: { answers: Record<string, unknown> };
     };
-    expect(dashboard.registration.answers.stateOfResidence).toBe(answers.stateOfResidence);
+    expect(dashboard.registration.answers).not.toHaveProperty("stateOfResidence");
     expect(dashboard.registration.answers.dietaryRestrictions).toEqual(answers.dietaryRestrictions);
     expect(dashboard.registration.answers).not.toHaveProperty("internationalStudent");
     expect(dashboard.registration.answers).not.toHaveProperty("eatsBeef");
@@ -972,6 +972,7 @@ describe("convex applicant auth flows", () => {
         ...INITIAL_FORM,
         firstName: "Draft",
         lastName: "User",
+        countryOfResidence: "Canada",
         stateOfResidence: "Outside the United States",
         internationalStudent: true,
         dietaryRestrictions: ["No Beef", "Halal"],
@@ -984,7 +985,8 @@ describe("convex applicant auth flows", () => {
       draft: {
         firstName: "Draft",
         lastName: "User",
-        stateOfResidence: "Outside the United States",
+        countryOfResidence: "Canada",
+        stateOfResidence: "",
         internationalStudent: true,
         dietaryRestrictions: ["No Beef", "Halal"],
         otherDietaryRestrictions: "No shellfish",
@@ -992,11 +994,12 @@ describe("convex applicant auth flows", () => {
     });
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
     expect(stored).toMatchObject({
-      stateOfResidence: "Outside the United States",
+      countryOfResidence: "Canada",
       internationalStudent: true,
       dietaryRestrictions: ["No Beef", "Halal"],
       otherDietaryRestrictions: "No shellfish",
     });
+    expect(stored).not.toHaveProperty("stateOfResidence");
   });
 
   it("reloads student email from the saved draft query", async () => {

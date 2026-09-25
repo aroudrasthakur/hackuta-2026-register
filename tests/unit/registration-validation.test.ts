@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { AGE_TOO_HIGH_MESSAGE } from "../../shared/registration/constants";
 import { registrationPayloadSchema } from "../../shared/registration/schema";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import {
@@ -62,6 +63,28 @@ describe("validateApplicationForm", () => {
     expect(result.success).toBe(false);
   });
 
+  it.each([120, 121])("rejects age at or above 120 (%i)", (age) => {
+    const form = validRegistrationForm();
+    form.age = String(age);
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.age).toBe(AGE_TOO_HIGH_MESSAGE);
+    }
+  });
+
+  it("accepts age 119", () => {
+    const form = validRegistrationForm();
+    form.age = "119";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.payload.age).toBe(119);
+  });
+
   it("rejects invalid graduation years", () => {
     const form = validRegistrationForm();
     form.graduationYear = "9000";
@@ -85,7 +108,21 @@ describe("validateApplicationForm", () => {
     }
   });
 
-  it("requires a listed state or territory and accepts applicants outside the United States", () => {
+  it("requires a US state even when other answers are still incomplete", () => {
+    const result = validateApplicationForm({
+      ...INITIAL_FORM,
+      countryOfResidence: "United States of America",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.stateOfResidence).toBe(
+        "Please select your state or territory of residence.",
+      );
+    }
+  });
+
+  it("requires a US state or territory only when the country is the United States", () => {
     const form = validRegistrationForm();
     form.stateOfResidence = "";
     const missing = validateApplicationForm(form);
@@ -100,11 +137,18 @@ describe("validateApplicationForm", () => {
     expect(validateApplicationForm(form).success).toBe(false);
 
     form.countryOfResidence = "Canada";
-    form.stateOfResidence = "Outside the United States";
+    form.stateOfResidence = "";
     const outside = validateApplicationForm(form);
     expect(outside.success).toBe(true);
     if (outside.success) {
-      expect(outside.payload.stateOfResidence).toBe("Outside the United States");
+      expect(outside.payload.stateOfResidence).toBeUndefined();
+    }
+
+    form.stateOfResidence = "Outside the United States";
+    const legacyOutside = validateApplicationForm(form);
+    expect(legacyOutside.success).toBe(true);
+    if (legacyOutside.success) {
+      expect(legacyOutside.payload.stateOfResidence).toBeUndefined();
     }
   });
 
@@ -463,10 +507,26 @@ describe("validateRegistrationPayload", () => {
 
   it("rejects submissions missing the new required answers", () => {
     const payload = validPayloadFromForm();
-    for (const field of ["stateOfResidence", "internationalStudent"] as const) {
-      const incomplete = { ...payload };
-      delete (incomplete as Partial<typeof payload>)[field];
-      expect(validateRegistrationPayload(incomplete).success).toBe(false);
+    const withoutState = { ...payload };
+    delete (withoutState as Record<string, unknown>).stateOfResidence;
+    expect(validateRegistrationPayload(withoutState).success).toBe(false);
+
+    const withoutInternational = { ...payload };
+    delete (withoutInternational as Record<string, unknown>).internationalStudent;
+    expect(validateRegistrationPayload(withoutInternational).success).toBe(false);
+  });
+
+  it("accepts non-US submissions without a state of residence", () => {
+    const payload = {
+      ...validPayloadFromForm(),
+      countryOfResidence: "Canada",
+      stateOfResidence: undefined,
+    };
+
+    const result = validateRegistrationPayload(payload);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.stateOfResidence).toBeUndefined();
     }
   });
 
