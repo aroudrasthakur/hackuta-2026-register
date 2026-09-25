@@ -1,8 +1,5 @@
-import type { DataModelFromSchemaDefinition, GenericMutationCtx } from "convex/server";
 import { internalMutation } from "./_generated/server";
-import type schema from "./schema";
-
-type MutationCtx = GenericMutationCtx<DataModelFromSchemaDefinition<typeof schema>>;
+import type { MutationCtx } from "./lib/dataModel";
 
 type ResettableTable =
   | "applications"

@@ -479,4 +479,73 @@ describe("ResumeUpload", () => {
     expect(clickSpy).not.toHaveBeenCalled();
     clickSpy.mockRestore();
   });
+
+  describe("persisted resume state", () => {
+    it("shows a saved filename and status when no local file is selected", () => {
+      render(
+        <ResumeUpload
+          file={null}
+          savedFilename="saved-resume.pdf"
+          onChange={mockOnChange}
+          onError={mockOnError}
+        />,
+      );
+
+      expect(screen.getByText("saved-resume.pdf")).toBeInTheDocument();
+      expect(screen.getByText("Saved to your application")).toBeInTheDocument();
+      expect(screen.queryByText(/KB/)).not.toBeInTheDocument();
+    });
+
+    it("prefers the local file name over a saved filename while uploading a replacement", () => {
+      const file = new File(["content"], "new-resume.pdf", { type: "application/pdf" });
+      render(
+        <ResumeUpload
+          file={file}
+          savedFilename="saved-resume.pdf"
+          onChange={mockOnChange}
+          onError={mockOnError}
+        />,
+      );
+
+      expect(screen.getByText("new-resume.pdf")).toBeInTheDocument();
+      expect(screen.queryByText("Saved to your application")).not.toBeInTheDocument();
+    });
+
+    it("shows an uploading state and blocks file selection", async () => {
+      const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => undefined);
+      render(
+        <ResumeUpload
+          file={null}
+          uploading
+          onChange={mockOnChange}
+          onError={mockOnError}
+        />,
+      );
+
+      expect(screen.getByText("Uploading resume…")).toBeInTheDocument();
+      expect(screen.getByText("This may take a moment.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Choose file" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Upload resume" })).toHaveAttribute("tabIndex", "-1");
+
+      await userEvent.setup().click(screen.getByRole("button", { name: "Upload resume" }));
+      expect(clickSpy).not.toHaveBeenCalled();
+      clickSpy.mockRestore();
+    });
+
+    it("hides saved-resume controls while uploading", () => {
+      render(
+        <ResumeUpload
+          file={null}
+          savedFilename="saved-resume.pdf"
+          uploading
+          onChange={mockOnChange}
+          onError={mockOnError}
+        />,
+      );
+
+      expect(screen.getByText("Uploading resume…")).toBeInTheDocument();
+      expect(screen.queryByText("saved-resume.pdf")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Remove resume" })).not.toBeInTheDocument();
+    });
+  });
 });

@@ -1,8 +1,6 @@
 import { makeFunctionReference } from "convex/server";
-import type { DataModelFromSchemaDefinition, GenericMutationCtx } from "convex/server";
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import type schema from "./schema";
 import { validateRegistrationPayload } from "../shared/registration/validation";
 import type { RegistrationPayload } from "../shared/registration/types";
 import {
@@ -10,6 +8,7 @@ import {
   RESUME_MISSING_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../shared/registration/resume";
+import type { MutationCtx } from "./lib/dataModel";
 import { deleteStorageIfExists } from "./lib/draftResume";
 import { getHackathonName } from "./lib/eventConfig";
 import { requireVerifiedAuthUser } from "./lib/auth";
@@ -26,8 +25,6 @@ import {
   isVerifiedUploadSessionValid,
   uploadSessionOwnedByUser,
 } from "./lib/resumeUpload";
-
-type MutationCtx = GenericMutationCtx<DataModelFromSchemaDefinition<typeof schema>>;
 
 const sendApplicationConfirmationEmailRef = makeFunctionReference<"action">(
   "email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail",

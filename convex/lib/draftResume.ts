@@ -1,8 +1,3 @@
-import type {
-  DataModelFromSchemaDefinition,
-  DocumentByName,
-  GenericMutationCtx,
-} from "convex/server";
 import type { GenericId } from "convex/values";
 import {
   isAllowedResumeFilename,
@@ -10,16 +5,13 @@ import {
   RESUME_UPLOAD_EXPIRED_MESSAGE,
 } from "../../shared/registration/resume";
 import type { DraftPatchPayload } from "../../shared/registration/draftPatch";
-import type schema from "../schema";
 import { findApplicationByResume } from "./applications";
+import type { ApplicationDoc, MutationCtx } from "./dataModel";
 import {
   isVerifiedUploadSessionValid,
   uploadSessionOwnedByUser,
 } from "./resumeUpload";
 
-type DataModel = DataModelFromSchemaDefinition<typeof schema>;
-type ApplicationDoc = DocumentByName<DataModel, "applications">;
-type MutationCtx = GenericMutationCtx<DataModel>;
 type StorageId = GenericId<"_storage">;
 
 const INVALID_RESUME_MESSAGE = "Please upload a valid PDF resume of 2 MB or smaller.";

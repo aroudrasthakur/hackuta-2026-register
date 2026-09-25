@@ -1,19 +1,10 @@
-import type {
-  DataModelFromSchemaDefinition,
-  DocumentByName,
-  GenericMutationCtx,
-} from "convex/server";
 import {
   mergeDraftPatchIntoApplication,
   type DraftPatchPayload,
 } from "../../shared/registration/draftPatch";
-import type schema from "../schema";
 import { requireAuthUser } from "./applications";
+import type { ApplicationDoc, MutationCtx } from "./dataModel";
 import { deleteStorageIfExists, prepareResumeDraftPatch } from "./draftResume";
-
-type DataModel = DataModelFromSchemaDefinition<typeof schema>;
-type ApplicationDoc = DocumentByName<DataModel, "applications">;
-type MutationCtx = GenericMutationCtx<DataModel>;
 
 export { mergeDraftPatchIntoApplication };
 

@@ -1,16 +1,5 @@
-import type {
-  DataModelFromSchemaDefinition,
-  DocumentByName,
-  GenericMutationCtx,
-  GenericQueryCtx,
-} from "convex/server";
 import { DEFAULT_HACKATHON_NAME } from "../../shared/hackathon/eventDefaults";
-import type schema from "../schema";
-
-type DataModel = DataModelFromSchemaDefinition<typeof schema>;
-type EventConfigDoc = DocumentByName<DataModel, "eventConfig">;
-type QueryCtx = GenericQueryCtx<DataModel>;
-type MutationCtx = GenericMutationCtx<DataModel>;
+import type { EventConfigDoc, MutationCtx, QueryCtx } from "./dataModel";
 
 export const EVENT_CONFIG_KEY = "current" as const;
 
