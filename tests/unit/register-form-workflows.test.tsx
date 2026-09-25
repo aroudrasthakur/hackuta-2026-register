@@ -588,6 +588,7 @@ describe("ApplicationForm application questions and hackathon count", () => {
         builtOrWantToBuild: "Built a campus map app.",
         shortDeadlineLearning: "Learned Convex in one weekend.",
         hackathonsAttended: "3",
+        experienceLevel: "Expert",
       },
     };
     rerender(<ApplicationForm onSubmitted={vi.fn()} />);
@@ -597,6 +598,7 @@ describe("ApplicationForm application questions and hackathon count", () => {
     ).toBeInTheDocument();
     expect(screen.getByDisplayValue("Learned Convex in one weekend.")).toBeInTheDocument();
     expect(screen.getByLabelText(/How many hackathons have you attended/)).toHaveValue(3);
+    expect(screen.getByLabelText(/Experience level/)).toHaveTextContent("Expert");
   });
 
   it("blocks submit until both application questions are answered", async () => {
@@ -624,9 +626,21 @@ describe("ApplicationForm application questions and hackathon count", () => {
         builtOrWantToBuild: expect.stringContaining("campus events app"),
         shortDeadlineLearning: expect.stringContaining("GitHub Actions"),
         hackathonsAttended: 1,
+        experienceLevel: "Intermediate",
       }),
       null,
     );
+  });
+
+  it("autosaves experienceLevel with the rest of the draft patch", async () => {
+    vi.useFakeTimers();
+    renderValidForm();
+    await selectListboxOption(/Experience level/, "Advanced");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    expect(env.saveDraft).toHaveBeenCalledOnce();
+    expect(env.saveDraft.mock.calls[0]?.[0].patch.experienceLevel).toBe("Advanced");
   });
 });
 

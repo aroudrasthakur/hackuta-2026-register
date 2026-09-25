@@ -50,6 +50,7 @@ export function fillValidApplicationForm() {
     within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Pork"),
   );
   setInputValue(/How many hackathons have you attended/, "1");
+  selectListboxOption(/Experience level/, "Intermediate");
   setInputValue(
     new RegExp(APPLICATION_QUESTIONS.builtOrWantToBuild),
     "I built a campus events app with React and Convex.",

@@ -22,6 +22,7 @@ Isomorphic TypeScript imported by the React client and Convex backend. Keeps val
 | [constants.ts](registration/constants.ts) | MLH enums, `APPLICATION_QUESTIONS` labels, `FIELD_LIMITS`, graduation year and hackathons-attended bounds |
 | [draftPatch.ts](registration/draftPatch.ts) | Draft patch shape and cleared-value sentinel |
 | [draftMapping.ts](registration/draftMapping.ts) | Profile row ↔ autosave form mapping |
+| [allergyMigration.ts](registration/allergyMigration.ts) | Legacy `otherDietary` → `allergyDetails` merge helper |
 | [resume.ts](registration/resume.ts) | Client resume validation, upload headers, size limits |
 | [submitErrors.ts](registration/submitErrors.ts) | User-facing error mapping for Convex and HTTP upload |
 | [countries.ts](registration/countries.ts) | Generated country list (United States first) |
@@ -38,8 +39,11 @@ Convex application validators in [convex/applicationFields.ts](../convex/applica
 | `builtOrWantToBuild` | `TRIMMED_STRING_FIELDS` | Mandatory multiline; trimmed on draft save |
 | `shortDeadlineLearning` | `TRIMMED_STRING_FIELDS` | Mandatory multiline; trimmed on draft save |
 | `hackathonsAttended` | `OPTIONAL_INT_FIELDS` | Mandatory on submit; stored as integer 0–100 |
+| `experienceLevel` | `PLAIN_STRING_FIELDS` | Mandatory select; Beginner through Expert |
+| `allergyDetails` | `TRIMMED_STRING_FIELDS` | Required when dietary Allergies is checked; up to 500 characters |
+| `otherDietaryRestrictions` | `TRIMMED_STRING_FIELDS` | Optional free-text dietary notes |
 
-Draft hydration maps legacy `firstHackathon: true` → `"0"` and `false` → `"1"` when `hackathonsAttended` is absent ([draftMapping.ts](registration/draftMapping.ts)).
+Draft hydration maps legacy `firstHackathon: true` → `"0"` and `false` → `"1"` when `hackathonsAttended` is absent, and legacy `otherDietary` → `allergyDetails` when needed ([draftMapping.ts](registration/draftMapping.ts)).
 
 ## Auth (`auth/`)
 

@@ -12,6 +12,13 @@ export const LEVELS_OF_STUDY = [
   "Prefer not to answer",
 ] as const;
 
+export const EXPERIENCE_LEVELS = [
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+  "Expert",
+] as const;
+
 export const GENDERS = [
   "Man",
   "Woman",
@@ -166,7 +173,7 @@ export const FIELD_LIMITS = {
   accessibilityNeeds: 2000,
   builtOrWantToBuild: 2000,
   shortDeadlineLearning: 2000,
-  otherDietary: 500,
+  allergyDetails: 500,
   otherDietaryRestrictions: 500,
   otherMajor: 200,
   otherSchool: 200,

@@ -74,9 +74,10 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     raceEthnicity: form.raceEthnicity,
     otherRaceEthnicity: form.otherRaceEthnicity,
     dietaryRestrictions: form.dietaryRestrictions,
-    otherDietary: form.otherDietary,
+    allergyDetails: form.allergyDetails,
     otherDietaryRestrictions: form.otherDietaryRestrictions,
     tshirtSize: form.tshirtSize || undefined,
+    experienceLevel: form.experienceLevel || undefined,
     hackathonsAttended:
       form.hackathonsAttended.trim() === ""
         ? Number.NaN

@@ -27,6 +27,7 @@ export function validRegistrationForm(): ApplicationFormData {
     graduationYear: String(MIN_GRADUATION_YEAR),
     gender: VALID_GENDER,
     tshirtSize: "M",
+    experienceLevel: "Intermediate",
     hackathonsAttended: "1",
     builtOrWantToBuild: "I built a campus events app with React and Convex.",
     shortDeadlineLearning:

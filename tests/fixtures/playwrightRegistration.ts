@@ -58,6 +58,7 @@ export async function fillApplicationForm(page: Page) {
   await clickInput(page, "dietary-no-beef");
   await clickInput(page, "dietary-no-pork");
   await page.getByLabel("How many hackathons have you attended", { exact: false }).fill("1");
+  await selectListboxOption(page, "experienceLevel", "Intermediate");
   await page
     .getByLabel(APPLICATION_QUESTIONS.builtOrWantToBuild, { exact: false })
     .fill("I built a campus events app with React and Convex.");

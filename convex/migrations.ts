@@ -1,4 +1,5 @@
 import type { GenericMutationCtx } from "convex/server";
+import { resolveAllergyDetailsFromLegacy } from "../shared/registration/allergyMigration";
 import { mergeLegacyMeatPreferencesIntoDietaryRestrictions } from "../shared/registration/dietaryMigration";
 import { internalMutation } from "./_generated/server";
 
@@ -174,6 +175,44 @@ export const migrateFirstHackathonToHackathonsAttended = internalMutation({
       await ctx.db.replace(_id, {
         ...replacement,
         ...(hackathonsAttended !== undefined ? { hackathonsAttended } : {}),
+      });
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
+/**
+ * One-time migration: rename legacy `otherDietary` allergy text to
+ * `allergyDetails`, then remove the old column.
+ */
+export const migrateOtherDietaryToAllergyDetails = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      const legacy = application as typeof application & {
+        otherDietary?: string;
+        allergyDetails?: string;
+      };
+
+      if (!("otherDietary" in legacy)) {
+        continue;
+      }
+
+      const allergyDetails = resolveAllergyDetailsFromLegacy(
+        legacy.allergyDetails,
+        legacy.otherDietary,
+      );
+      const { _id, _creationTime, otherDietary: _removed, ...replacement } = legacy;
+      void _creationTime;
+      void _removed;
+
+      await ctx.db.replace(_id, {
+        ...replacement,
+        ...(allergyDetails !== undefined ? { allergyDetails } : {}),
       });
       updated += 1;
     }

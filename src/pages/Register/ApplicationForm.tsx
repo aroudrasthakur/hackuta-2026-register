@@ -33,6 +33,7 @@ import {
   APPLICATION_QUESTIONS,
   COUNTRIES_OF_RESIDENCE,
   DIETARY_OPTIONS,
+  EXPERIENCE_LEVELS,
   FIELD_LIMITS,
   FOOD_ALLERGY_WAIVER_TEXT,
   GENDERS,
@@ -748,7 +749,9 @@ function ApplicationFormContent({
 
         <fieldset
           className={`${checkboxFieldsetClass} ${fieldsetErrorClass(
-            !!errors.otherDietary || !!errors.otherDietaryRestrictions,
+            !!errors.allergyDetails ||
+              !!errors.otherDietaryRestrictions ||
+              !!errors.foodAllergyWaiverAgreed,
           )}`}
         >
           <legend className={fieldsetLegendClass}>
@@ -770,6 +773,26 @@ function ApplicationFormContent({
               />
             ))}
           </div>
+          {form.dietaryRestrictions.includes("Allergies") ? (
+            <>
+              <input
+                id="allergyDetails"
+                value={form.allergyDetails}
+                onChange={(e) => updateField("allergyDetails", e.target.value)}
+                placeholder="Please describe your food allergies"
+                aria-invalid={!!errors.allergyDetails}
+                aria-describedby={
+                  errors.allergyDetails ? "allergyDetails-error" : undefined
+                }
+                maxLength={FIELD_LIMITS.allergyDetails}
+                className={fieldClass(errors.allergyDetails)}
+              />
+              <FieldError
+                id="allergyDetails-error"
+                message={errors.allergyDetails}
+              />
+            </>
+          ) : null}
           <TextField
             id="otherDietaryRestrictions"
             label="Other dietary restrictions (optional)"
@@ -781,26 +804,6 @@ function ApplicationFormContent({
             maxLength={FIELD_LIMITS.otherDietaryRestrictions}
             error={errors.otherDietaryRestrictions}
           />
-          {form.dietaryRestrictions.includes("Allergies") ? (
-            <>
-              <input
-                id="otherDietary"
-                value={form.otherDietary}
-                onChange={(e) => updateField("otherDietary", e.target.value)}
-                placeholder="Please describe your food allergies"
-                aria-invalid={!!errors.otherDietary}
-                aria-describedby={
-                  errors.otherDietary ? "otherDietary-error" : undefined
-                }
-                maxLength={FIELD_LIMITS.otherDietary}
-                className={fieldClass(errors.otherDietary)}
-              />
-              <FieldError
-                id="otherDietary-error"
-                message={errors.otherDietary}
-              />
-            </>
-          ) : null}
           <div className="flex flex-col gap-1">
             <CustomCheckbox
               id="foodAllergyWaiverAgreed"
@@ -838,21 +841,6 @@ function ApplicationFormContent({
           }
           error={errors.tshirtSize}
         />
-
-        <TextField
-          id="hackathonsAttended"
-          label="How many hackathons have you attended"
-          required
-          type="number"
-          inputMode="numeric"
-          min={MIN_HACKATHONS_ATTENDED}
-          max={MAX_HACKATHONS_ATTENDED}
-          step={1}
-          value={form.hackathonsAttended}
-          onChange={(e) => updateField("hackathonsAttended", e.target.value)}
-          autoComplete="off"
-          error={errors.hackathonsAttended}
-        />
       </section>
 
       <section className="space-y-6">
@@ -865,6 +853,34 @@ function ApplicationFormContent({
         </h3>
 
         <div className="space-y-5">
+          <TextField
+            id="hackathonsAttended"
+            label="How many hackathons have you attended"
+            required
+            type="number"
+            inputMode="numeric"
+            min={MIN_HACKATHONS_ATTENDED}
+            max={MAX_HACKATHONS_ATTENDED}
+            step={1}
+            value={form.hackathonsAttended}
+            onChange={(e) => updateField("hackathonsAttended", e.target.value)}
+            autoComplete="off"
+            error={errors.hackathonsAttended}
+          />
+          <SelectField
+            id="experienceLevel"
+            label="Experience level"
+            required
+            value={form.experienceLevel}
+            options={EXPERIENCE_LEVELS}
+            onChange={(value) =>
+              updateField(
+                "experienceLevel",
+                value as ApplicationFormData["experienceLevel"],
+              )
+            }
+            error={errors.experienceLevel}
+          />
           <TextAreaField
             id="builtOrWantToBuild"
             label={APPLICATION_QUESTIONS.builtOrWantToBuild}
@@ -1074,9 +1090,7 @@ function ApplicationFormContent({
 
         <div
           className={`flex flex-col gap-4 rounded-xl border-2 bg-white p-5 text-sm ${
-            errors.codeOfConductAgreed ||
-            errors.mlhDataSharingConsent ||
-            errors.foodAllergyWaiverAgreed
+            errors.codeOfConductAgreed || errors.mlhDataSharingConsent
               ? "border-red-400 bg-red-50"
               : "border-(--sand)"
           }`}

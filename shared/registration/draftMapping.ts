@@ -16,6 +16,7 @@ import {
   type ApplicantAnswerFieldKey,
   type DraftPatchPayload,
 } from "./applicantFields";
+import { resolveAllergyDetailsFromLegacy } from "./allergyMigration";
 import { normalizeEmail } from "../lib/normalizeEmail";
 import { normalizeResidenceFormFields, requiresUsState } from "./residence";
 import type { SavedResumeDraft } from "./applicantFields";
@@ -122,6 +123,15 @@ export function applicationToDraftForm(
 
   for (const key of TRIMMED_STRING_FIELDS) {
     values[key] = (application[key] as string | undefined) ?? "";
+  }
+
+  const legacyOtherDietary = (application as { otherDietary?: string }).otherDietary;
+  if (legacyOtherDietary !== undefined || application.allergyDetails !== undefined) {
+    values.allergyDetails =
+      resolveAllergyDetailsFromLegacy(
+        values.allergyDetails as string,
+        legacyOtherDietary,
+      ) ?? "";
   }
 
   for (const key of PLAIN_STRING_FIELDS) {
