@@ -350,6 +350,61 @@ export const migrateLegacyCodeOfConductFields = internalMutation({
 /** @deprecated Use migrateLegacyCodeOfConductFields */
 export const migrateCodeOfConductAgreedToMlhField = migrateLegacyCodeOfConductFields;
 
+/**
+ * One-time migration: rename legacy `sponsorSharingConsentSubmittedAt` and
+ * `foodAllergyWaiverSubmittedAt` to `sponsorSharingConsentAt` and
+ * `foodAllergyWaiverAgreedAt`.
+ */
+export const migrateLegacyAgreementSubmittedAtFields = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      const legacy = application as typeof application & {
+        sponsorSharingConsentSubmittedAt?: number;
+        foodAllergyWaiverSubmittedAt?: number;
+        sponsorSharingConsentAt?: number;
+        foodAllergyWaiverAgreedAt?: number;
+      };
+
+      const hasLegacyColumn =
+        "sponsorSharingConsentSubmittedAt" in legacy ||
+        "foodAllergyWaiverSubmittedAt" in legacy;
+      if (!hasLegacyColumn) {
+        continue;
+      }
+
+      const {
+        _id,
+        _creationTime,
+        sponsorSharingConsentSubmittedAt,
+        foodAllergyWaiverSubmittedAt,
+        ...replacement
+      } = legacy;
+      void _creationTime;
+
+      const sponsorSharingConsentAt =
+        legacy.sponsorSharingConsentAt ?? sponsorSharingConsentSubmittedAt;
+      const foodAllergyWaiverAgreedAt =
+        legacy.foodAllergyWaiverAgreedAt ?? foodAllergyWaiverSubmittedAt;
+
+      await ctx.db.replace(_id, {
+        ...replacement,
+        ...(sponsorSharingConsentAt !== undefined
+          ? { sponsorSharingConsentAt }
+          : {}),
+        ...(foodAllergyWaiverAgreedAt !== undefined
+          ? { foodAllergyWaiverAgreedAt }
+          : {}),
+      });
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
 /** One-time cleanup after removing hackathonId from the applications schema. */
 export const stripLegacyApplicationHackathonIds = internalMutation({
   args: {},

@@ -19,6 +19,7 @@ import {
   getApplicationByUser,
   syncAuthUserNameFromApplication,
 } from "./lib/applications";
+import { applyAgreementTimestampUpdates } from "../shared/registration/consentTimestamps";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import {
   findUploadSessionByToken,
@@ -103,7 +104,7 @@ async function upsertRegistration(
   const previousResume = draftApplication.resumeStorageId;
   const keepsDraftResume = Boolean(resumeStorageId) && resumeStorageId === previousResume;
 
-  await ctx.db.patch(draftApplication._id, {
+  const submissionPatch: Record<string, unknown> = {
     ...fields,
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
@@ -111,14 +112,18 @@ async function upsertRegistration(
     formSubmitted: true,
     confirmationStatus: "unconfirmed",
     submittedAt,
-    sponsorSharingConsentSubmittedAt: data.sponsorSharingConsent
-      ? submittedAt
-      : undefined,
-    foodAllergyWaiverSubmittedAt: submittedAt,
     updatedAt: submittedAt,
     resumeStorageId: resumeStorageId ?? undefined,
     resumeFilename: keepsDraftResume ? draftApplication.resumeFilename : undefined,
-  });
+  };
+  applyAgreementTimestampUpdates(
+    submissionPatch,
+    draftApplication,
+    fields,
+    submittedAt,
+  );
+
+  await ctx.db.patch(draftApplication._id, submissionPatch);
 
   await syncAuthUserNameFromApplication(ctx, authUser._id, data);
 

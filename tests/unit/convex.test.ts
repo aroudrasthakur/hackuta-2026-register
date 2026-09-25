@@ -421,9 +421,9 @@ describe("convex registrations", () => {
     expect(stored).toMatchObject({
       sponsorSharingConsent: false,
       foodAllergyWaiverAgreed: true,
-      foodAllergyWaiverSubmittedAt: expect.any(Number),
+      foodAllergyWaiverAgreedAt: expect.any(Number),
     });
-    expect(stored).not.toHaveProperty("sponsorSharingConsentSubmittedAt");
+    expect(stored).not.toHaveProperty("sponsorSharingConsentAt");
     await drainScheduledFunctions(t);
   });
 
@@ -436,8 +436,227 @@ describe("convex registrations", () => {
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
     expect(stored).toMatchObject({
       sponsorSharingConsent: true,
-      sponsorSharingConsentSubmittedAt: expect.any(Number),
+      sponsorSharingConsentAt: expect.any(Number),
     });
+    await drainScheduledFunctions(t);
+  });
+
+  it("sets MLH consent timestamps when agreements are first checked on draft save", async () => {
+    const t = await authTest();
+    const before = Date.now();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        mlhCodeOfConductAgreed: true,
+        mlhDataSharingConsent: true,
+        mlhCommunicationsConsent: true,
+      }),
+    });
+    const after = Date.now();
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.mlhCodeOfConductAgreedAt).toBeGreaterThanOrEqual(before);
+    expect(stored?.mlhCodeOfConductAgreedAt).toBeLessThanOrEqual(after);
+    expect(stored?.mlhDataSharingConsentAt).toBeGreaterThanOrEqual(before);
+    expect(stored?.mlhDataSharingConsentAt).toBeLessThanOrEqual(after);
+    expect(stored?.mlhCommunicationsConsentAt).toBeGreaterThanOrEqual(before);
+    expect(stored?.mlhCommunicationsConsentAt).toBeLessThanOrEqual(after);
+  });
+
+  it("preserves MLH consent timestamps on unchanged autosave and clears them on uncheck", async () => {
+    const t = await authTest();
+    const agreedForm = {
+      ...validRegistrationForm(),
+      mlhCodeOfConductAgreed: true,
+      mlhDataSharingConsent: true,
+      mlhCommunicationsConsent: false,
+    };
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(agreedForm),
+    });
+    const firstSave = await t.run((ctx) => ctx.db.query("applications").first());
+    const codeOfConductAt = firstSave?.mlhCodeOfConductAgreedAt;
+    const dataSharingAt = firstSave?.mlhDataSharingConsentAt;
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({ ...agreedForm, firstName: "Updated" }),
+    });
+    const afterAutosave = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(afterAutosave?.mlhCodeOfConductAgreedAt).toBe(codeOfConductAt);
+    expect(afterAutosave?.mlhDataSharingConsentAt).toBe(dataSharingAt);
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...agreedForm,
+        mlhCodeOfConductAgreed: false,
+        mlhDataSharingConsent: false,
+      }),
+    });
+    const afterUncheck = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(afterUncheck).not.toHaveProperty("mlhCodeOfConductAgreedAt");
+    expect(afterUncheck).not.toHaveProperty("mlhDataSharingConsentAt");
+  });
+
+  it("records a new MLH consent timestamp when an agreement is rechecked", async () => {
+    const t = await authTest();
+    const agreedForm = {
+      ...validRegistrationForm(),
+      mlhCodeOfConductAgreed: true,
+      mlhDataSharingConsent: true,
+    };
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(agreedForm),
+    });
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({ ...agreedForm, mlhCodeOfConductAgreed: false }),
+    });
+    const beforeRecheck = Date.now();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(agreedForm),
+    });
+    const afterRecheck = Date.now();
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.mlhCodeOfConductAgreedAt).toBeGreaterThanOrEqual(beforeRecheck);
+    expect(stored?.mlhCodeOfConductAgreedAt).toBeLessThanOrEqual(afterRecheck);
+  });
+
+  it("does not fabricate MLH consent timestamps for legacy checked rows on autosave", async () => {
+    const t = await authTest();
+    await t.run(async (ctx) => {
+      const user = await ctx.db.query("users").first();
+      if (!user) throw new Error("missing user");
+      await ctx.db.insert("applications", {
+        authUserId: user._id,
+        email: "legacy-consent@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 1,
+        updatedAt: 1,
+        mlhCodeOfConductAgreed: true,
+        mlhDataSharingConsent: true,
+      });
+    });
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        mlhCodeOfConductAgreed: true,
+        mlhDataSharingConsent: true,
+      }),
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).not.toHaveProperty("mlhCodeOfConductAgreedAt");
+    expect(stored).not.toHaveProperty("mlhDataSharingConsentAt");
+  });
+
+  it("rejects client-supplied MLH consent timestamps on draft save", async () => {
+    const t = await authTest();
+    await expect(
+      t.mutation("applications:saveApplicationDraft", {
+        patch: {
+          ...formToDraftPatch({
+            ...validRegistrationForm(),
+            mlhCodeOfConductAgreed: true,
+          }),
+          mlhCodeOfConductAgreedAt: 123,
+        },
+      }),
+    ).rejects.toThrow(/mlhCodeOfConductAgreedAt/);
+  });
+
+  it("rejects client-supplied legacy agreement SubmittedAt timestamps on draft save", async () => {
+    const t = await authTest();
+    await expect(
+      t.mutation("applications:saveApplicationDraft", {
+        patch: {
+          ...formToDraftPatch({
+            ...validRegistrationForm(),
+            sponsorSharingConsent: true,
+          }),
+          sponsorSharingConsentSubmittedAt: 123,
+        },
+      }),
+    ).rejects.toThrow(/sponsorSharingConsentSubmittedAt/);
+    await expect(
+      t.mutation("applications:saveApplicationDraft", {
+        patch: {
+          ...formToDraftPatch({
+            ...validRegistrationForm(),
+            foodAllergyWaiverAgreed: true,
+          }),
+          foodAllergyWaiverSubmittedAt: 456,
+        },
+      }),
+    ).rejects.toThrow(/foodAllergyWaiverSubmittedAt/);
+  });
+
+  it("sets sponsor and food waiver timestamps on draft save with the same transition rules", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        sponsorSharingConsent: true,
+        foodAllergyWaiverAgreed: true,
+      }),
+    });
+    const firstSave = await t.run((ctx) => ctx.db.query("applications").first());
+    const sponsorAt = firstSave?.sponsorSharingConsentAt;
+    const waiverAt = firstSave?.foodAllergyWaiverAgreedAt;
+    expect(sponsorAt).toEqual(expect.any(Number));
+    expect(waiverAt).toEqual(expect.any(Number));
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        sponsorSharingConsent: true,
+        foodAllergyWaiverAgreed: true,
+        firstName: "Updated",
+      }),
+    });
+    const afterAutosave = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(afterAutosave?.sponsorSharingConsentAt).toBe(sponsorAt);
+    expect(afterAutosave?.foodAllergyWaiverAgreedAt).toBe(waiverAt);
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        sponsorSharingConsent: false,
+        foodAllergyWaiverAgreed: false,
+      }),
+    });
+    const afterUncheck = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(afterUncheck).not.toHaveProperty("sponsorSharingConsentAt");
+    expect(afterUncheck).not.toHaveProperty("foodAllergyWaiverAgreedAt");
+  });
+
+  it("preserves draft agreement timestamps through final submission", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        mlhCodeOfConductAgreed: true,
+        mlhDataSharingConsent: true,
+        mlhCommunicationsConsent: true,
+      }),
+    });
+    const draft = await t.run((ctx) => ctx.db.query("applications").first());
+    const codeOfConductAt = draft?.mlhCodeOfConductAgreedAt;
+    const dataSharingAt = draft?.mlhDataSharingConsentAt;
+    const communicationsAt = draft?.mlhCommunicationsConsentAt;
+    const waiverAt = draft?.foodAllergyWaiverAgreedAt;
+
+    await t.mutation("registrations:submitRegistration", {
+      data: validRegistrationPayload(),
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored?.mlhCodeOfConductAgreedAt).toBe(codeOfConductAt);
+    expect(stored?.mlhDataSharingConsentAt).toBe(dataSharingAt);
+    expect(stored?.mlhCommunicationsConsentAt).toBe(communicationsAt);
+    expect(stored?.foodAllergyWaiverAgreedAt).toBe(waiverAt);
+    expect(stored?.submittedAt).toEqual(expect.any(Number));
     await drainScheduledFunctions(t);
   });
 

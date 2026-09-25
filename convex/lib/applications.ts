@@ -150,11 +150,14 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     emergencyContactPhone: application.emergencyContactPhone,
     emergencyContactPhoneCountry: application.emergencyContactPhoneCountry,
     mlhCodeOfConductAgreed: application.mlhCodeOfConductAgreed === true,
+    mlhCodeOfConductAgreedAt: application.mlhCodeOfConductAgreedAt,
     mlhDataSharingConsent: application.mlhDataSharingConsent === true,
+    mlhDataSharingConsentAt: application.mlhDataSharingConsentAt,
     mlhCommunicationsConsent: application.mlhCommunicationsConsent,
+    mlhCommunicationsConsentAt: application.mlhCommunicationsConsentAt,
     sponsorSharingConsent: application.sponsorSharingConsent === true,
     foodAllergyWaiverAgreed: application.foodAllergyWaiverAgreed === true,
-    sponsorSharingConsentSubmittedAt: application.sponsorSharingConsentSubmittedAt,
-    foodAllergyWaiverSubmittedAt: application.foodAllergyWaiverSubmittedAt,
+    sponsorSharingConsentAt: application.sponsorSharingConsentAt,
+    foodAllergyWaiverAgreedAt: application.foodAllergyWaiverAgreedAt,
   };
 }
