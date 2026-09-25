@@ -50,7 +50,7 @@ export const STRING_ARRAY_FIELDS = ["raceEthnicity", "dietaryRestrictions"] as c
 export const NULLABLE_BOOLEAN_FIELDS = ["internationalStudent"] as const;
 
 export const REQUIRED_BOOLEAN_FIELDS = [
-  "codeOfConductAgreed",
+  "MLHcodeOfConductAgreed",
   "mlhDataSharingConsent",
   "mlhCommunicationsConsent",
   "sponsorSharingConsent",
