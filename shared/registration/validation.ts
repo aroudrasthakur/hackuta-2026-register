@@ -77,13 +77,18 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     otherDietary: form.otherDietary,
     otherDietaryRestrictions: form.otherDietaryRestrictions,
     tshirtSize: form.tshirtSize || undefined,
-    firstHackathon: form.firstHackathon ?? undefined,
+    hackathonsAttended:
+      form.hackathonsAttended.trim() === ""
+        ? Number.NaN
+        : Number(form.hackathonsAttended.trim()),
     hearAbout: resolveHearAbout(form) || undefined,
     linkedin: form.linkedin,
     github: form.github,
     portfolio: form.portfolio,
     devpost: form.devpost,
     accessibilityNeeds: form.accessibilityNeeds,
+    builtOrWantToBuild: form.builtOrWantToBuild,
+    shortDeadlineLearning: form.shortDeadlineLearning,
     emergencyContactName: form.emergencyContactName,
     emergencyContactPhone: form.emergencyContactPhone,
     codeOfConductAgreed: form.codeOfConductAgreed ? true : undefined,

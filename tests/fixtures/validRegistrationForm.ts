@@ -27,7 +27,10 @@ export function validRegistrationForm(): ApplicationFormData {
     graduationYear: String(MIN_GRADUATION_YEAR),
     gender: VALID_GENDER,
     tshirtSize: "M",
-    firstHackathon: true,
+    hackathonsAttended: "1",
+    builtOrWantToBuild: "I built a campus events app with React and Convex.",
+    shortDeadlineLearning:
+      "Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.",
     hearAbout: "Discord",
     emergencyContactName: "Jane Test",
     emergencyContactPhone: "5559876543",

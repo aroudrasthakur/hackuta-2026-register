@@ -443,10 +443,7 @@ describe("ApplicationForm", () => {
     setInputValueById("portfolio", "https://example.com/sam");
     setInputValueById("devpost", "https://devpost.com/software/hackuta-project");
     setInputValue(/Accessibility needs/, "Step-free access");
-    fireEvent.click(
-      within(screen.getByRole("group", { name: /Is this your first hackathon/ }))
-        .getByLabelText("No"),
-    );
+    setInputValueById("hackathonsAttended", "2");
 
     const resume = new File(["%PDF-1.7"], "resume.pdf", {
       type: "application/pdf",
@@ -475,7 +472,7 @@ describe("ApplicationForm", () => {
         stateOfResidence: "Texas",
         internationalStudent: false,
         dietaryRestrictions: ["No Beef", "No Pork", "Allergies"],
-        firstHackathon: false,
+        hackathonsAttended: 2,
         resumeStorageId: "resume-id",
       }),
       null,

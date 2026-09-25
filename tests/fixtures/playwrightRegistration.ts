@@ -54,7 +54,7 @@ export async function fillApplicationForm(page: Page) {
   await dismissOpenListboxes(page);
   await clickInput(page, "dietary-no-beef");
   await clickInput(page, "dietary-no-pork");
-  await clickInput(page, "firstHackathon-yes");
+  await page.getByLabel("How many hackathons have you attended", { exact: false }).fill("1");
   await selectListboxOption(page, "hearAbout", "Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("5559876543");

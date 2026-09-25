@@ -140,6 +140,48 @@ export const stripLegacyApplicationCheckInAndConfirmedAt = internalMutation({
   },
 });
 
+/**
+ * One-time migration: replace legacy firstHackathon yes/no answers with
+ * hackathonsAttended counts, then remove the legacy column.
+ */
+export const migrateFirstHackathonToHackathonsAttended = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      const legacy = application as typeof application & {
+        firstHackathon?: boolean | null;
+        hackathonsAttended?: number;
+      };
+
+      if (!("firstHackathon" in legacy) && legacy.hackathonsAttended !== undefined) {
+        continue;
+      }
+
+      let hackathonsAttended = legacy.hackathonsAttended;
+      if (hackathonsAttended === undefined) {
+        if (legacy.firstHackathon === true) {
+          hackathonsAttended = 0;
+        } else if (legacy.firstHackathon === false) {
+          hackathonsAttended = 1;
+        }
+      }
+
+      const { _id, _creationTime, firstHackathon: _removed, ...replacement } = legacy;
+      void _creationTime;
+      void _removed;
+      await ctx.db.replace(_id, {
+        ...replacement,
+        ...(hackathonsAttended !== undefined ? { hackathonsAttended } : {}),
+      });
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
 /** One-time cleanup after removing hackathonId from the applications schema. */
 export const stripLegacyApplicationHackathonIds = internalMutation({
   args: {},

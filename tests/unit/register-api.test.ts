@@ -39,7 +39,7 @@ const payload: RegistrationPayload = {
   otherDietary: "",
   otherDietaryRestrictions: undefined,
   tshirtSize: "M",
-  firstHackathon: true,
+  hackathonsAttended: 1,
   hearAbout: "Discord",
   resumeStorageId: undefined,
   linkedin: undefined,
@@ -47,6 +47,9 @@ const payload: RegistrationPayload = {
   portfolio: undefined,
   devpost: undefined,
   accessibilityNeeds: "",
+  builtOrWantToBuild: "I built a campus events app with React and Convex.",
+  shortDeadlineLearning:
+    "Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.",
   emergencyContactName: "Jane Test",
   emergencyContactPhone: "5559876543",
   codeOfConductAgreed: true,

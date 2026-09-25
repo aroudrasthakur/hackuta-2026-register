@@ -1,5 +1,8 @@
 import { fireEvent, screen, within } from "@testing-library/react";
-import { MIN_GRADUATION_YEAR } from "../../shared/registration/constants";
+import {
+  APPLICATION_QUESTIONS,
+  MIN_GRADUATION_YEAR,
+} from "../../shared/registration/constants";
 import {
   VALID_COUNTRY,
   VALID_GENDER,
@@ -46,7 +49,15 @@ export function fillValidApplicationForm() {
   fireEvent.click(
     within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Pork"),
   );
-  answerYesNo(/Is this your first hackathon/, "Yes");
+  setInputValue(/How many hackathons have you attended/, "1");
+  setInputValue(
+    new RegExp(APPLICATION_QUESTIONS.builtOrWantToBuild),
+    "I built a campus events app with React and Convex.",
+  );
+  setInputValue(
+    new RegExp(APPLICATION_QUESTIONS.shortDeadlineLearning),
+    "Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.",
+  );
   selectListboxOption(/How did you hear about HackUTA/, "Discord");
   setInputValue(/Emergency contact name/, "Jane Test");
   setInputValue(/Emergency contact phone/, "5559876543");

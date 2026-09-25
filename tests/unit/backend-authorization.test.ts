@@ -37,6 +37,9 @@ const ref = {
   createUploadSession: makeFunctionReference<"mutation">("resumeUploads:createVerifiedUploadSession"),
   cleanupUploads: makeFunctionReference<"mutation">("resumeUploads:cleanupExpiredUploadSessions"),
   resetAllData: makeFunctionReference<"mutation">("maintenance:resetAllData"),
+  migrateFirstHackathon: makeFunctionReference<"mutation">(
+    "migrations:migrateFirstHackathonToHackathonsAttended",
+  ),
   stripHackathonIds: makeFunctionReference<"mutation">("migrations:stripLegacyApplicationHackathonIds"),
   stripCheckInAndConfirmedAt: makeFunctionReference<"mutation">(
     "migrations:stripLegacyApplicationCheckInAndConfirmedAt",
@@ -561,6 +564,68 @@ describe("maintenance and migrations", () => {
     );
 
     await expect(t.mutation(ref.stripCheckInAndConfirmedAt, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
+    });
+  }, 30_000);
+
+  it("migrates legacy firstHackathon answers to hackathonsAttended and removes the legacy field", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "first-timer@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 1,
+        updatedAt: 1,
+        firstHackathon: true,
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "returning@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 2,
+        updatedAt: 2,
+        firstHackathon: false,
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "already-migrated@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 3,
+        updatedAt: 3,
+        hackathonsAttended: 5,
+      });
+    });
+
+    await expect(t.mutation(ref.migrateFirstHackathon, {})).resolves.toEqual({
+      ok: true,
+      updated: 2,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications.some((application) => "firstHackathon" in application)).toBe(false);
+    expect(
+      applications.find((application) => application.email === "first-timer@example.com")
+        ?.hackathonsAttended,
+    ).toBe(0);
+    expect(
+      applications.find((application) => application.email === "returning@example.com")
+        ?.hackathonsAttended,
+    ).toBe(1);
+    expect(
+      applications.find((application) => application.email === "already-migrated@example.com")
+        ?.hackathonsAttended,
+    ).toBe(5);
+
+    await expect(t.mutation(ref.migrateFirstHackathon, {})).resolves.toEqual({
       ok: true,
       updated: 0,
     });
