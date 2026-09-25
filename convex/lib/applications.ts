@@ -1,24 +1,15 @@
-import type {
-  DataModelFromSchemaDefinition,
-  DocumentByName,
-  GenericMutationCtx,
-} from "convex/server";
 import type { GenericId } from "convex/values";
 import { ensureEventConfig } from "./eventConfig";
 import { normalizeEmail } from "./normalizeEmail";
 import { getAuthUser, requireAuthUser, type AuthCtx } from "./auth";
-import type schema from "../schema";
+import type { ApplicationDoc, MutationCtx } from "./dataModel";
 
 export { getAuthUser, requireAuthUser };
-
-type DataModel = DataModelFromSchemaDefinition<typeof schema>;
-type ApplicationDoc = DocumentByName<DataModel, "applications">;
-type MutationCtx = GenericMutationCtx<DataModel>;
 
 export async function getApplicationByUser(
   ctx: AuthCtx,
   authUserId: GenericId<"users">,
-) {
+): Promise<ApplicationDoc | null> {
   return ctx.db
     .query("applications")
     .withIndex("by_auth_user", (q) => q.eq("authUserId", authUserId))
@@ -58,7 +49,9 @@ export async function ensureDraftApplication(ctx: MutationCtx) {
   const applicationId = await ctx.db.insert("applications", {
     authUserId: authUser._id,
     email,
-    emailVerificationTime: authUser.emailVerificationTime,
+    ...(authUser.emailVerificationTime !== undefined
+      ? { emailVerificationTime: authUser.emailVerificationTime }
+      : {}),
     status: "draft",
     eligibilityStatus: "unreviewed",
     confirmationStatus: "unconfirmed",
@@ -69,13 +62,13 @@ export async function ensureDraftApplication(ctx: MutationCtx) {
   if (!application) {
     throw new Error("Application could not be created.");
   }
-  return application;
+  return application as ApplicationDoc;
 }
 
 export async function findApplicationByResume(
   ctx: AuthCtx,
   storageId: GenericId<"_storage">,
-) {
+): Promise<ApplicationDoc | null> {
   return ctx.db
     .query("applications")
     .withIndex("by_resume", (q) => q.eq("resumeStorageId", storageId))

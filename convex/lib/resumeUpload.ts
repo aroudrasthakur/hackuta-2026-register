@@ -1,17 +1,10 @@
 import type { GenericId } from "convex/values";
 import type { AuthCtx } from "./auth";
+import type { ResumeUploadSessionDoc } from "./dataModel";
 
 export const RESUME_UPLOAD_EXPIRY_MS = 30 * 60 * 1000;
 
-type UploadSession = {
-  _id: GenericId<"resumeUploadSessions">;
-  token: string;
-  authUserId: GenericId<"users">;
-  storageId?: GenericId<"_storage">;
-  createdAt: number;
-  verifiedAt?: number;
-  consumedAt?: number;
-};
+type UploadSession = ResumeUploadSessionDoc;
 
 export function uploadSessionOwnedByUser(
   session: UploadSession | null,
@@ -34,7 +27,10 @@ export function isVerifiedUploadSessionValid(
   );
 }
 
-export async function findUploadSessionByToken(ctx: AuthCtx, uploadToken: string) {
+export async function findUploadSessionByToken(
+  ctx: AuthCtx,
+  uploadToken: string,
+): Promise<ResumeUploadSessionDoc | null> {
   return ctx.db
     .query("resumeUploadSessions")
     .withIndex("by_token", (q) => q.eq("token", uploadToken))

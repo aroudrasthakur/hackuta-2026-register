@@ -1,15 +1,12 @@
 import { makeFunctionReference } from "convex/server";
-import type { DataModelFromSchemaDefinition, GenericMutationCtx } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation, mutation } from "./_generated/server";
-import type schema from "./schema";
+import type { MutationCtx } from "./lib/dataModel";
 import { MAX_RESUME_BYTES } from "../shared/registration/resume";
 import { requireAuthUser } from "./lib/auth";
 import { findApplicationByResume } from "./lib/applications";
 import { RESUME_UPLOAD_BUCKET } from "./lib/rateLimitBuckets";
 import { RESUME_UPLOAD_EXPIRY_MS } from "./lib/resumeUpload";
-
-type MutationCtx = GenericMutationCtx<DataModelFromSchemaDefinition<typeof schema>>;
 
 const RESUME_UPLOAD_WINDOW_MS = 10 * 60 * 1000;
 const MAX_RESUME_UPLOADS_PER_WINDOW = 5;

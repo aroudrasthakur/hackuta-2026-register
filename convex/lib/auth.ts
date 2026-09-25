@@ -1,16 +1,8 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import type {
-  DataModelFromSchemaDefinition,
-  GenericMutationCtx,
-  GenericQueryCtx,
-} from "convex/server";
 import type { GenericId } from "convex/values";
-import type schema from "../schema";
 import { normalizeEmail } from "./normalizeEmail";
+import type { AuthUserDoc, MutationCtx, QueryCtx } from "./dataModel";
 
-type DataModel = DataModelFromSchemaDefinition<typeof schema>;
-type QueryCtx = GenericQueryCtx<DataModel>;
-type MutationCtx = GenericMutationCtx<DataModel>;
 export type AuthCtx = QueryCtx | MutationCtx;
 
 export async function requireAuthUserId(ctx: {
@@ -23,7 +15,7 @@ export async function requireAuthUserId(ctx: {
   return authUserId;
 }
 
-export async function getAuthUser(ctx: AuthCtx) {
+export async function getAuthUser(ctx: AuthCtx): Promise<AuthUserDoc | null> {
   const authUserId = await getAuthUserId(ctx);
   if (authUserId) {
     const authUser = await ctx.db.get(authUserId);
@@ -40,7 +32,7 @@ export async function getAuthUser(ctx: AuthCtx) {
     .first();
 }
 
-export async function requireAuthUser(ctx: AuthCtx) {
+export async function requireAuthUser(ctx: AuthCtx): Promise<AuthUserDoc> {
   const user = await getAuthUser(ctx);
   if (!user) {
     throw new Error("Authentication required.");
@@ -48,7 +40,7 @@ export async function requireAuthUser(ctx: AuthCtx) {
   return user;
 }
 
-export async function requireVerifiedAuthUser(ctx: AuthCtx) {
+export async function requireVerifiedAuthUser(ctx: AuthCtx): Promise<AuthUserDoc> {
   const user = await requireAuthUser(ctx);
   if (!user.emailVerificationTime) {
     throw new Error("Verify your email before submitting your application.");
