@@ -18,9 +18,9 @@ export function CustomCheckbox({ label, id, className = "", ...props }: CustomCh
           className="peer absolute opacity-0 w-5 h-5 cursor-pointer"
           {...props}
         />
-        <div className="w-5 h-5 rounded border-2 border-(--sand) bg-white transition-all peer-checked:bg-(--ocean) peer-checked:border-(--ocean) peer-focus-visible:ring-2 peer-focus-visible:ring-(--ocean)/30 peer-focus-visible:ring-offset-2 flex items-center justify-center">
+        <div className="w-5 h-5 rounded border-2 border-(--sand) bg-white transition-all peer-checked:bg-(--ocean) peer-checked:[&>svg]:opacity-100 peer-checked:border-(--ocean) peer-focus-visible:ring-2 peer-focus-visible:ring-(--ocean)/30 peer-focus-visible:ring-offset-2 flex items-center justify-center">
           <svg
-            className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+            className="w-3 h-3 text-white opacity-0 transition-opacity"
             viewBox="0 0 12 10"
             fill="none"
             aria-hidden="true"
@@ -62,8 +62,8 @@ export function CustomRadio({ label, id, name, className = "", ...props }: Custo
           className="peer absolute opacity-0 w-5 h-5 cursor-pointer"
           {...props}
         />
-        <div className="w-5 h-5 rounded-full border-2 border-(--sand) bg-white transition-all peer-checked:border-(--ocean) peer-focus-visible:ring-2 peer-focus-visible:ring-(--ocean)/30 peer-focus-visible:ring-offset-2 flex items-center justify-center">
-          <div className="w-2.5 h-2.5 rounded-full bg-(--ocean) opacity-0 peer-checked:opacity-100 transition-opacity scale-0 peer-checked:scale-100" />
+        <div className="w-5 h-5 rounded-full border-2 border-(--sand) bg-white transition-all peer-checked:border-(--ocean) peer-checked:[&>div]:opacity-100 peer-checked:[&>div]:scale-100 peer-focus-visible:ring-2 peer-focus-visible:ring-(--ocean)/30 peer-focus-visible:ring-offset-2 flex items-center justify-center">
+          <div className="w-2.5 h-2.5 rounded-full bg-(--ocean) opacity-0  transition-opacity scale-0" />
         </div>
       </div>
       <span className="text-sm font-medium group-hover:text-(--ocean) transition-colors">
