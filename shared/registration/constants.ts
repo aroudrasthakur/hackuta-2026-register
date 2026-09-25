@@ -175,7 +175,7 @@ export const MLH_PRIVACY_POLICY_URL = "https://github.com/MLH/mlh-policies/blob/
 export const MLH_CODE_OF_CONDUCT_URL = "https://static.mlh.io/docs/mlh-code-of-conduct.pdf";
 
 export const SPONSOR_SHARING_CONSENT_TEXT =
-  "I authorize HackUTA to share my resume and application information with HackUTA's sponsors for recruiting purposes. Sponsors may choose to contact me about internships and full-time position opportunities.";
+  "I authorize HackUTA to share my resume and application information with HackUTA's sponsors for recruiting purposes. Sponsors may choose to contact me about internships and full-time position opportunities. (optional)";
 export const SPONSOR_SHARING_CONSENT_VERSION = "9-25-2026";
 
 export const FOOD_ALLERGY_WAIVER_TEXT =

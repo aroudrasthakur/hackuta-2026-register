@@ -566,27 +566,6 @@ function ApplicationFormContent({
               />
             </>
           ) : null}
-          <div className="flex flex-col gap-1">
-            <CustomCheckbox
-              id="foodAllergyWaiverAgreed"
-              label={FOOD_ALLERGY_WAIVER_TEXT}
-              required
-              checked={form.foodAllergyWaiverAgreed}
-              onChange={(e) =>
-                updateField("foodAllergyWaiverAgreed", e.target.checked)
-              }
-              aria-invalid={!!errors.foodAllergyWaiverAgreed}
-              aria-describedby={
-                errors.foodAllergyWaiverAgreed
-                  ? "foodAllergyWaiverAgreed-error"
-                  : undefined
-              }
-            />
-            <FieldError
-              id="foodAllergyWaiverAgreed-error"
-              message={errors.foodAllergyWaiverAgreed}
-            />
-          </div>
         </fieldset>
       </section>
 
@@ -652,6 +631,27 @@ function ApplicationFormContent({
               />
             </>
           ) : null}
+          <div className="flex flex-col gap-1">
+            <CustomCheckbox
+              id="foodAllergyWaiverAgreed"
+              label={FOOD_ALLERGY_WAIVER_TEXT}
+              required
+              checked={form.foodAllergyWaiverAgreed}
+              onChange={(e) =>
+                updateField("foodAllergyWaiverAgreed", e.target.checked)
+              }
+              aria-invalid={!!errors.foodAllergyWaiverAgreed}
+              aria-describedby={
+                errors.foodAllergyWaiverAgreed
+                  ? "foodAllergyWaiverAgreed-error"
+                  : undefined
+              }
+            />
+            <FieldError
+              id="foodAllergyWaiverAgreed-error"
+              message={errors.foodAllergyWaiverAgreed}
+            />
+          </div>
         </fieldset>
 
         <SelectField
