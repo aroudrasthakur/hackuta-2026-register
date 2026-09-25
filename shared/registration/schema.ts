@@ -32,6 +32,12 @@ export function isValidPhone(value: string) {
   return digits.length >= 10 && digits.length <= 15;
 }
 
+function formatPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 10) return value;
+  return `(${digits.slice(0, 3)})-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 const HTTP_URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
 
 export const LINKEDIN_BASE_DOMAIN = "linkedin.com";
@@ -260,7 +266,9 @@ export const registrationPayloadSchema = z
     phone: safePlainText({
       max: FIELD_LIMITS.phone,
       message: "Phone number is required.",
-    }).refine(isValidPhone, "Enter a valid phone number."),
+    })
+      .refine(isValidPhone, "Enter a valid phone number.")
+      .transform(formatPhone),
     age: ageSchema,
     school: safePlainText({
       max: FIELD_LIMITS.school,
@@ -361,7 +369,9 @@ export const registrationPayloadSchema = z
     emergencyContactPhone: safePlainText({
       max: FIELD_LIMITS.phone,
       message: "Emergency contact phone is required.",
-    }).refine(isValidPhone, "Enter a valid phone number."),
+    })
+      .refine(isValidPhone, "Enter a valid phone number.")
+      .transform(formatPhone),
     MLHcodeOfConductAgreed: z.literal(true, {
       message: "You must agree to the MLH Code of Conduct to continue.",
     }),

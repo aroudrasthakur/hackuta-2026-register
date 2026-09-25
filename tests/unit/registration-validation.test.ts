@@ -34,6 +34,30 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("formats both 10-digit phone numbers in the submission payload", () => {
+    const result = validateApplicationForm({
+      ...validRegistrationForm(),
+      phone: "555 123 4567",
+      emergencyContactPhone: "(555) 987-6543",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.phone).toBe("(555)-123-4567");
+      expect(result.payload.emergencyContactPhone).toBe("(555)-987-6543");
+    }
+  });
+
+  it("preserves valid international numbers longer than 10 digits", () => {
+    const result = validateApplicationForm({
+      ...validRegistrationForm(),
+      phone: "+44 20 7946 0958",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.payload.phone).toBe("+44 20 7946 0958");
+  });
+
   it.each([
     new File(["text"], "resume.txt", { type: "text/plain" }),
     new File([], "resume.pdf", { type: "application/pdf" }),
