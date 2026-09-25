@@ -40,6 +40,9 @@ const ref = {
   migrateFirstHackathon: makeFunctionReference<"mutation">(
     "migrations:migrateFirstHackathonToHackathonsAttended",
   ),
+  migrateOtherDietary: makeFunctionReference<"mutation">(
+    "migrations:migrateOtherDietaryToAllergyDetails",
+  ),
   stripHackathonIds: makeFunctionReference<"mutation">("migrations:stripLegacyApplicationHackathonIds"),
   stripCheckInAndConfirmedAt: makeFunctionReference<"mutation">(
     "migrations:stripLegacyApplicationCheckInAndConfirmedAt",
@@ -626,6 +629,69 @@ describe("maintenance and migrations", () => {
     ).toBe(5);
 
     await expect(t.mutation(ref.migrateFirstHackathon, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
+    });
+  }, 30_000);
+
+  it("migrates legacy otherDietary to allergyDetails and preserves allergyDetails as the winner", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "legacy-only@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 1,
+        updatedAt: 1,
+        otherDietary: "Shellfish",
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "both-columns@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 2,
+        updatedAt: 2,
+        allergyDetails: "Peanuts",
+        otherDietary: "Shellfish",
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "already-migrated@example.com",
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        createdAt: 3,
+        updatedAt: 3,
+        allergyDetails: "Tree nuts",
+      });
+    });
+
+    await expect(t.mutation(ref.migrateOtherDietary, {})).resolves.toEqual({
+      ok: true,
+      updated: 2,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications.some((application) => "otherDietary" in application)).toBe(false);
+    expect(
+      applications.find((application) => application.email === "legacy-only@example.com")
+        ?.allergyDetails,
+    ).toBe("Shellfish");
+    expect(
+      applications.find((application) => application.email === "both-columns@example.com")
+        ?.allergyDetails,
+    ).toBe("Peanuts");
+    expect(
+      applications.find((application) => application.email === "already-migrated@example.com")
+        ?.allergyDetails,
+    ).toBe("Tree nuts");
+
+    await expect(t.mutation(ref.migrateOtherDietary, {})).resolves.toEqual({
       ok: true,
       updated: 0,
     });

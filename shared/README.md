@@ -22,6 +22,7 @@ Isomorphic TypeScript imported by the React client and Convex backend. Keeps val
 | [constants.ts](registration/constants.ts) | MLH enums, `APPLICATION_QUESTIONS` labels, `FIELD_LIMITS`, graduation year and hackathons-attended bounds |
 | [draftPatch.ts](registration/draftPatch.ts) | Draft patch shape and cleared-value sentinel |
 | [draftMapping.ts](registration/draftMapping.ts) | Profile row ↔ autosave form mapping |
+| [allergyMigration.ts](registration/allergyMigration.ts) | Legacy `otherDietary` → `allergyDetails` merge helper |
 | [resume.ts](registration/resume.ts) | Client resume validation, upload headers, size limits |
 | [submitErrors.ts](registration/submitErrors.ts) | User-facing error mapping for Convex and HTTP upload |
 | [countries.ts](registration/countries.ts) | Generated country list (United States first) |

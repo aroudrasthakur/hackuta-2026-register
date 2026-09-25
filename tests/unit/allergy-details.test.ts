@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { APPLICANT_DRAFT_PATCH_FIELD_KEYS } from "../../convex/applicationFields";
+import { resolveAllergyDetailsFromLegacy } from "../../shared/registration/allergyMigration";
 import {
   APPLICANT_ANSWER_FIELD_KEYS,
   TRIMMED_STRING_FIELDS,
@@ -13,6 +14,22 @@ import {
 import { validateApplicationForm } from "../../shared/registration/validation";
 import { INITIAL_FORM } from "../../shared/registration/types";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
+
+describe("resolveAllergyDetailsFromLegacy", () => {
+  it("prefers non-empty allergyDetails over legacy otherDietary", () => {
+    expect(resolveAllergyDetailsFromLegacy("Peanuts", "Shellfish")).toBe("Peanuts");
+  });
+
+  it("falls back to legacy otherDietary when allergyDetails is blank", () => {
+    expect(resolveAllergyDetailsFromLegacy("", "Shellfish")).toBe("Shellfish");
+    expect(resolveAllergyDetailsFromLegacy(undefined, "Shellfish")).toBe("Shellfish");
+  });
+
+  it("returns undefined when both values are blank", () => {
+    expect(resolveAllergyDetailsFromLegacy("", "")).toBeUndefined();
+    expect(resolveAllergyDetailsFromLegacy(undefined, undefined)).toBeUndefined();
+  });
+});
 
 describe("allergyDetails field", () => {
   it("registers allergyDetails as a trimmed string draft field", () => {

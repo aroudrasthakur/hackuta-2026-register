@@ -105,6 +105,12 @@ export const applicationRecord = {
   resumeStorageId: v.optional(v.id("_storage")),
   resumeFilename: v.optional(v.string()),
   ...applicantAnswerFields,
+  /**
+   * Legacy allergy text column (pre-`allergyDetails` rename).
+   * Keep optional until `migrateOtherDietaryToAllergyDetails` has run in every
+   * deployment, then remove this field and redeploy.
+   */
+  otherDietary: v.optional(v.string()),
 };
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */

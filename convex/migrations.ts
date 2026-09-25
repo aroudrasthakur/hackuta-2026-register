@@ -1,4 +1,5 @@
 import type { GenericMutationCtx } from "convex/server";
+import { resolveAllergyDetailsFromLegacy } from "../shared/registration/allergyMigration";
 import { mergeLegacyMeatPreferencesIntoDietaryRestrictions } from "../shared/registration/dietaryMigration";
 import { internalMutation } from "./_generated/server";
 
@@ -201,8 +202,10 @@ export const migrateOtherDietaryToAllergyDetails = internalMutation({
         continue;
       }
 
-      const allergyDetails =
-        legacy.allergyDetails ?? legacy.otherDietary ?? undefined;
+      const allergyDetails = resolveAllergyDetailsFromLegacy(
+        legacy.allergyDetails,
+        legacy.otherDietary,
+      );
       const { _id, _creationTime, otherDietary: _removed, ...replacement } = legacy;
       void _creationTime;
       void _removed;
