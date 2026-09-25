@@ -142,7 +142,7 @@ export const MAJORS = [
 export const MAJOR_OTHER_OPTION = "Other (please specify)" as const;
 export const SCHOOL_OTHER_OPTION = "Other (Please Specify)" as const;
 
-export const TSHIRT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
+export const TSHIRT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"] as const;
 
 export const HEAR_ABOUT_OPTIONS = [
   "Instagram",

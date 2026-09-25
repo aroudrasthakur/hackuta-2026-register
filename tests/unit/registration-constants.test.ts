@@ -71,7 +71,7 @@ describe("registration constants", () => {
 
     it("has t-shirt size options", () => {
       expect(Array.isArray(TSHIRT_SIZES)).toBe(true);
-      expect(TSHIRT_SIZES.length).toBeGreaterThan(0);
+      expect(TSHIRT_SIZES).toEqual(["S", "M", "L", "XL", "2XL", "3XL"]);
     });
 
     it("has dietary restriction options", () => {
