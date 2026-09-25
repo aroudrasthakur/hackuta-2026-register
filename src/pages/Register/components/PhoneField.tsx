@@ -60,7 +60,7 @@ export function PhoneField({
   }
 
   function changeNumber(raw: string) {
-    raw = raw.replace(/[^\d\s().+\-]/g, "");
+    raw = raw.replace(/[^\d\s().+-]/g, "");
     if (raw.trim().startsWith("+")) {
       const parsed = parsePhoneNumberFromString(raw);
       const country = parsed && countryForNumber(parsed);
