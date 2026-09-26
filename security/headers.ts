@@ -11,3 +11,6 @@ export const permissionsPolicy = [
 ].join(", ");
 
 export const referrerPolicy = "strict-origin-when-cross-origin";
+export const crossOriginResourcePolicy = "same-origin";
+export const htmlCacheControl = "no-store";
+export const xContentTypeOptions = "nosniff";

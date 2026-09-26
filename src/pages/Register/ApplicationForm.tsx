@@ -451,7 +451,9 @@ function ApplicationFormContent({
       setResumeUpload(null);
       onSubmitted();
     } catch (err) {
-      console.error("Registration submission failed", err);
+      if (import.meta.env.DEV) {
+        console.error("Registration submission failed", err);
+      }
       const message = mapConvexErrorToUserMessage(err);
       if (isResumeFieldMessage(message)) {
         setErrors((prev) => ({ ...prev, resume: message }));
