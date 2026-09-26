@@ -59,6 +59,8 @@ HTTP: POST /resume-upload on the Convex site URL (JWT + origin allowlist). See [
 | Environment variables | [README — Environment variables](../README.md#environment-variables), [.env.example](../.env.example) |
 | Backend unit tests | npm run test:unit — [convex.test.ts](../tests/unit/convex.test.ts), [resume-upload-security.test.ts](../tests/unit/resume-upload-security.test.ts) |
 | Deployment verification | npm run convex:verify — [verify-convex-deployment.mjs](../scripts/verify-convex-deployment.mjs) |
+| Deploy to shared dev | `npx convex dev --once --env-file .env.local` — see [docs/OPERATIONS.md](../docs/OPERATIONS.md) |
+| Event timeline / registration window | Internal `eventConfig:*` mutations; UTC ms timestamps — see [docs/OPERATIONS.md — Event timeline](../docs/OPERATIONS.md#event-timeline-and-registration-window) |
 | Resume session cleanup | Cron every 15 min — resumeUploads:cleanupExpiredUploadSessions in [crons.ts](crons.ts) |
 | Wipe deployment (**destructive**) | Convex dashboard → internal maintenance:resetAllData |
 

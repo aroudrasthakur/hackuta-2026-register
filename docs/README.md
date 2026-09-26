@@ -5,7 +5,7 @@
 | [API.md](API.md) | Developers | Endpoints, payloads, errors, rate limits, data model |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Developers | Repo layout, flows, design decisions |
 | [SECURITY.md](SECURITY.md) | Developers, operators | Validation, CSP, uploads, secrets |
-| [OPERATIONS.md](OPERATIONS.md) | Operators | Deploy checklist, env vars, maintenance, troubleshooting |
+| [OPERATIONS.md](OPERATIONS.md) | Operators | Deploy checklist, env vars, event timeline / registration window, maintenance, troubleshooting |
 | [TESTING.md](TESTING.md) | Developers | Test commands, CI, coverage |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contributors | PR workflow, conventions |
 | [DESIGN.md](DESIGN.md) | Designers, developers | Odyssey theme, palette, form UX |

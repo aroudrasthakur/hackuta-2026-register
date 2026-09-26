@@ -10,7 +10,7 @@ This app deploys separately from the marketing landing page ([hackuta-2026-repos
 | --- | --- | --- |
 | Shared dev | [127.0.0.1:5273](http://127.0.0.1:5273) | standing-manatee-425 |
 | Local personal | [127.0.0.1:5273](http://127.0.0.1:5273) | npx convex dev (your deployment) |
-| Production | [register.hackuta.com](https://register.hackuta.com) | <ask director> |
+| Production | [register.hackuta.com](https://register.hackuta.com) | — (not stored in repo) |
 
 Organizer contact: [hello@hackuta.org](mailto:hello@hackuta.org)
 
@@ -91,6 +91,8 @@ node scripts/sync-dev-convex-env.mjs # email service settings from prod + localh
 ```
 
 `sync-dev-convex-env.mjs` sets dev-specific `SITE_URL`, localhost CORS, and copies the email service settings (`EMAIL_SERVICE_URL`, `EMAIL_SERVICE_API_KEY`) from production. Localhost origins are ignored on production unless `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` is set — keep that unset on prod.
+
+To push schema and functions to the shared dev deployment (`standing-manatee-425`) without a watch process: `npx convex dev --once --env-file .env.local`. Operator commands for hackathon dates and the registration window are in [docs/OPERATIONS.md — Event timeline](docs/OPERATIONS.md#event-timeline-and-registration-window).
 
 ### Production deploy
 
