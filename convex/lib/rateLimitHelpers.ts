@@ -43,3 +43,16 @@ export async function pruneStaleRateLimits(
     await ctx.db.delete(entry._id);
   }
 }
+
+/** Deletes every rate-limit row for the given bucket/key pairs (indexed lookups). */
+export async function deleteRateLimitsForBucketKeys(
+  ctx: RateLimitWriteCtx,
+  entries: ReadonlyArray<{ bucket: string; key: string }>,
+) {
+  for (const { bucket, key } of entries) {
+    const rows = await listRateLimitsForBucketKey(ctx, bucket, key);
+    for (const row of rows) {
+      await ctx.db.delete(row._id);
+    }
+  }
+}

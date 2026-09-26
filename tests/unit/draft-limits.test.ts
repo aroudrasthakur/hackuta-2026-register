@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_LIMITS } from "../../shared/registration/constants";
+import {
+  FIELD_LIMITS,
+  MAX_GRADUATION_YEAR,
+  MIN_GRADUATION_YEAR,
+} from "../../shared/registration/constants";
 import {
   DRAFT_ARRAY_TOO_LONG_MESSAGE,
   DRAFT_FIELD_TOO_LONG_MESSAGE,
@@ -27,6 +31,18 @@ describe("validateDraftPatchLimits", () => {
   it("rejects out-of-range numeric draft fields", () => {
     expect(() => validateDraftPatchLimits({ age: 12 })).toThrow(DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE);
     expect(() => validateDraftPatchLimits({ hackathonsAttended: 999 })).toThrow(
+      DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE,
+    );
+    expect(() => validateDraftPatchLimits({ graduationYear: MIN_GRADUATION_YEAR - 1 })).toThrow(
+      DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE,
+    );
+    expect(() => validateDraftPatchLimits({ graduationYear: MAX_GRADUATION_YEAR + 1 })).toThrow(
+      DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE,
+    );
+  });
+
+  it("rejects NaN numeric draft fields", () => {
+    expect(() => validateDraftPatchLimits({ age: Number.NaN })).toThrow(
       DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE,
     );
   });

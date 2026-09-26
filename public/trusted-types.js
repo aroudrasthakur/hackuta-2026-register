@@ -12,11 +12,7 @@
     }
     try {
       const url = new URL(value, window.location.origin);
-      if (url.origin === window.location.origin) {
-        return true;
-      }
-      // Vercel preview toolbar (allowed in CSP script-src).
-      return url.hostname === "vercel.live";
+      return url.origin === window.location.origin;
     } catch {
       return false;
     }

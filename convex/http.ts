@@ -32,7 +32,16 @@ const isUserEmailVerifiedRef = makeFunctionReference<"query">(
 const CONVEX_TEST_ORIGIN = "https://hackuta.test";
 
 function requestOrigin(request: Request) {
-  return request.headers.get("origin") ?? request.headers.get("x-test-origin");
+  const origin = request.headers.get("origin");
+  if (origin) {
+    return origin;
+  }
+  const isTestMode =
+    process.env.CONVEX_TEST_MODE === "true" || process.env.VITEST === "true";
+  if (isTestMode) {
+    return request.headers.get("x-test-origin");
+  }
+  return null;
 }
 
 function allowedOrigin(request: Request): string | undefined {

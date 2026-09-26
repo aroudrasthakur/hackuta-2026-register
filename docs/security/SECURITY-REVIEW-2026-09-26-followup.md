@@ -22,8 +22,8 @@ Original F1–F27 items remain **Pass** except where R-items reopened partial ar
 | ID | Severity | Status | Evidence / fix | Test |
 | --- | --- | --- | --- | --- |
 | R1 | Medium | **Fixed** | Rate-limit readers use `bucket`+`key` index prefix via `listRateLimitsForBucketKey` / `countRecentRateLimits` | `rate-limits.test.ts` (500 noise rows) |
-| R2 | Medium | **Fixed** | Password-reset IP from `getClientAddressFromMeta(ctx)`; ignores spoofed `params.clientAddress` | `auth-send-rate-limits.test.ts` |
-| R3 | Medium | **Fixed** | PDF hex-name normalization + full object-graph active-content walk | `pdf-validation.test.ts` |
+| R2 | Medium | **Fixed** | Password-reset IP from `getClientAddressFromMeta(ctx)`; ignores spoofed `params.clientAddress` | `client-address.test.ts`, `auth-send-rate-limits.test.ts` (IP bucket only) |
+| R3 | Medium | **Fixed** | PDF hex-name normalization + object-graph active-content walk (partial — nested `/A`/`/AA` completed in R2 follow-up) | `pdf-validation.test.ts` (hex markers; graph walk extended in follow-up-2) |
 | R4 | Medium | **Fixed** | Pre-parse object-count cap (`MAX_PDF_OBJECT_COUNT`); post-load elapsed check retained | `pdf-validation.test.ts` |
 | R5 | Medium | **Fixed** | `deleteAccountByEmail` removes refresh tokens, verifiers, verification codes, authRateLimits, failures, rateLimits | `maintenance.test.ts` |
 | R6 | Medium | **Fixed** | `by_createdAt` indexes; chained prune for email + all rate-limit buckets | `maintenance.test.ts`, `rate-limits.test.ts` |
@@ -32,7 +32,7 @@ Original F1–F27 items remain **Pass** except where R-items reopened partial ar
 | R9 | Low | **Fixed** | Draft numeric bounds for age, graduationYear, hackathonsAttended | `draft-limits.test.ts` |
 | R10 | Low | **Fixed** | README / scripts README no longer claim prod API key sync | docs review |
 | R11 | Low | **Fixed** | `public/README.md`, `convex/README.md`, `OPERATIONS.md` accuracy | docs review |
-| R12 | Low | **Fixed** | Trusted Types allows `vercel.live` script URLs (matches CSP) | `trusted-types-policy.test.ts` |
+| R12 | Low | **Superseded** | Trusted Types allowed `vercel.live` script URLs (removed in R2 follow-up S6) | `trusted-types-policy.test.ts` (same-origin only after follow-up-2) |
 | R13 | Low | **Fixed** | Default `LANDING_URL` aligned to `https://hackuta.com` | `site.ts` |
 | R14 | Info | **Fixed** | `build.sourcemap: false` explicit in Vite config | `vite.config.ts` |
 | R15 | Info | **Fixed** | Unverified resume upload returns 403 | `convex.test.ts` |

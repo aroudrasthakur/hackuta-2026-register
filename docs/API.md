@@ -81,7 +81,7 @@ Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Password re
 
 ### `rateLimits:getOtpSendCooldown`
 
-**Type:** mutation · **Auth:** none · `{ email: string }`
+**Type:** query · **Auth:** none · `{ email: string }`
 
 ```typescript
 { waitSeconds: number; hourlyLimitReached: boolean }
@@ -91,7 +91,7 @@ Lookup attempts are rate-limited; invalid emails get a neutral response.
 
 ### `rateLimits:getPasswordResetSendCooldown`
 
-**Type:** mutation · **Auth:** none · `{ email: string }`
+**Type:** query · **Auth:** none · `{ email: string }`
 
 Same response shape as `getOtpSendCooldown`. Tracks accepted requests for all addresses in the `password_reset_send` bucket separately from sign-up OTP sends, so requesting a reset for an unregistered email produces the same cooldown.
 

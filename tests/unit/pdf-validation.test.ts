@@ -1,6 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it, vi } from "vitest";
 import {
+  countLoadedPdfObjects,
   countPdfObjectDeclarations,
   MAX_PDF_OBJECT_COUNT,
   normalizePdfHexEscapes,
@@ -12,6 +13,27 @@ async function validPdfBytes() {
   const pdf = await PDFDocument.create();
   pdf.addPage([612, 792]);
   return new Uint8Array(await pdf.save());
+}
+
+function buildMinimalPdf(objects: string[]): Uint8Array {
+
+  let body = "%PDF-1.4\n";
+  const offsets: number[] = [0];
+  for (const object of objects) {
+    offsets.push(body.length);
+    body += `${object}\n`;
+  }
+
+  const xrefStart = body.length;
+  body += `xref\n0 ${objects.length + 1}\n`;
+  body += "0000000000 65535 f \n";
+  for (let index = 1; index <= objects.length; index += 1) {
+    body += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
+  }
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
+  body += `startxref\n${xrefStart}\n%%EOF\n`;
+
+  return new TextEncoder().encode(body);
 }
 
 describe("validateResumePdfBytes", () => {
@@ -89,6 +111,39 @@ describe("validateResumePdfBytes", () => {
     );
   });
 
+  it("does not reject harmless name tokens containing /JS as a substring", async () => {
+    const bytes = buildMinimalPdf([
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj",
+      "4 0 obj\n<< /Type /Font /BaseFont /JSans-Regular >>\nendobj",
+    ]);
+    await expect(validateResumePdfBytes(bytes)).resolves.toBeUndefined();
+  });
+
+  it("rejects a page annotation whose /A action is JavaScript", async () => {
+    const bytes = buildMinimalPdf([
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Annots [4 0 R] >>\nendobj",
+      "4 0 obj\n<< /Type /Annot /Subtype /Link /Rect [0 0 0 0] /A << /S /JavaScript /JS (x) >> >>\nendobj",
+    ]);
+    await expect(validateResumePdfBytes(bytes)).rejects.toThrow(
+      "This PDF contains content that is not allowed.",
+    );
+  });
+
+  it("rejects a catalog /AA additional-actions dictionary", async () => {
+    const bytes = buildMinimalPdf([
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R /AA << /O << /S /JavaScript /JS (x) >> >> >>\nendobj",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj",
+    ]);
+    await expect(validateResumePdfBytes(bytes)).rejects.toThrow(
+      "This PDF contains content that is not allowed.",
+    );
+  });
+
   it("rejects PDFs with too many object declarations before parsing", async () => {
     const loadSpy = vi.spyOn(PDFDocument, "load");
     const header = new TextEncoder().encode("%PDF-1.4\n");
@@ -106,5 +161,26 @@ describe("validateResumePdfBytes", () => {
     expect(loadSpy).not.toHaveBeenCalled();
     loadSpy.mockRestore();
   });
-});
 
+  it("rejects PDFs whose loaded indirect object count exceeds the cap", async () => {
+    const bytes = await validPdfBytes();
+    const loadedPdf = await PDFDocument.load(bytes);
+    vi.spyOn(loadedPdf.context, "enumerateIndirectObjects").mockReturnValue(
+      Array.from({ length: MAX_PDF_OBJECT_COUNT + 1 }, (_, index) => [
+        index as never,
+        loadedPdf.context.obj({}),
+      ]),
+    );
+    const loadSpy = vi.spyOn(PDFDocument, "load").mockResolvedValue(loadedPdf);
+
+    await expect(validateResumePdfBytes(bytes)).rejects.toThrow("The file is not a valid PDF.");
+    loadSpy.mockRestore();
+  });
+
+  it("counts loaded indirect objects after parse", async () => {
+    const pdf = await PDFDocument.create();
+    pdf.addPage([612, 792]);
+    const loaded = await PDFDocument.load(await pdf.save());
+    expect(countLoadedPdfObjects(loaded)).toBeGreaterThan(0);
+  });
+});

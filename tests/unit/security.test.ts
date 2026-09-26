@@ -31,5 +31,7 @@ describe("response security headers", () => {
     expect(deployedHeader("Cross-Origin-Resource-Policy")).toBe(crossOriginResourcePolicy);
     expect(deployedHeader("Cache-Control")).toBe(htmlCacheControl);
     expect(deployedHeader("Strict-Transport-Security")).toContain("max-age=31536000");
+    expect(deployedHeader("Cross-Origin-Opener-Policy")).toBe("same-origin");
+    expect(deployedHeader("X-Frame-Options")).toBe("DENY");
   });
 });

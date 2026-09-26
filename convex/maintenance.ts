@@ -2,9 +2,17 @@ import { makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./lib/dataModel";
+import type { GenericId } from "convex/values";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import { getApplicationByUser } from "./lib/applications";
 import { invalidateAllSessionsForUser } from "./lib/invalidateAuthSessions";
+import { deleteRateLimitsForBucketKeys } from "./lib/rateLimitHelpers";
+import {
+  OTP_SEND_BUCKET,
+  PASSWORD_RESET_SEND_BUCKET,
+  RESUME_UPLOAD_BUCKET,
+} from "./lib/rateLimitBuckets";
+import { DRAFT_SAVE_BUCKET, SUBMIT_BUCKET } from "./lib/userRateLimits";
 
 type ResettableTable =
   | "applications"
@@ -50,6 +58,20 @@ async function deleteAllStorage(ctx: MutationCtx) {
       await ctx.storage.delete(file._id);
     }
   }
+}
+
+function rateLimitKeysForUser(
+  normalizedEmail: string,
+  userId: GenericId<"users">,
+): ReadonlyArray<{ bucket: string; key: string }> {
+  const userKey = String(userId);
+  return [
+    { bucket: OTP_SEND_BUCKET, key: normalizedEmail },
+    { bucket: PASSWORD_RESET_SEND_BUCKET, key: normalizedEmail },
+    { bucket: DRAFT_SAVE_BUCKET, key: userKey },
+    { bucket: SUBMIT_BUCKET, key: userKey },
+    { bucket: RESUME_UPLOAD_BUCKET, key: `user:${userId}` },
+  ];
 }
 
 /**
@@ -179,13 +201,13 @@ export const deleteAccountByEmail = internalMutation({
 
     const accounts = await ctx.db
       .query("authAccounts")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+      .withIndex("userIdAndProvider", (q) => q.eq("userId", user._id))
       .collect();
 
     for (const account of accounts) {
       const codes = await ctx.db
         .query("authVerificationCodes")
-        .filter((q) => q.eq(q.field("accountId"), account._id))
+        .withIndex("accountId", (q) => q.eq("accountId", account._id))
         .collect();
       for (const code of codes) {
         await ctx.db.delete(code._id);
@@ -194,9 +216,10 @@ export const deleteAccountByEmail = internalMutation({
 
     const sessions = await ctx.db
       .query("authSessions")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+      .withIndex("userId", (q) => q.eq("userId", user._id))
       .collect();
     for (const session of sessions) {
+      // authVerifiers has no sessionId index — scan per session only.
       const verifiers = await ctx.db
         .query("authVerifiers")
         .filter((q) => q.eq(q.field("sessionId"), session._id))
@@ -224,25 +247,13 @@ export const deleteAccountByEmail = internalMutation({
 
     const limitsForEmail = await ctx.db
       .query("authRateLimits")
-      .filter((q) => q.eq(q.field("identifier"), normalized))
+      .withIndex("identifier", (q) => q.eq("identifier", normalized))
       .collect();
     for (const row of limitsForEmail) {
       await ctx.db.delete(row._id);
     }
 
-    let deletedRateLimits = CLEANUP_PAGE_SIZE;
-    while (deletedRateLimits === CLEANUP_PAGE_SIZE) {
-      const rows = await ctx.db
-        .query("rateLimits")
-        .filter((q) =>
-          q.or(q.eq(q.field("key"), normalized), q.eq(q.field("key"), user._id)),
-        )
-        .take(CLEANUP_PAGE_SIZE);
-      deletedRateLimits = rows.length;
-      for (const row of rows) {
-        await ctx.db.delete(row._id);
-      }
-    }
+    await deleteRateLimitsForBucketKeys(ctx, rateLimitKeysForUser(normalized, user._id));
 
     await ctx.db.delete(user._id);
 

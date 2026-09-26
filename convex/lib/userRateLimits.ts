@@ -4,7 +4,7 @@ import type { MutationCtx } from "./dataModel";
 import { countRecentRateLimits, pruneStaleRateLimits } from "./rateLimitHelpers";
 
 export const DRAFT_SAVE_BUCKET = "draft_save";
-const SUBMIT_BUCKET = "registration_submit";
+export const SUBMIT_BUCKET = "registration_submit";
 
 export async function consumeDraftSaveAllowance(
   ctx: MutationCtx,

@@ -13,15 +13,16 @@ import {
 
 const PDF_PARSE_BUDGET_MS = 5_000;
 export const MAX_PDF_OBJECT_COUNT = 5_000;
+const MAX_PDF_INSPECTION_DEPTH = 8;
 
-const ACTIVE_CONTENT_NAME_MARKERS = [
+const ACTIVE_CONTENT_NAME_TOKENS = new Set([
   "/JavaScript",
   "/JS",
   "/OpenAction",
   "/Launch",
   "/EmbeddedFile",
   "/RichMedia",
-] as const;
+]);
 
 const ACTIVE_DICT_KEYS = [
   "JS",
@@ -30,9 +31,17 @@ const ACTIVE_DICT_KEYS = [
   "EmbeddedFile",
   "RichMedia",
   "OpenAction",
+  "AA",
+  "Names",
+  "EmbeddedFiles",
+  "EF",
+  "AcroForm",
+  "XFA",
 ] as const;
 
 const ACTIVE_ACTION_TYPES = ["/JavaScript", "/Launch"] as const;
+
+const PDF_NAME_TOKEN_PATTERN = /\/[A-Za-z0-9#]+/g;
 
 /** Decode PDF name hex escapes such as `/J#61vaScript` → `/JavaScript`. */
 export function normalizePdfHexEscapes(text: string): string {
@@ -41,11 +50,16 @@ export function normalizePdfHexEscapes(text: string): string {
   );
 }
 
+function normalizePdfNameToken(token: string): string {
+  return normalizePdfHexEscapes(token);
+}
+
 function scanRawPdfForActiveContent(bytes: Uint8Array): string | null {
-  const text = normalizePdfHexEscapes(new TextDecoder("latin1").decode(bytes));
-  for (const marker of ACTIVE_CONTENT_NAME_MARKERS) {
-    if (text.includes(marker)) {
-      return marker;
+  const text = new TextDecoder("latin1").decode(bytes);
+  for (const match of text.matchAll(PDF_NAME_TOKEN_PATTERN)) {
+    const normalized = normalizePdfNameToken(match[0]);
+    if (ACTIVE_CONTENT_NAME_TOKENS.has(normalized)) {
+      return normalized;
     }
   }
   return null;
@@ -56,6 +70,11 @@ export function countPdfObjectDeclarations(bytes: Uint8Array): number {
   const text = new TextDecoder("latin1").decode(bytes);
   const matches = text.match(/\b\d+\s+\d+\s+obj\b/g);
   return matches?.length ?? 0;
+}
+
+/** Count indirect objects after parse (includes objects inside object streams). */
+export function countLoadedPdfObjects(pdf: PDFDocument): number {
+  return [...pdf.context.enumerateIndirectObjects()].length;
 }
 
 function resolvePdfObject(pdf: PDFDocument, value: unknown): unknown {
@@ -70,6 +89,15 @@ function pdfNameValue(value: unknown): string | null {
     return value.asString();
   }
   return null;
+}
+
+function isPdfStreamLike(value: unknown): value is { dict: PDFDict } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "dict" in value &&
+    (value as { dict: unknown }).dict instanceof PDFDict
+  );
 }
 
 function dictionaryContainsActiveContent(dict: PDFDict): boolean {
@@ -87,14 +115,38 @@ function dictionaryContainsActiveContent(dict: PDFDict): boolean {
   return false;
 }
 
-function inspectPdfValue(pdf: PDFDocument, value: unknown): boolean {
+function inspectPdfDict(pdf: PDFDocument, dict: PDFDict, depth: number): boolean {
+  if (dictionaryContainsActiveContent(dict)) {
+    return true;
+  }
+  if (depth >= MAX_PDF_INSPECTION_DEPTH) {
+    return false;
+  }
+
+  for (const key of dict.keys()) {
+    if (inspectPdfValue(pdf, dict.lookup(key), depth + 1)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function inspectPdfValue(pdf: PDFDocument, value: unknown, depth = 0): boolean {
+  if (depth > MAX_PDF_INSPECTION_DEPTH) {
+    return false;
+  }
+
   const resolved = resolvePdfObject(pdf, value);
+  if (isPdfStreamLike(resolved)) {
+    return inspectPdfDict(pdf, resolved.dict, depth + 1);
+  }
   if (resolved instanceof PDFDict) {
-    return dictionaryContainsActiveContent(resolved);
+    return inspectPdfDict(pdf, resolved, depth);
   }
   if (resolved instanceof PDFArray) {
     for (let index = 0; index < resolved.size(); index += 1) {
-      if (inspectPdfValue(pdf, resolved.lookup(index))) {
+      if (inspectPdfValue(pdf, resolved.lookup(index), depth + 1)) {
         return true;
       }
     }
@@ -104,17 +156,17 @@ function inspectPdfValue(pdf: PDFDocument, value: unknown): boolean {
 
 function pdfGraphContainsActiveContent(pdf: PDFDocument): boolean {
   for (const [, obj] of pdf.context.enumerateIndirectObjects()) {
-    if (obj instanceof PDFDict && dictionaryContainsActiveContent(obj)) {
+    if (inspectPdfValue(pdf, obj, 0)) {
       return true;
     }
   }
 
   for (const page of pdf.getPages()) {
     const node = page.node;
-    if (inspectPdfValue(pdf, node.lookup(PDFName.of("AA")))) {
+    if (inspectPdfValue(pdf, node.lookup(PDFName.of("AA")), 0)) {
       return true;
     }
-    if (inspectPdfValue(pdf, node.lookup(PDFName.of("Annots")))) {
+    if (inspectPdfValue(pdf, node.lookup(PDFName.of("Annots")), 0)) {
       return true;
     }
   }
@@ -152,6 +204,11 @@ export async function validateResumePdfBytes(bytes: Uint8Array): Promise<void> {
   }
 
   const pdf = await loadPdfWithinBudget(bytes);
+
+  if (countLoadedPdfObjects(pdf) > MAX_PDF_OBJECT_COUNT) {
+    throw new Error("The file is not a valid PDF.");
+  }
+
   if (pdfGraphContainsActiveContent(pdf)) {
     throw new Error("This PDF contains content that is not allowed.");
   }

@@ -4,8 +4,12 @@ import type { GenericId } from "convex/values";
 import { describe, expect, it } from "vitest";
 import schema from "../../convex/schema";
 import { EMAIL_DELIVERY_RETENTION_MS } from "../../convex/maintenance";
-import { OTP_SEND_BUCKET } from "../../convex/lib/rateLimitBuckets";
-import { DRAFT_SAVE_BUCKET } from "../../convex/lib/userRateLimits";
+import {
+  OTP_SEND_BUCKET,
+  PASSWORD_RESET_SEND_BUCKET,
+  RESUME_UPLOAD_BUCKET,
+} from "../../convex/lib/rateLimitBuckets";
+import { DRAFT_SAVE_BUCKET, SUBMIT_BUCKET } from "../../convex/lib/userRateLimits";
 import { RATE_LIMIT_RETENTION_MS } from "../../convex/rateLimits";
 
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
@@ -127,6 +131,36 @@ describe("maintenance", () => {
         key: "audit-a@example.com",
         createdAt: Date.now(),
       });
+      await ctx.db.insert("rateLimits", {
+        bucket: PASSWORD_RESET_SEND_BUCKET,
+        key: "audit-a@example.com",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("rateLimits", {
+        bucket: DRAFT_SAVE_BUCKET,
+        key: String(userAId),
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("rateLimits", {
+        bucket: SUBMIT_BUCKET,
+        key: String(userAId),
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("rateLimits", {
+        bucket: RESUME_UPLOAD_BUCKET,
+        key: `user:${userAId}`,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("rateLimits", {
+        bucket: OTP_SEND_BUCKET,
+        key: "audit-b@example.com",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("rateLimits", {
+        bucket: DRAFT_SAVE_BUCKET,
+        key: String(userBId),
+        createdAt: Date.now(),
+      });
       await ctx.db.insert("emailDeliveries", {
         serviceId: "delivery-a",
         kind: "otp",
@@ -155,7 +189,13 @@ describe("maintenance", () => {
       expect(await ctx.db.query("authVerificationCodes").collect()).toHaveLength(0);
       expect(await ctx.db.query("authVerifiers").collect()).toHaveLength(0);
       expect(await ctx.db.query("authRateLimits").collect()).toHaveLength(0);
-      expect(await ctx.db.query("rateLimits").collect()).toHaveLength(0);
+      const remainingLimits = await ctx.db.query("rateLimits").collect();
+      expect(remainingLimits).toHaveLength(2);
+      expect(
+        remainingLimits.every(
+          (row) => row.key === "audit-b@example.com" || row.key === String(userBId),
+        ),
+      ).toBe(true);
       expect(await ctx.db.query("emailDeliveries").collect()).toHaveLength(0);
       expect(await ctx.db.query("emailDeliveryRecordingFailures").collect()).toHaveLength(0);
     });

@@ -86,10 +86,16 @@ const INTEGER_FIELD_RANGES: Record<string, { min: number; max: number }> = {
 
 function validateDraftNumberField(key: string, value: unknown): void {
   const range = INTEGER_FIELD_RANGES[key];
-  if (!range || typeof value !== "number" || Number.isNaN(value)) {
+  if (!range || typeof value !== "number") {
     return;
   }
-  if (!Number.isInteger(value) || value < range.min || value > range.max) {
+  if (
+    Number.isNaN(value) ||
+    !Number.isFinite(value) ||
+    !Number.isInteger(value) ||
+    value < range.min ||
+    value > range.max
+  ) {
     throw new Error(DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE);
   }
 }

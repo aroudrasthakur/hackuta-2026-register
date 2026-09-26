@@ -5,13 +5,12 @@
  */
 export const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' https://vercel.live",
+  "script-src 'self'",
   "script-src-attr 'none'",
-  "style-src 'self' https://vercel.live 'unsafe-inline'",
-  "img-src 'self' https://vercel.live https://vercel.com data: blob:",
-  "font-src 'self' https://vercel.live https://assets.vercel.com",
-  "connect-src 'self' https://vercel.live wss://ws-us3.pusher.com https://*.convex.cloud wss://*.convex.cloud https://*.convex.site",
-  "frame-src https://vercel.live",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' https://vercel.com data: blob:",
+  "font-src 'self' https://assets.vercel.com",
+  "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site",
   "worker-src 'self' blob:",
   "media-src 'self'",
   "object-src 'none'",
