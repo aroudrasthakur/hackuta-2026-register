@@ -1,6 +1,7 @@
 import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "./constants";
@@ -81,6 +82,10 @@ export function formToDraftPatch(
 
   patch.otherSchool =
     form.school === SCHOOL_OTHER_OPTION ? form.otherSchool.trim() : "";
+  patch.otherLevelOfStudy =
+    form.levelOfStudy === LEVEL_OF_STUDY_OTHER_OPTION
+      ? form.otherLevelOfStudy.trim()
+      : "";
   patch.otherMajor =
     form.major === MAJOR_OTHER_OPTION ? form.otherMajor.trim() : "";
   patch.otherHearAbout =

@@ -68,10 +68,19 @@ function yearOfStudy(
   answers: {
     graduationYear?: number | string | null;
     levelOfStudy?: string | null;
+    otherLevelOfStudy?: string | null;
   } | null,
 ) {
   if (answers?.graduationYear) return String(answers.graduationYear);
-  if (answers?.levelOfStudy?.trim()) return answers.levelOfStudy.trim();
+  if (answers?.levelOfStudy?.trim()) {
+    if (
+      answers.levelOfStudy.trim() === "Other" &&
+      answers.otherLevelOfStudy?.trim()
+    ) {
+      return answers.otherLevelOfStudy.trim();
+    }
+    return answers.levelOfStudy.trim();
+  }
   return "—";
 }
 

@@ -389,6 +389,35 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("accepts a custom level of study when Other is selected", () => {
+    const form = validRegistrationForm();
+    form.levelOfStudy = "Other";
+    form.otherLevelOfStudy = "Gap year program";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.payload.levelOfStudy).toBe("Other");
+      expect(result.payload.otherLevelOfStudy).toBe("Gap year program");
+    }
+  });
+
+  it("requires a level of study description when Other is selected", () => {
+    const form = validRegistrationForm();
+    form.levelOfStudy = "Other";
+    form.otherLevelOfStudy = "";
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.otherLevelOfStudy).toBe(
+        "Please describe your level of study.",
+      );
+    }
+  });
+
   it("accepts a custom major when Other is selected", () => {
     const form = validRegistrationForm();
     form.major = MAJOR_OTHER_OPTION;

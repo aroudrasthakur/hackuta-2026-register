@@ -294,6 +294,24 @@ describe("ProfilePage (Convex mode)", () => {
     expect(profileValue("Name")).toHaveTextContent(expected);
   });
 
+  it("shows a custom level of study description when Other is selected", () => {
+    dashboardQueryResult.current = {
+      profile: { displayName: null, verifiedEmail: "a@example.com" },
+      registration: {
+        status: "draft",
+        eligibilityStatus: "unreviewed",
+        submittedAt: null,
+        answers: {
+          levelOfStudy: "Other",
+          otherLevelOfStudy: " Gap year program ",
+        },
+      },
+      hackathon: null,
+    };
+    renderConvexProfile();
+    expect(profileValue("Year of study")).toHaveTextContent("Gap year program");
+  });
+
   it("uses level of study when no graduation year is saved and dashes for missing school", () => {
     dashboardQueryResult.current = {
       profile: { displayName: null, verifiedEmail: "a@example.com" },

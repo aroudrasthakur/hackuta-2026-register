@@ -40,6 +40,7 @@ import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OPTIONS,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   LEVELS_OF_STUDY,
   MAJOR_OTHER_OPTION,
   MAJORS,
@@ -614,19 +615,27 @@ function ApplicationFormContent({
               message={errors.internationalStudent}
             />
           </fieldset>
-          <SelectField
+          <SelectWithOther
             id="levelOfStudy"
+            otherId="otherLevelOfStudy"
+            variant="listbox"
             label="Level of study"
             required
             value={form.levelOfStudy}
+            otherValue={form.otherLevelOfStudy}
             options={LEVELS_OF_STUDY}
-            onChange={(value) =>
+            otherOption={LEVEL_OF_STUDY_OTHER_OPTION}
+            otherPlaceholder="Describe your level of study"
+            onValueChange={(value) =>
               updateField(
                 "levelOfStudy",
                 value as ApplicationFormData["levelOfStudy"],
               )
             }
+            onOtherValueChange={(value) => updateField("otherLevelOfStudy", value)}
             error={errors.levelOfStudy}
+            otherError={errors.otherLevelOfStudy}
+            maxLength={FIELD_LIMITS.otherLevelOfStudy}
           />
           <SelectWithOther
             id="major"

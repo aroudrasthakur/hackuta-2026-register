@@ -24,6 +24,19 @@ function renderPhoneField(
 }
 
 describe("PhoneField", () => {
+  it("matches the country selector height styling to the phone input", () => {
+    renderPhoneField();
+
+    const countrySelect = screen.getByLabelText("Applicant calling code");
+    const phoneInput = screen.getByLabelText(/Phone number/);
+
+    expect(countrySelect.className).toContain("h-full");
+    expect(countrySelect.className).toContain("text-sm");
+    expect(countrySelect.className).not.toContain("text-xs");
+    expect(phoneInput.className).toContain("py-3");
+    expect(countrySelect.className).toContain("py-3");
+  });
+
   it("defaults the country selector to US with a compact +code label", () => {
     renderPhoneField();
 

@@ -99,8 +99,10 @@ export function SelectWithOther(props: SelectWithOtherProps) {
       />
     );
 
+  // Render the follow-up field as a sibling, not nested under the picker, so parent
+  // grid layouts can place it in normal field order instead of stacking below.
   return (
-    <div className="space-y-5">
+    <>
       {picker}
       {isOtherMode ? (
         <TextField
@@ -114,6 +116,6 @@ export function SelectWithOther(props: SelectWithOtherProps) {
           {...(otherError ? { error: otherError } : {})}
         />
       ) : null}
-    </div>
+    </>
   );
 }

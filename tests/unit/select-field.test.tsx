@@ -7,6 +7,23 @@ import { SelectField } from "../../src/pages/Register/components/FormFields";
 const OPTIONS = ["Texas", "California", "New York"] as const;
 
 describe("SelectField", () => {
+  it("raises the field stacking order while the list is open", async () => {
+    render(
+      <SelectField
+        id="stateOfResidence"
+        label="State of residence"
+        value=""
+        options={OPTIONS}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("combobox", { name: /State of residence/ }));
+
+    const container = screen.getByRole("listbox").parentElement;
+    expect(container?.className).toContain("z-30");
+  });
+
   it("opens a themed listbox instead of a native select", async () => {
     render(
       <SelectField

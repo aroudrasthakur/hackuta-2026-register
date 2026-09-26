@@ -54,7 +54,7 @@ export function fieldClass(error?: string) {
 }
 
 const compactSelectClass =
-  "appearance-none rounded-lg border-2 border-(--sand) bg-white py-3 pl-2 pr-5 text-xs text-(--ink) " +
+  "appearance-none rounded-lg border-2 border-(--sand) bg-white py-3 pl-2 pr-5 text-sm text-(--ink) " +
   "outline-none transition-colors focus:border-(--ocean) focus:ring-2 focus:ring-(--ocean)/20 " +
   "disabled:cursor-not-allowed disabled:opacity-60";
 

@@ -8,6 +8,7 @@ import {
   FIELD_LIMITS,
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
@@ -27,6 +28,12 @@ const OTHER_FIELDS = [
     other: "otherSchool",
     sentinel: SCHOOL_OTHER_OPTION,
     text: OTHER_OPTION_FIXTURES.school,
+  },
+  {
+    parent: "levelOfStudy",
+    other: "otherLevelOfStudy",
+    sentinel: LEVEL_OF_STUDY_OTHER_OPTION,
+    text: OTHER_OPTION_FIXTURES.levelOfStudy,
   },
   {
     parent: "major",
@@ -64,6 +71,8 @@ describe("other option schema registration", () => {
     const form = validRegistrationForm();
     form.school = SCHOOL_OTHER_OPTION;
     form.otherSchool = "Mars Academy";
+    form.levelOfStudy = LEVEL_OF_STUDY_OTHER_OPTION;
+    form.otherLevelOfStudy = OTHER_OPTION_FIXTURES.levelOfStudy;
     form.major = MAJOR_OTHER_OPTION;
     form.otherMajor = "Space Law";
     form.gender = GENDER_SELF_DESCRIBE_OPTION;
@@ -81,6 +90,8 @@ describe("other option schema registration", () => {
 
     expect(parsed.data.school).toBe(SCHOOL_OTHER_OPTION);
     expect(parsed.data.otherSchool).toBe("Mars Academy");
+    expect(parsed.data.levelOfStudy).toBe(LEVEL_OF_STUDY_OTHER_OPTION);
+    expect(parsed.data.otherLevelOfStudy).toBe(OTHER_OPTION_FIXTURES.levelOfStudy);
     expect(parsed.data.major).toBe(MAJOR_OTHER_OPTION);
     expect(parsed.data.otherMajor).toBe("Space Law");
     expect(parsed.data.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);
@@ -104,6 +115,8 @@ describe("other option schema registration", () => {
     const form = validRegistrationForm();
     form.school = SCHOOL_OTHER_OPTION;
     form.otherSchool = "Mars Academy";
+    form.levelOfStudy = LEVEL_OF_STUDY_OTHER_OPTION;
+    form.otherLevelOfStudy = OTHER_OPTION_FIXTURES.levelOfStudy;
     form.major = MAJOR_OTHER_OPTION;
     form.otherMajor = "Space Law";
     form.gender = GENDER_SELF_DESCRIBE_OPTION;
@@ -113,6 +126,7 @@ describe("other option schema registration", () => {
 
     const patch = formToDraftPatch(form);
     expect(patch.otherSchool).toBe("Mars Academy");
+    expect(patch.otherLevelOfStudy).toBe(OTHER_OPTION_FIXTURES.levelOfStudy);
     expect(patch.otherMajor).toBe("Space Law");
     expect(patch.otherGender).toBe("Genderfluid");
     expect(patch.otherHearAbout).toBe("Professor announcement");
@@ -126,6 +140,8 @@ describe("other option schema registration", () => {
 
     expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
     expect(restored.otherSchool).toBe("Mars Academy");
+    expect(restored.levelOfStudy).toBe(LEVEL_OF_STUDY_OTHER_OPTION);
+    expect(restored.otherLevelOfStudy).toBe(OTHER_OPTION_FIXTURES.levelOfStudy);
     expect(restored.major).toBe(MAJOR_OTHER_OPTION);
     expect(restored.otherMajor).toBe("Space Law");
     expect(restored.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);

@@ -9,7 +9,11 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { DropdownChevron } from "./DropdownChevron";
-import { dropdownOptionClass, dropdownPanelClass } from "./dropdownStyles";
+import {
+  dropdownContainerClass,
+  dropdownOptionClass,
+  dropdownPanelClass,
+} from "./dropdownStyles";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
 import { useDropdownDismiss } from "./useDropdownDismiss";
 
@@ -219,7 +223,7 @@ export const SelectField = memo(function SelectField({
   const displayValue = value || placeholder;
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className={`${dropdownContainerClass(open)} w-full`}>
       <label className={labelClass} htmlFor={id}>
         <span className={legendClass}>
           {label}

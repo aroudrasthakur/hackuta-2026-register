@@ -12,6 +12,8 @@ export const LEVELS_OF_STUDY = [
   "Prefer not to answer",
 ] as const;
 
+export const LEVEL_OF_STUDY_OTHER_OPTION = "Other" as const;
+
 export const EXPERIENCE_LEVELS = [
   "Beginner",
   "Intermediate",
@@ -178,6 +180,7 @@ export const FIELD_LIMITS = {
   allergyDetails: 500,
   otherDietaryRestrictions: 500,
   otherMajor: 200,
+  otherLevelOfStudy: 200,
   otherSchool: 200,
   otherHearAbout: 200,
   otherGender: 200,
