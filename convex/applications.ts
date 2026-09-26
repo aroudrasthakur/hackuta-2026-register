@@ -78,7 +78,9 @@ export const saveApplicationDraft = mutation({
     }
 
     const normalizedPatch = stripAgreementTimestamps(patch);
-    validateDraftPatchLimits(normalizedPatch as Record<string, unknown>);
+    const draftPatch = validateDraftPatchLimits(
+      normalizedPatch as Record<string, unknown>,
+    ) as DraftPatchPayload;
 
     const authUser = await getAuthUser(ctx);
     const email = normalizeEmail(authUser?.email) ?? application.email;
@@ -87,7 +89,7 @@ export const saveApplicationDraft = mutation({
     await replaceApplicationWithDraftPatch(
       ctx,
       application,
-      normalizedPatch as DraftPatchPayload,
+      draftPatch,
       {
         email,
         emailVerificationTime:
@@ -98,12 +100,12 @@ export const saveApplicationDraft = mutation({
 
     if (authUser) {
       await syncAuthUserNameFromApplication(ctx, authUser._id, {
-        firstName: isClearedDraftValue(normalizedPatch.firstName)
+        firstName: isClearedDraftValue(draftPatch.firstName)
           ? null
-          : normalizedPatch.firstName,
-        lastName: isClearedDraftValue(normalizedPatch.lastName)
+          : draftPatch.firstName,
+        lastName: isClearedDraftValue(draftPatch.lastName)
           ? null
-          : normalizedPatch.lastName,
+          : draftPatch.lastName,
       });
     }
 

@@ -11,6 +11,7 @@ import {
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
+import { DRAFT_ARRAY_INVALID_VALUE_MESSAGE } from "../../shared/registration/draftLimits";
 import { formToDraftPatch } from "../../shared/registration/draftPatch";
 import { validateApplicationForm } from "../../shared/registration/validation";
 import {
@@ -1715,6 +1716,33 @@ describe("convex applicant auth flows", () => {
     await expect(t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch(validRegistrationForm(), { storageId: upload.storageId, filename }),
     })).rejects.toThrow(message);
+  });
+
+  it("rejects invalid draft multi-select values", async () => {
+    const t = await authTest();
+    await expect(t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        raceEthnicity: ["Definitely not a valid option"],
+      }),
+    })).rejects.toThrow(DRAFT_ARRAY_INVALID_VALUE_MESSAGE);
+  });
+
+  it("deduplicates draft multi-select values before storing them", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        raceEthnicity: ["White", "White"],
+        dietaryRestrictions: ["Vegan", "Vegan"],
+      }),
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: {
+        raceEthnicity: ["White"],
+        dietaryRestrictions: ["Vegan"],
+      },
+    });
   });
 
   it("reports a saved resume whose file is missing and still allows removal and submit", async () => {

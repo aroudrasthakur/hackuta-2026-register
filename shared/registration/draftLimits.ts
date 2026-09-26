@@ -74,8 +74,14 @@ const ARRAY_MAX_LENGTHS: Record<(typeof STRING_ARRAY_FIELDS)[number], number> = 
   dietaryRestrictions: DIETARY_OPTIONS.length,
 };
 
+const ARRAY_ALLOWED_VALUES: Record<(typeof STRING_ARRAY_FIELDS)[number], ReadonlySet<string>> = {
+  raceEthnicity: new Set(RACE_ETHNICITY_OPTIONS),
+  dietaryRestrictions: new Set(DIETARY_OPTIONS),
+};
+
 export const DRAFT_FIELD_TOO_LONG_MESSAGE = "One or more fields exceed the allowed length.";
 export const DRAFT_ARRAY_TOO_LONG_MESSAGE = "Too many selections in a multi-select field.";
+export const DRAFT_ARRAY_INVALID_VALUE_MESSAGE = "Invalid selection in a multi-select field.";
 export const DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE = "One or more numeric fields are out of range.";
 
 const INTEGER_FIELD_RANGES: Record<string, { min: number; max: number }> = {
@@ -100,8 +106,45 @@ function validateDraftNumberField(key: string, value: unknown): void {
   }
 }
 
-export function validateDraftPatchLimits(patch: Record<string, unknown>): void {
-  for (const [key, value] of Object.entries(patch)) {
+function normalizeDraftStringArray(
+  key: keyof typeof ARRAY_MAX_LENGTHS,
+  value: unknown,
+): string[] {
+  if (!Array.isArray(value)) {
+    throw new Error(DRAFT_ARRAY_INVALID_VALUE_MESSAGE);
+  }
+
+  const allowed = ARRAY_ALLOWED_VALUES[key];
+  const maxItems = ARRAY_MAX_LENGTHS[key];
+  const deduped: string[] = [];
+
+  for (const item of value) {
+    if (typeof item !== "string") {
+      throw new Error(DRAFT_ARRAY_INVALID_VALUE_MESSAGE);
+    }
+    if (item.length > 200) {
+      throw new Error(DRAFT_FIELD_TOO_LONG_MESSAGE);
+    }
+    if (!allowed.has(item)) {
+      throw new Error(DRAFT_ARRAY_INVALID_VALUE_MESSAGE);
+    }
+    if (!deduped.includes(item)) {
+      deduped.push(item);
+    }
+  }
+
+  if (deduped.length > maxItems) {
+    throw new Error(DRAFT_ARRAY_TOO_LONG_MESSAGE);
+  }
+
+  return deduped;
+}
+
+/** Validates draft patch bounds and returns enum arrays deduplicated for storage. */
+export function validateDraftPatchLimits(patch: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...patch };
+
+  for (const [key, value] of Object.entries(normalized)) {
     validateDraftNumberField(key, value);
     if (typeof value === "string") {
       const max = STRING_FIELD_MAX[key];
@@ -110,16 +153,13 @@ export function validateDraftPatchLimits(patch: Record<string, unknown>): void {
       }
     }
 
-    if (Array.isArray(value) && key in ARRAY_MAX_LENGTHS) {
-      const maxItems = ARRAY_MAX_LENGTHS[key as keyof typeof ARRAY_MAX_LENGTHS];
-      if (value.length > maxItems) {
-        throw new Error(DRAFT_ARRAY_TOO_LONG_MESSAGE);
-      }
-      for (const item of value) {
-        if (typeof item === "string" && item.length > 200) {
-          throw new Error(DRAFT_FIELD_TOO_LONG_MESSAGE);
-        }
-      }
+    if (key in ARRAY_MAX_LENGTHS) {
+      normalized[key] = normalizeDraftStringArray(
+        key as keyof typeof ARRAY_MAX_LENGTHS,
+        value,
+      );
     }
   }
+
+  return normalized;
 }
