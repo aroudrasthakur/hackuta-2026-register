@@ -16,9 +16,21 @@ describe("verify-production-env", () => {
     const result = run({
       NODE_ENV: "production",
       VITE_USE_MOCK_API: "true",
+      CI: "false",
+      GITHUB_ACTIONS: "false",
     });
     expect(result.status).toBe(1);
     expect(result.stderr ?? result.stdout).toContain("VITE_USE_MOCK_API");
+  });
+
+  it("allows mock auth for CI GitHub Actions e2e production builds", () => {
+    const result = run({
+      NODE_ENV: "production",
+      VITE_USE_MOCK_API: "true",
+      CI: "true",
+      GITHUB_ACTIONS: "true",
+    });
+    expect(result.status).toBe(0);
   });
 
   it("allows production builds without mock auth", () => {
