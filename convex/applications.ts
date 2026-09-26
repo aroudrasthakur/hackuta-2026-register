@@ -29,12 +29,12 @@ import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
+import { validateDraftPatchLimits } from "../shared/registration/draftLimits";
 import { stripAgreementTimestamps } from "../shared/registration/consentTimestamps";
 import {
   applicationToDraftForm,
   savedResumeFromStoredApplication,
 } from "../shared/registration/draftMapping";
-
 export const getMyApplicationDraft = query({
   args: {},
   handler: async (ctx) => {
@@ -78,6 +78,9 @@ export const saveApplicationDraft = mutation({
     }
 
     const normalizedPatch = stripAgreementTimestamps(patch);
+    const draftPatch = validateDraftPatchLimits(
+      normalizedPatch as Record<string, unknown>,
+    ) as DraftPatchPayload;
 
     const authUser = await getAuthUser(ctx);
     const email = normalizeEmail(authUser?.email) ?? application.email;
@@ -86,7 +89,7 @@ export const saveApplicationDraft = mutation({
     await replaceApplicationWithDraftPatch(
       ctx,
       application,
-      normalizedPatch as DraftPatchPayload,
+      draftPatch,
       {
         email,
         emailVerificationTime:
@@ -97,12 +100,12 @@ export const saveApplicationDraft = mutation({
 
     if (authUser) {
       await syncAuthUserNameFromApplication(ctx, authUser._id, {
-        firstName: isClearedDraftValue(normalizedPatch.firstName)
+        firstName: isClearedDraftValue(draftPatch.firstName)
           ? null
-          : normalizedPatch.firstName,
-        lastName: isClearedDraftValue(normalizedPatch.lastName)
+          : draftPatch.firstName,
+        lastName: isClearedDraftValue(draftPatch.lastName)
           ? null
-          : normalizedPatch.lastName,
+          : draftPatch.lastName,
       });
     }
 

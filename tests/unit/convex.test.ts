@@ -11,6 +11,7 @@ import {
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
+import { DRAFT_ARRAY_INVALID_VALUE_MESSAGE } from "../../shared/registration/draftLimits";
 import { formToDraftPatch } from "../../shared/registration/draftPatch";
 import { validateApplicationForm } from "../../shared/registration/validation";
 import {
@@ -18,7 +19,7 @@ import {
   OTHER_OPTION_FIXTURES,
 } from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm, validRegistrationPayload } from "../fixtures/validRegistrationForm";
-import { INITIAL_FORM } from "../../shared/registration/types";
+import { INITIAL_FORM, type ApplicationFormData } from "../../shared/registration/types";
 import {
   MAX_RESUME_BYTES,
   MAX_RESUME_PAGES,
@@ -1706,15 +1707,42 @@ describe("convex applicant auth flows", () => {
   });
 
   it.each([
-    ["a non-PDF name", "resume.exe"],
-    ["a path", "../resume.pdf"],
-    ["an overly long name", `${"a".repeat(260)}.pdf`],
-  ])("rejects a draft resume with %s", async (_label, filename) => {
+    ["a non-PDF name", "resume.exe", "Please select a PDF file."],
+    ["a path", "../resume.pdf", "Please select a PDF file."],
+    ["an overly long name", `${"a".repeat(260)}.pdf`, "One or more fields exceed the allowed length."],
+  ])("rejects a draft resume with %s", async (_label, filename, message) => {
     const t = await authTest();
     const upload = await verifiedUpload(t);
     await expect(t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch(validRegistrationForm(), { storageId: upload.storageId, filename }),
-    })).rejects.toThrow("Please select a PDF file.");
+    })).rejects.toThrow(message);
+  });
+
+  it("rejects invalid draft multi-select values", async () => {
+    const t = await authTest();
+    await expect(t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        raceEthnicity: ["Definitely not a valid option"] as unknown as ApplicationFormData["raceEthnicity"],
+      }),
+    })).rejects.toThrow(DRAFT_ARRAY_INVALID_VALUE_MESSAGE);
+  });
+
+  it("deduplicates draft multi-select values before storing them", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch({
+        ...validRegistrationForm(),
+        raceEthnicity: ["White", "White"],
+        dietaryRestrictions: ["Vegan", "Vegan"],
+      }),
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      draft: {
+        raceEthnicity: ["White"],
+        dietaryRestrictions: ["Vegan"],
+      },
+    });
   });
 
   it("reports a saved resume whose file is missing and still allows removal and submit", async () => {
