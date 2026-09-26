@@ -36,6 +36,14 @@ describe("SearchableSelect", () => {
     expect(screen.getByRole("combobox")).toHaveValue("Alpha University");
   });
 
+  it("raises the field stacking order while the list is open", async () => {
+    renderSelect();
+    await userEvent.click(screen.getByRole("combobox"));
+
+    const container = screen.getByRole("listbox").parentElement;
+    expect(container?.className).toContain("z-30");
+  });
+
   it("rotates the chevron while the list is open", async () => {
     renderSelect();
     const input = screen.getByRole("combobox");

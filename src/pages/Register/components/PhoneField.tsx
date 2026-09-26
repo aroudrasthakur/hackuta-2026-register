@@ -90,7 +90,7 @@ export function PhoneField({
 
       </label>
 
-      <div className="flex min-w-0 gap-2">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-2">
 
         <label className="sr-only" htmlFor={`${id}-country`}>
 
@@ -104,7 +104,7 @@ export function PhoneField({
 
             id={`${id}-country`}
 
-            className={`${countryCodeSelectClass(error)} w-[5.25rem] tabular-nums`}
+            className={`${countryCodeSelectClass(error)} h-full w-[5.25rem] tabular-nums`}
 
             value={selectedCountry}
 
