@@ -9,7 +9,8 @@ import {
   HACKATHON_SCHEDULE,
   resolveHackathonTimelineSource,
 } from "../shared/hackathon/schedule";
-import { getHackathonName } from "./lib/eventConfig";
+import { DEFAULT_HACKATHON_NAME } from "../shared/hackathon/eventDefaults";
+import { assertRegistrationOpen, getEventConfigRow } from "./lib/eventConfig";
 import { buildHackathonTimeline } from "../shared/hackathon/timeline";
 import { applicationDraftPatch } from "./applicationFields";
 import { requireAuthIdentity } from "./lib/auth";
@@ -72,6 +73,7 @@ export const saveApplicationDraft = mutation({
   },
   handler: async (ctx, { patch }) => {
     const application = await ensureDraftApplication(ctx);
+    await assertRegistrationOpen(ctx);
     if (applicationFormWasSubmitted(application) ||
       (await getApplicationStatus(ctx, application)) !== "draft") {
       throw new Error("Your application has already been submitted.");
@@ -121,9 +123,13 @@ export const getMyApplicantDashboard = query({
 
     const resumeStatus: "none" | "attached" = application?.resumeStorageId ? "attached" : "none";
     const applicantAnswers = application ? projectApplicantAnswers(application) : null;
-    const timelineSource = resolveHackathonTimelineSource(null);
+    const eventConfig = await getEventConfigRow(ctx);
+    const timelineSource = resolveHackathonTimelineSource({
+      ...HACKATHON_SCHEDULE,
+      registrationClosesAt: eventConfig?.registrationClosesAt ?? null,
+    });
     const timeline = buildHackathonTimeline(timelineSource);
-    const hackathonName = await getHackathonName(ctx);
+    const hackathonName = eventConfig?.name ?? DEFAULT_HACKATHON_NAME;
 
     const displayName =
       (application ? formatApplicantFullName(application) : null) ??

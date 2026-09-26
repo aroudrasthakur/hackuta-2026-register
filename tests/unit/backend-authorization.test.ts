@@ -77,6 +77,7 @@ const ref = {
   publicEventConfig: makeFunctionReference<"query">("eventConfig:getPublicEventConfig"),
   hackathonNameInternal: makeFunctionReference<"query">("eventConfig:getHackathonNameInternal"),
   setHackathonName: makeFunctionReference<"mutation">("eventConfig:setHackathonName"),
+  setRegistrationClosesAt: makeFunctionReference<"mutation">("eventConfig:setRegistrationClosesAt"),
 };
 
 const TEST_ORIGIN = "https://hackuta.test";
@@ -143,6 +144,13 @@ describe("authorization boundaries", () => {
       "Authentication required.",
     );
     await expect(t.mutation(ref.ensureApplicantApplication, {})).rejects.toThrow("Authentication required.");
+  });
+
+  it("preserves authentication errors for draft writes after applications close", async () => {
+    const t = createTest();
+    await t.mutation(ref.setRegistrationClosesAt, { closesAt: Date.now() - 1 });
+    await expect(t.mutation(ref.saveDraft, { patch: formToDraftPatch(INITIAL_FORM) }))
+      .rejects.toThrow("Authentication required.");
   });
 
   it("treats an identity for a deleted user with no email as signed out", async () => {
@@ -545,7 +553,9 @@ describe("event config", () => {
       name: "HackUTA 8",
     });
     await expect(t.query(ref.hackathonNameInternal, {})).resolves.toBe("HackUTA 8");
-    await expect(t.query(ref.publicEventConfig, {})).resolves.toEqual({ name: "HackUTA 8" });
+    await expect(t.query(ref.publicEventConfig, {})).resolves.toEqual({
+      name: "HackUTA 8", registrationClosesAt: null,
+    });
   });
 });
 

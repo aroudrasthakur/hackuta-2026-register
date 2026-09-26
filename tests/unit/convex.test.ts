@@ -1364,6 +1364,7 @@ describe("event config", () => {
     const t = createTest() as unknown as ConvexTestClient;
     await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toEqual({
       name: "HackUTA 2026",
+      registrationClosesAt: null,
     });
   });
 
@@ -1372,14 +1373,96 @@ describe("event config", () => {
     await t.mutation("applicant:ensureApplicantApplication", {});
     await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toEqual({
       name: "HackUTA 2026",
+      registrationClosesAt: null,
     });
 
     await t.mutation("eventConfig:setHackathonName", { name: "HackUTA XIV" });
     await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toEqual({
       name: "HackUTA XIV",
+      registrationClosesAt: null,
     });
     await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       hackathon: { name: "HackUTA XIV" },
+    });
+  });
+
+  it("keeps applications open by default and publishes a configurable close date", async () => {
+    const t = await authTest();
+    await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toMatchObject({
+      registrationClosesAt: null,
+    });
+
+    const closesAt = Date.now() + 60_000;
+    await expect(t.mutation("eventConfig:setRegistrationClosesAt", { closesAt })).resolves.toMatchObject({
+      registrationClosesAt: closesAt,
+    });
+    await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toMatchObject({
+      registrationClosesAt: closesAt,
+    });
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      hackathon: { registrationClosesAt: closesAt },
+      timeline: expect.arrayContaining([
+        expect.objectContaining({ id: "application-deadline", timestamp: closesAt }),
+      ]),
+    });
+
+    await expect(t.mutation("eventConfig:setRegistrationClosesAt", { closesAt: null })).resolves.toMatchObject({
+      registrationClosesAt: null,
+    });
+    await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toMatchObject({
+      registrationClosesAt: null,
+    });
+    await expect(t.mutation("registrations:submitRegistration", { data: validRegistrationPayload() }))
+      .resolves.toMatchObject({ ok: true });
+    await drainScheduledFunctions(t);
+  });
+
+  it("accepts a complete application just before the configured cutoff", async () => {
+    const t = await authTest();
+    const closesAt = Date.now() + 60_000;
+    await t.mutation("eventConfig:setRegistrationClosesAt", { closesAt });
+    const clock = vi.spyOn(Date, "now").mockReturnValue(closesAt - 1);
+    try {
+      await expect(t.mutation("registrations:submitRegistration", { data: validRegistrationPayload() }))
+        .resolves.toMatchObject({ ok: true });
+      await expectSubmittedReview(t);
+      await drainScheduledFunctions(t);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it.each([0, 1])("rejects submissions %d milliseconds after the close boundary", async (elapsed) => {
+    const t = await authTest();
+    await t.mutation("applicant:ensureApplicantApplication", {});
+    const closesAt = Date.now() + 60_000;
+    await t.mutation("eventConfig:setRegistrationClosesAt", { closesAt });
+    const clock = vi.spyOn(Date, "now").mockReturnValue(closesAt + elapsed);
+    try {
+      await expect(t.mutation("registrations:submitRegistration", { data: validRegistrationPayload() }))
+        .rejects.toThrow("Applications are closed.");
+      await expect(t.mutation("applications:saveApplicationDraft", {
+        patch: formToDraftPatch(validRegistrationForm()),
+      })).rejects.toThrow("Applications are closed.");
+      await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+        status: "draft", draft: expect.any(Object),
+      });
+      expect(await t.run((ctx) => ctx.db.query("applicationReviews").collect())).toHaveLength(0);
+      expect(await t.run((ctx) => ctx.db.query("applicationSubmissionLogs").collect())).toHaveLength(0);
+      expect(await t.run((ctx) => ctx.db.system.query("_scheduled_functions").collect())).toHaveLength(0);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("rejects invalid close timestamps without mutating event config", async () => {
+    const t = createTest() as unknown as ConvexTestClient;
+    for (const closesAt of [-1, 1.5, 8_640_000_000_000_001]) {
+      await expect(t.mutation("eventConfig:setRegistrationClosesAt", { closesAt }))
+        .rejects.toThrow("Invalid application closing time.");
+    }
+    await expect(t.query("eventConfig:getPublicEventConfig", {})).resolves.toMatchObject({
+      registrationClosesAt: null,
     });
   });
 });

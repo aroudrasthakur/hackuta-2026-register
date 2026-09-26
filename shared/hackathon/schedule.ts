@@ -18,6 +18,24 @@ export function resolveHackathonTimelineSource(
 ): HackathonTimelineSource {
   return {
     ...HACKATHON_SCHEDULE,
+    registrationClosesAt: hackathon?.registrationClosesAt ?? null,
     decisionsReleasedAt: hackathon?.decisionsReleasedAt ?? null,
   };
+}
+
+export function isRegistrationClosed(closesAt: number | null, now = Date.now()) {
+  return closesAt !== null && now >= closesAt;
+}
+
+export function formatCentralDeadline(timestamp: number) {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Chicago",
+    timeZoneName: "short",
+  }).format(new Date(timestamp));
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  APPLICATION_CLOSED_MESSAGE,
   isResumeFieldMessage,
   mapConvexErrorToUserMessage,
   mapResumeUploadHttpError,
@@ -21,6 +22,11 @@ describe("submit error mapping", () => {
     expect(
       mapConvexErrorToUserMessage(new Error("You have already submitted an application.")),
     ).toBe("You have already submitted an application.");
+  });
+
+  it("shows an actionable message when a submission crosses the deadline", () => {
+    expect(mapConvexErrorToUserMessage(new Error("[CONVEX M(registrations:submitRegistration)] Applications are closed.")))
+      .toBe(APPLICATION_CLOSED_MESSAGE);
   });
 
   it("maps unknown server failures to a friendly default", () => {
