@@ -325,6 +325,18 @@ One row per auth user. All application form fields are top-level columns.
 | `builtOrWantToBuild`, `shortDeadlineLearning` | Required multiline answers (max 2,000 chars each) |
 | `hackathonsAttended` | Required integer 0–100; replaces legacy boolean `firstHackathon` |
 
+### `applicationSubmissionLogs`
+
+Append-only snapshot written once on successful submit (`registrations:submitRegistration`). Not written on draft saves or failed submits.
+
+| Field | Notes |
+| --- | --- |
+| `applicationId` | FK to `applications` |
+| Application columns | Full copy of the submitted application row at submit time |
+| `submittedAt` | Submission timestamp — use this instead of `createdAt`, which reflects when the draft row was first created |
+
+Indexed by `applicationId` (`by_application`).
+
 ### Other tables
 
 | Table | Purpose |

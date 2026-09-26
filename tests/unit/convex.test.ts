@@ -416,6 +416,7 @@ describe("convex registrations", () => {
       ...applicationFields,
       applicationId,
     });
+    expect(logs[0]?.submittedAt).toEqual(stored?.submittedAt);
 
     await drainScheduledFunctions(t);
     await expect(t.mutation("registrations:submitRegistration", {

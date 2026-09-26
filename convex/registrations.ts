@@ -31,6 +31,7 @@ const sendApplicationConfirmationEmailRef = makeFunctionReference<"action">(
   "email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail",
 );
 
+/** Snapshot the submitted application once. Consumers should use `submittedAt`, not `createdAt`. */
 async function recordApplicationSubmission(ctx: MutationCtx, applicationId: ApplicationDoc["_id"]) {
   const submitted = await ctx.db.get(applicationId);
   if (!submitted) {
