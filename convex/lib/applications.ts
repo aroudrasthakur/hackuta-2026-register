@@ -146,6 +146,7 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     builtOrWantToBuild: application.builtOrWantToBuild,
     shortDeadlineLearning: application.shortDeadlineLearning,
     emergencyContactName: application.emergencyContactName,
+    emergencyContactRelationship: application.emergencyContactRelationship,
     emergencyContactPhone: application.emergencyContactPhone,
     emergencyContactPhoneCountry: application.emergencyContactPhoneCountry,
     mlhCodeOfConductAgreed: application.mlhCodeOfConductAgreed === true,

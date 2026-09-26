@@ -67,6 +67,9 @@ export async function fillApplicationForm(page: Page) {
     .fill("Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.");
   await selectListboxOption(page, "hearAbout", "Discord");
   await page.getByLabel("Emergency contact name", { exact: false }).fill("Jane Test");
+  await page
+    .getByLabel("Emergency contact relationship", { exact: false })
+    .fill("Parent");
   await page.getByLabel("Emergency contact phone", { exact: false }).fill("2025550124");
   await clickInput(page, "mlhCodeOfConductAgreed");
   await clickInput(page, "mlhDataSharingConsent");

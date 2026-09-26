@@ -10,6 +10,11 @@ import {
 import type { SavedResumeDraft } from "../../../shared/registration/applicantFields";
 import { formToDraftPatch } from "../../../shared/registration/draftPatch";
 import {
+  EMERGENCY_CONTACT_FIELDS,
+  isEmergencyContactStarted,
+  type EmergencyContactField,
+} from "../../../shared/registration/emergencyContact";
+import {
   getMyApplicationDraftRef,
   saveApplicationDraftRef,
 } from "../../convex/api";
@@ -348,6 +353,25 @@ function ApplicationFormContent({
     },
     [],
   );
+
+  const updateEmergencyContact = useCallback(
+    (key: EmergencyContactField, value: string) => {
+      const next = { ...form, [key]: value };
+      updateField(key, value);
+      // Emptying the whole section makes it valid again, so drop sibling
+      // "required" errors that only applied to a partially filled contact.
+      if (!isEmergencyContactStarted(next)) {
+        setErrors((prev) => {
+          if (!EMERGENCY_CONTACT_FIELDS.some((field) => prev[field])) return prev;
+          const cleared = { ...prev };
+          for (const field of EMERGENCY_CONTACT_FIELDS) delete cleared[field];
+          return cleared;
+        });
+      }
+    },
+    [form, updateField],
+  );
+  const emergencyContactStarted = isEmergencyContactStarted(form);
 
   const updateCountry = useCallback(
     (country: ApplicationFormData["countryOfResidence"]) => {
@@ -1044,28 +1068,48 @@ function ApplicationFormContent({
             className="inline-block h-1 w-8 bg-(--ocean)"
             aria-hidden="true"
           ></span>
-          Emergency Contact
+          Emergency Contact (optional)
         </h3>
+        <p className="text-sm text-(--ocean)">
+          If you add an emergency contact, please fill in their name,
+          relationship to you, and phone number.
+        </p>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <TextField
             id="emergencyContactName"
             label="Emergency contact name"
-            required
+            required={emergencyContactStarted}
             value={form.emergencyContactName}
             onChange={(e) =>
-              updateField("emergencyContactName", e.target.value)
+              updateEmergencyContact("emergencyContactName", e.target.value)
             }
             maxLength={FIELD_LIMITS.name}
             error={errors.emergencyContactName}
           />
+          <TextField
+            id="emergencyContactRelationship"
+            label="Emergency contact relationship to you"
+            required={emergencyContactStarted}
+            value={form.emergencyContactRelationship}
+            onChange={(e) =>
+              updateEmergencyContact(
+                "emergencyContactRelationship",
+                e.target.value,
+              )
+            }
+            placeholder="e.g. Parent, sibling, roommate"
+            maxLength={FIELD_LIMITS.emergencyContactRelationship}
+            error={errors.emergencyContactRelationship}
+          />
           <PhoneField
             id="emergencyContactPhone"
             label="Emergency contact phone"
+            required={emergencyContactStarted}
             value={form.emergencyContactPhone}
             country={form.emergencyContactPhoneCountry}
             onChange={(value, country) => {
-              updateField("emergencyContactPhone", value);
+              updateEmergencyContact("emergencyContactPhone", value);
               updateField("emergencyContactPhoneCountry", country);
             }}
             autoComplete="section-emergency tel-national"

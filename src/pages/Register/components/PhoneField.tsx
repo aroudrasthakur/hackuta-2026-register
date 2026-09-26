@@ -44,6 +44,8 @@ export function PhoneField({
 
   autoComplete,
 
+  required = true,
+
 }: {
 
   id: string;
@@ -59,6 +61,8 @@ export function PhoneField({
   error?: string | undefined;
 
   autoComplete?: string;
+
+  required?: boolean;
 
 }) {
 
@@ -86,7 +90,7 @@ export function PhoneField({
 
       <label className={legendClass} htmlFor={id}>
 
-        {label}<RequiredMark />
+        {label}{required ? <RequiredMark /> : null}
 
       </label>
 
@@ -150,7 +154,7 @@ export function PhoneField({
 
           pattern="[0-9]*"
 
-          required
+          required={required}
 
           autoComplete={autoComplete}
 
