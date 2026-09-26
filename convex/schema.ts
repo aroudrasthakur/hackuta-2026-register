@@ -26,7 +26,6 @@ export default defineSchema({
   applications: defineTable(applicationRecord)
     .index("by_auth_user", ["authUserId"])
     .index("by_email", ["email"])
-    .index("by_status", ["status"])
     .index("by_resume", ["resumeStorageId"]),
 
   applicationReviews: defineTable({

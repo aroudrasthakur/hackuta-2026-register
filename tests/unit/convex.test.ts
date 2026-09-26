@@ -448,7 +448,6 @@ describe("convex registrations", () => {
         reviewedBy: submitted!.authUserId,
         updatedAt: Date.now(),
       });
-      await ctx.db.patch(submitted!._id, { status: "draft" });
     });
     await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       registration: { status: "accepted", updatedAt: submitted?.applicantUpdatedAt },
@@ -463,6 +462,25 @@ describe("convex registrations", () => {
       expect.objectContaining({ applicationId: submitted?._id, status: "submitted" }),
     ]);
     await drainScheduledFunctions(t);
+  });
+
+  it("rejects legacy review columns on application rows after cleanup", async () => {
+    const t = await authTest();
+    await t.mutation("applicant:ensureApplicantApplication", {});
+    const application = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(application).toBeTruthy();
+
+    for (const patch of [
+      { status: "draft" },
+      { updatedAt: 1 },
+      { reviewedAt: 1 },
+      { reviewedBy: "legacy-reviewer" },
+    ]) {
+      await expect(t.run((ctx) => ctx.db.patch(application!._id, patch as never))).rejects.toThrow();
+    }
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      status: "draft", draft: expect.any(Object),
+    });
   });
 
   it("does not write legacy review fields but still snapshots submission metadata", async () => {
@@ -670,9 +688,8 @@ describe("convex registrations", () => {
       await ctx.db.insert("applications", {
         authUserId: user._id,
         email: "legacy-consent@example.com",
-        status: "draft",
         createdAt: 1,
-        updatedAt: 1,
+        applicantUpdatedAt: 1,
         mlhCodeOfConductAgreed: true,
         mlhDataSharingConsent: true,
       });

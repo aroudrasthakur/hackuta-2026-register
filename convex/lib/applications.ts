@@ -26,10 +26,7 @@ export async function getApplicationReview(ctx: AuthCtx, applicationId: Applicat
 export async function getApplicationStatus(ctx: AuthCtx, application: ApplicationDoc) {
   const review = await getApplicationReview(ctx, application._id);
   if (review) return review.status === "under_review" ? "submitted" : review.status;
-  if (applicationFormWasSubmitted(application)) {
-    return application.status && application.status !== "draft" ? application.status : "submitted";
-  }
-  return application.status ?? "draft";
+  return applicationFormWasSubmitted(application) ? "submitted" : "draft";
 }
 
 /** Whether the applicant completed a successful registration form submit. */
