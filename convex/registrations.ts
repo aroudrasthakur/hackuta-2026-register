@@ -8,7 +8,7 @@ import {
   RESUME_MISSING_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
 } from "../shared/registration/resume";
-import type { MutationCtx } from "./lib/dataModel";
+import type { ApplicationDoc, MutationCtx } from "./lib/dataModel";
 import { deleteStorageIfExists } from "./lib/draftResume";
 import { getHackathonName } from "./lib/eventConfig";
 import { requireVerifiedAuthUser } from "./lib/auth";
@@ -30,6 +30,21 @@ import {
 const sendApplicationConfirmationEmailRef = makeFunctionReference<"action">(
   "email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail",
 );
+
+/** Snapshot the submitted application once. Consumers should use `submittedAt`, not `createdAt`. */
+async function recordApplicationSubmission(ctx: MutationCtx, applicationId: ApplicationDoc["_id"]) {
+  const submitted = await ctx.db.get(applicationId);
+  if (!submitted) {
+    throw new Error("Application could not be recorded.");
+  }
+
+  const { _id, _creationTime, ...fields } = submitted;
+  void _creationTime;
+  await ctx.db.insert("applicationSubmissionLogs", {
+    ...fields,
+    applicationId: _id,
+  });
+}
 
 async function upsertRegistration(
   ctx: MutationCtx,
@@ -123,6 +138,7 @@ async function upsertRegistration(
   );
 
   await ctx.db.patch(draftApplication._id, submissionPatch);
+  await recordApplicationSubmission(ctx, draftApplication._id);
 
   await syncAuthUserNameFromApplication(ctx, authUser._id, data);
 

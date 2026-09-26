@@ -8,7 +8,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 
 | Path | Summary |
 | --- | --- |
-| [schema.ts](schema.ts) | Tables: applications, eventConfig, rateLimits, resume uploads, emailDeliveries, auth |
+| [schema.ts](schema.ts) | Tables: applications, applicationSubmissionLogs, eventConfig, rateLimits, resume uploads, emailDeliveries, auth |
 | [auth.ts](auth.ts) | Convex Auth — password, sign-up OTP, and password-reset OTP |
 | [passwordReset.ts](passwordReset.ts) | Post-reset session invalidation mutation |
 | [auth.config.ts](auth.config.ts) | Auth provider configuration |

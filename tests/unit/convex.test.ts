@@ -401,6 +401,47 @@ describe("convex registrations", () => {
     })).rejects.toThrow("already submitted");
   }, 15_000);
 
+  it("records one full application snapshot on submit and ignores a rejected resubmit", async () => {
+    const t = await authTest();
+    await t.mutation("registrations:submitRegistration", {
+      data: validRegistrationPayload(),
+    });
+
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    const logs = await t.run((ctx) => ctx.db.query("applicationSubmissionLogs").collect());
+    expect(stored).toBeTruthy();
+    expect(logs).toHaveLength(1);
+    const { _id: applicationId, _creationTime: _applicationCreatedAt, ...applicationFields } = stored!;
+    void _applicationCreatedAt;
+    expect(logs[0]).toMatchObject({
+      ...applicationFields,
+      applicationId,
+    });
+    expect(logs[0]?.submittedAt).toEqual(stored?.submittedAt);
+
+    await drainScheduledFunctions(t);
+    await expect(t.mutation("registrations:submitRegistration", {
+      data: validRegistrationPayload(),
+    })).rejects.toThrow("already submitted");
+    expect(await t.run((ctx) => ctx.db.query("applicationSubmissionLogs").collect())).toHaveLength(1);
+  });
+
+  it("does not record a submission snapshot for an invalid payload", async () => {
+    const t = await authTest();
+    await expect(t.mutation("registrations:submitRegistration", {
+      data: { ...validRegistrationPayload(), age: -1 },
+    })).rejects.toThrow("Invalid registration data.");
+    expect(await t.run((ctx) => ctx.db.query("applicationSubmissionLogs").collect())).toHaveLength(0);
+  });
+
+  it("does not record a submission snapshot when a draft is saved", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm()),
+    });
+    expect(await t.run((ctx) => ctx.db.query("applicationSubmissionLogs").collect())).toHaveLength(0);
+  });
+
   it("rejects registration without MLH Code of Conduct agreement", async () => {
     const t = await authTest();
 
