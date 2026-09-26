@@ -9,6 +9,7 @@ import {
   applicationFormWasSubmitted,
   ensureDraftApplication,
   getApplicationByUser,
+  getApplicationStatus,
   getAuthUser,
 } from "./lib/applications";
 import { normalizeEmail } from "./lib/normalizeEmail";
@@ -17,7 +18,7 @@ export const ensureApplicantApplication = mutation({
   args: {},
   handler: async (ctx) => {
     const application = await ensureDraftApplication(ctx);
-    return { applicationId: application._id, status: application.status };
+    return { applicationId: application._id, status: await getApplicationStatus(ctx, application) };
   },
 });
 

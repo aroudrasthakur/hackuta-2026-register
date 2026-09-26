@@ -18,6 +18,8 @@ import {
   formatApplicantFullName,
   getAuthUser,
   getApplicationByUser,
+  getApplicationStatus,
+  applicationFormWasSubmitted,
   projectApplicantAnswers,
   syncAuthUserNameFromApplication,
 } from "./lib/applications";
@@ -27,12 +29,12 @@ import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
+import { validateDraftPatchLimits } from "../shared/registration/draftLimits";
 import { stripAgreementTimestamps } from "../shared/registration/consentTimestamps";
 import {
   applicationToDraftForm,
   savedResumeFromStoredApplication,
 } from "../shared/registration/draftMapping";
-
 export const getMyApplicationDraft = query({
   args: {},
   handler: async (ctx) => {
@@ -42,13 +44,10 @@ export const getMyApplicationDraft = query({
     }
 
     const application = await getApplicationByUser(ctx, authUser._id);
-    if (!application || application.status !== "draft") {
-      return application
-        ? {
-            status: application.status,
-            draft: null,
-          }
-        : null;
+    if (!application) return null;
+    const status = await getApplicationStatus(ctx, application);
+    if (status !== "draft") {
+      return { status, draft: null };
     }
 
     const storedResume = savedResumeFromStoredApplication(application);
@@ -58,11 +57,11 @@ export const getMyApplicationDraft = query({
       (await ctx.db.system.get("_storage", application.resumeStorageId)) !== null;
 
     return {
-      status: application.status,
+      status,
       draft: applicationToDraftForm(application),
       savedResume: resumeFileExists ? storedResume : null,
       resumeMissing: storedResume !== null && !resumeFileExists,
-      updatedAt: application.updatedAt,
+      updatedAt: application.applicantUpdatedAt ?? application.createdAt,
     };
   },
 });
@@ -73,11 +72,15 @@ export const saveApplicationDraft = mutation({
   },
   handler: async (ctx, { patch }) => {
     const application = await ensureDraftApplication(ctx);
-    if (application.status !== "draft") {
+    if (applicationFormWasSubmitted(application) ||
+      (await getApplicationStatus(ctx, application)) !== "draft") {
       throw new Error("Your application has already been submitted.");
     }
 
     const normalizedPatch = stripAgreementTimestamps(patch);
+    const draftPatch = validateDraftPatchLimits(
+      normalizedPatch as Record<string, unknown>,
+    ) as DraftPatchPayload;
 
     const authUser = await getAuthUser(ctx);
     const email = normalizeEmail(authUser?.email) ?? application.email;
@@ -86,23 +89,23 @@ export const saveApplicationDraft = mutation({
     await replaceApplicationWithDraftPatch(
       ctx,
       application,
-      normalizedPatch as DraftPatchPayload,
+      draftPatch,
       {
         email,
         emailVerificationTime:
           authUser?.emailVerificationTime ?? application.emailVerificationTime,
-        updatedAt,
+        applicantUpdatedAt: updatedAt,
       },
     );
 
     if (authUser) {
       await syncAuthUserNameFromApplication(ctx, authUser._id, {
-        firstName: isClearedDraftValue(normalizedPatch.firstName)
+        firstName: isClearedDraftValue(draftPatch.firstName)
           ? null
-          : normalizedPatch.firstName,
-        lastName: isClearedDraftValue(normalizedPatch.lastName)
+          : draftPatch.firstName,
+        lastName: isClearedDraftValue(draftPatch.lastName)
           ? null
-          : normalizedPatch.lastName,
+          : draftPatch.lastName,
       });
     }
 
@@ -117,6 +120,7 @@ export const getMyApplicantDashboard = query({
 
     const authUser = await getAuthUser(ctx);
     const application = authUser ? await getApplicationByUser(ctx, authUser._id) : null;
+    const status = application ? await getApplicationStatus(ctx, application) : null;
 
     const resumeStatus: "none" | "attached" = application?.resumeStorageId ? "attached" : "none";
     const applicantAnswers = application ? projectApplicantAnswers(application) : null;
@@ -138,9 +142,9 @@ export const getMyApplicantDashboard = query({
       registration: application
         ? {
             id: application._id,
-            status: application.status,
+            status,
             submittedAt: application.submittedAt ?? null,
-            updatedAt: application.updatedAt,
+            updatedAt: application.applicantUpdatedAt ?? application.createdAt,
             answers: applicantAnswers,
             resumeStatus,
           }

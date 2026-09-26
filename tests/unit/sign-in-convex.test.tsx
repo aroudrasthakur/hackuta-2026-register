@@ -117,7 +117,12 @@ beforeEach(() => {
   state.fetchAccessToken = vi.fn(async () => "token");
   state.ensureApplication = vi.fn(async () => ({ applicationId: "p1", status: "draft" }));
   state.invalidateSessions = vi.fn(async () => undefined);
-  state.clientMutation = vi.fn(async () => ({ waitSeconds: 0, hourlyLimitReached: false }));
+  state.clientMutation = vi.fn(async (ref) => {
+    if (getFunctionName(ref as never) === "passwordReset:assertResetCodeAvailable") {
+      return { ok: true };
+    }
+    return { waitSeconds: 0, hourlyLimitReached: false };
+  });
   state.hasClient = true;
   state.isAuthenticated = false;
   state.isLoading = false;
@@ -539,6 +544,25 @@ describe("ForgotPasswordFlow with Convex auth", () => {
     await enterCode(user, "123");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
   });
+
+  it("stays on the code step when the reset code is no longer available", async () => {
+    state.clientMutation.mockImplementation(async (ref) => {
+      if (getFunctionName(ref as never) === "passwordReset:assertResetCodeAvailable") {
+        return { ok: false };
+      }
+      return { waitSeconds: 0, hourlyLimitReached: false };
+    });
+    const user = userEvent.setup();
+    await openForgotPassword(user);
+    await requestCode(user);
+    await screen.findByRole("heading", { name: "Enter your reset code" });
+    await enterCode(user, "112233");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(OTP_INVALID_MESSAGE);
+    expect(screen.getByRole("heading", { name: "Enter your reset code" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Choose a new password" })).not.toBeInTheDocument();
+  });
 });
 
 describe("ForgotPasswordFlow without an auth client", () => {
@@ -563,7 +587,6 @@ describe("ForgotPasswordFlow without an auth client", () => {
   });
 
   it("fails safely on the password step when sign-in is unavailable", async () => {
-    state.hasClient = false;
     vi.stubEnv("VITE_USE_MOCK_API", "false");
     const onComplete = vi.fn();
     const user = userEvent.setup();
@@ -581,6 +604,7 @@ describe("ForgotPasswordFlow without an auth client", () => {
     await user.click(screen.getByRole("button", { name: "Send code" }));
     await enterCode(user);
     await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByRole("heading", { name: "Choose a new password" })).toBeInTheDocument();
 
     rerender(
       <ForgotPasswordFlow

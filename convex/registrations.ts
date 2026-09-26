@@ -16,6 +16,7 @@ import {
   applicationFormWasSubmitted,
   ensureDraftApplication,
   findApplicationByResume,
+  getApplicationReview,
   getApplicationByUser,
   syncAuthUserNameFromApplication,
 } from "./lib/applications";
@@ -42,6 +43,8 @@ async function recordApplicationSubmission(ctx: MutationCtx, applicationId: Appl
   void _creationTime;
   await ctx.db.insert("applicationSubmissionLogs", {
     ...fields,
+    status: "submitted",
+    updatedAt: submitted.submittedAt ?? submitted.applicantUpdatedAt ?? submitted.createdAt,
     applicationId: _id,
   });
 }
@@ -63,7 +66,8 @@ async function upsertRegistration(
   const existing = await getApplicationByUser(ctx, authUser._id);
   const draftApplication = existing ?? (await ensureDraftApplication(ctx));
 
-  if (applicationFormWasSubmitted(draftApplication)) {
+  if (applicationFormWasSubmitted(draftApplication) ||
+    (await getApplicationReview(ctx, draftApplication._id)) !== null) {
     throw new Error("You have already submitted an application.");
   }
 
@@ -123,10 +127,9 @@ async function upsertRegistration(
     ...fields,
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
-    status: "submitted",
     formSubmitted: true,
     submittedAt,
-    updatedAt: submittedAt,
+    applicantUpdatedAt: submittedAt,
     resumeStorageId: resumeStorageId ?? undefined,
     resumeFilename: keepsDraftResume ? draftApplication.resumeFilename : undefined,
   };
@@ -138,6 +141,12 @@ async function upsertRegistration(
   );
 
   await ctx.db.patch(draftApplication._id, submissionPatch);
+  await ctx.db.insert("applicationReviews", {
+    applicationId: draftApplication._id,
+    status: "under_review",
+    createdAt: submittedAt,
+    updatedAt: submittedAt,
+  });
   await recordApplicationSubmission(ctx, draftApplication._id);
 
   await syncAuthUserNameFromApplication(ctx, authUser._id, data);

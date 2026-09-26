@@ -80,7 +80,7 @@ Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and 
               → applications:getMyApplicationDraft on load (hydrate fields)
 ```
 
-Draft rows use `status: "draft"`. Users can leave and resume until submit. Autosave sends a full form snapshot (including application questions and `hackathonsAttended`) except resume blob fields, which update only on explicit upload/remove.
+Draft status is derived from the application submission markers without storing a status on the application. No review row exists until submit; afterwards the backend reads the linked review status. Users can leave and resume until submit. Autosave sends a full form snapshot (including application questions and `hackathonsAttended`) except resume blob fields, which update only on explicit upload/remove.
 
 ### Application submit
 
@@ -88,7 +88,7 @@ Draft rows use `status: "draft"`. Users can leave and resume until submit. Autos
 /register form → client Zod validate
               → POST /resume-upload (optional PDF)
               → registrations:submitRegistration { data, resumeUploadToken }
-              → application status → submitted
+              → application marked submitted + applicationReviews row created atomically
               → confirmation email (internal action)
 ```
 
@@ -108,7 +108,9 @@ Auth lives on `users` (Convex Auth). Application data lives in **applications** 
 | Table | Purpose |
 | --- | --- |
 | users | Convex Auth identity (email, verification time) |
-| applications | Form fields as columns + status, draft/submitted timestamps |
+| applications | Applicant form fields and draft/submission timestamps; no organizer review fields |
+| applicationReviews | Organizer decisions linked to submitted applications; dashboard status prefers the review row |
+| applicationSubmissionLogs | Immutable snapshot of the submitted application |
 | rateLimits | Sliding-window counters (OTP, upload) |
 | resumeUploadSessions | Capability tokens linking upload → registration |
 | _storage | Resume PDF blobs |

@@ -335,12 +335,18 @@ export const registrationPayloadSchema = z
     }),
     raceEthnicity: z
       .array(raceEthnicitySchema)
-      .min(1, "Please select your race or ethnicity."),
+      .min(1, "Please select your race or ethnicity.")
+      .max(RACE_ETHNICITY_OPTIONS.length)
+      .transform((values) => [...new Set(values)]),
     otherRaceEthnicity: safeOptionalPlainText({
       max: FIELD_LIMITS.otherRaceEthnicity,
       tooLongMessage: "Race / ethnicity details are too long.",
     }),
-    dietaryRestrictions: z.array(dietaryOptionSchema).default([]),
+    dietaryRestrictions: z
+      .array(dietaryOptionSchema)
+      .max(DIETARY_OPTIONS.length)
+      .transform((values) => [...new Set(values)])
+      .default([]),
     allergyDetails: safeOptionalPlainText({
       max: FIELD_LIMITS.allergyDetails,
       tooLongMessage: "Allergy details are too long.",

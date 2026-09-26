@@ -170,7 +170,8 @@ export function mergeDraftPatchIntoApplication<T extends Record<string, unknown>
   meta: {
     email: string;
     emailVerificationTime?: number;
-    updatedAt: number;
+    applicantUpdatedAt?: number;
+    updatedAt?: number;
   },
 ): Omit<T, "_id" | "_creationTime"> {
   const next: Record<string, unknown> = { ...application, ...meta };

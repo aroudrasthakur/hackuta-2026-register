@@ -51,9 +51,8 @@ async function seedApplication(
     ctx.db.insert("applications", {
       authUserId,
       email: "draft-resume@example.com",
-      status: "draft",
       createdAt: Date.now(),
-      updatedAt: Date.now(),
+      applicantUpdatedAt: Date.now(),
       ...fields,
     }),
   );
