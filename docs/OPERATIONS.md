@@ -43,7 +43,13 @@ npx convex env set --prod EMAIL_SERVICE_API_KEY <api-key>
 
 JWT keys: `node scripts/generateAuthKeys.mjs` — generate **per environment**, never reuse prod keys in dev.
 
-Dev sync helper: `node scripts/sync-dev-convex-env.mjs` (copies email service settings, sets localhost origins).
+Dev sync helper: `node scripts/sync-dev-convex-env.mjs` copies **non-secret** prod config (`EMAIL_SERVICE_URL` only) and sets localhost origins. **Never** copy `EMAIL_SERVICE_API_KEY` from prod — set a dev-only key:
+
+```bash
+npx convex env set EMAIL_SERVICE_API_KEY <dev-only-key>
+```
+
+Rotate the production email API key if it was ever copied into dev historically.
 
 ### Application review rollout
 
@@ -112,6 +118,23 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 2. Origin allowlist already blocks non-register domains
 3. Rate limits auto-recover after 10 minutes per IP
 4. If needed, temporarily tighten global limit in `convex/resumeUploads.ts` and redeploy
+
+### Incident response (auth / OTP abuse)
+
+1. Check Convex logs for repeated `auth:signIn` failures or OTP rate-limit errors
+2. Per-email limits: 5 OTP sends/hour, 30s resend cooldown; per-IP: 30 auth sends/hour; global auth-send cap: 500/hour
+3. Clear a stuck mailbox with internal `rateLimits:clearOtpSendLimitsForEmail`
+4. Confirm `AUTH_LOG_LEVEL` is **not** `DEBUG` on any deployment (would log OTPs in plain text)
+
+### Incident response (email service)
+
+1. Hit `/health` and `/queue-size` on the email service (requires API key for protected routes)
+2. Inspect `emailDeliveries` and `emailDeliveryRecordingFailures` in Convex
+3. Rotate `EMAIL_SERVICE_API_KEY` in prod and update Convex + the email service; use a separate dev key locally
+
+### Disable integration switch
+
+Unset `EMAIL_SERVICE_API_KEY` on a deployment to fail closed on outbound email (sign-up still works; delivery errors surface to the user).
 
 ## Backups & data retention
 
