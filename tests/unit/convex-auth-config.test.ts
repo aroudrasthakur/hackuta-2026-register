@@ -145,16 +145,15 @@ describe("OTP email delivery", () => {
     expect(ctx.runMutation).toHaveBeenCalledTimes(1);
   });
 
-  it("uses the password-reset limiter and template for reset codes", async () => {
+  it("delivers reset codes without consuming a second request allowance", async () => {
     const ctx = fakeActionCtx();
     await password.reset.sendVerificationRequest(
       { identifier: "a@b.co", token: "654321", expires },
       ctx,
     );
     expect(ctx.calls).toEqual([
-      "rateLimits:assertPasswordResetSendAllowed",
       "email/sendPasswordResetEmail:sendPasswordResetEmail",
-      "rateLimits:recordPasswordResetSend",
     ]);
+    expect(ctx.runMutation).not.toHaveBeenCalled();
   });
 });

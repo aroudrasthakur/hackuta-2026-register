@@ -12,13 +12,7 @@ const sendPasswordResetEmailRef = makeFunctionReference<"action">(
   "email/sendPasswordResetEmail:sendPasswordResetEmail",
 );
 const assertOtpSendAllowedRef = makeFunctionReference<"mutation">("rateLimits:assertOtpSendAllowed");
-const assertPasswordResetSendAllowedRef = makeFunctionReference<"mutation">(
-  "rateLimits:assertPasswordResetSendAllowed",
-);
 const recordOtpSendRef = makeFunctionReference<"mutation">("rateLimits:recordOtpSend");
-const recordPasswordResetSendRef = makeFunctionReference<"mutation">(
-  "rateLimits:recordPasswordResetSend",
-);
 
 const OTP_MAX_AGE_SECONDS = 10 * 60;
 
@@ -57,13 +51,11 @@ const PasswordResetEmail = Email({
     ctx: GenericActionCtx<Record<string, never>>,
   ) => {
     const { identifier, token, expires } = params;
-    await ctx.runMutation(assertPasswordResetSendAllowedRef, { email: identifier });
     await ctx.runAction(sendPasswordResetEmailRef, {
       email: identifier,
       code: token,
       expiresAt: expires.getTime(),
     });
-    await ctx.runMutation(recordPasswordResetSendRef, { email: identifier });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any,
 });

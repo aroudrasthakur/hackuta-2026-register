@@ -37,7 +37,7 @@ All user-derived values in HTML emails pass through `escapeHtml()` in convex/ema
 
 - Email OTP via `@convex-dev/auth` — codes hashed, 10-minute expiry, never logged or returned in API responses
 - Sign-up verification (`email-verification`) and password reset (`password-reset`) use **separate** email providers, templates, and `rateLimits` buckets — a sign-up OTP cannot authorize a reset
-- Password reset requests return **neutral** client copy regardless of whether the email is registered
+- Password reset requests return the same API result and **neutral** code-entry screen for registered and unregistered emails. Request limits apply before account lookup, so cooldowns and hourly caps also behave the same. Missing accounts create no auth or verification state and receive no email; only abuse-prevention rate-limit records are stored.
 - Reset codes are single-use; expired or incorrect codes cannot complete reset; new password must differ from the current password (checked before OTP consumption)
 - After reset, all auth sessions are invalidated and the user must sign in with the new password
 - Registration email is **always** taken from the verified JWT, not from the form payload

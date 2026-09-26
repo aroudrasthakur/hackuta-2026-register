@@ -101,8 +101,8 @@ export function ForgotPasswordFlow({
         throw new Error(PASSWORD_RESET_REQUESTED_MESSAGE);
       }
 
-      // Email-code requests resolve without starting a session, so only a thrown
-      // error indicates that the reset request failed.
+      // Existing and missing accounts both resolve without starting a session.
+      // Show the same confirmation for either; only operational errors reject.
       await convexSignIn("password", formData);
 
       const status = await fetchResetCooldown(normalized);

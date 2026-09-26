@@ -33,10 +33,10 @@ Sign-up OTP provider: `email-verification`. Resend cooldown **30 s**; max **5 se
 
 | Step | FormData fields | Result |
 | --- | --- | --- |
-| Request reset | `email`, `flow=reset` | Sends 6-digit reset email when account exists; client always shows neutral confirmation copy |
+| Request reset | `email`, `flow=reset` | Returns `{ tokens: null }` for registered and unregistered emails; client shows the same code-entry screen and neutral confirmation; sends email only when an account exists |
 | Reset password | `email`, `code`, `newPassword`, `flow=reset-verification` | Verifies reset OTP, updates password hash, invalidates other sessions; client signs out and returns to sign-in |
 
-Reset OTP provider: `password-reset` (separate from sign-up verification). Resend cooldown **30 s**; max **5 sends/hour** (bucket `password_reset_send`). Sign-up OTPs cannot authorize password reset.
+Reset OTP provider: `password-reset` (separate from sign-up verification). Request cooldown **30 s**; max **5 accepted requests/hour** (bucket `password_reset_send`). The limit is checked and recorded atomically before account lookup for every normalized email, including unregistered addresses. Missing accounts create no auth or verification state and receive no email; only the rate-limit request is recorded. Operational failures still reject. Sign-up OTPs cannot authorize password reset.
 
 Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Password reuse is checked only after the code is verified, so an invalid code cannot reveal whether a password guess matches. A valid code is consumed if the proposed password is reused; the user must request a new reset code to try again.
 
@@ -93,7 +93,7 @@ Lookup attempts are rate-limited; invalid emails get a neutral response.
 
 **Type:** mutation · **Auth:** none · `{ email: string }`
 
-Same response shape as `getOtpSendCooldown`. Tracks the `password_reset_send` bucket separately from sign-up OTP sends.
+Same response shape as `getOtpSendCooldown`. Tracks accepted requests for all addresses in the `password_reset_send` bucket separately from sign-up OTP sends, so requesting a reset for an unregistered email produces the same cooldown.
 
 ---
 
@@ -252,8 +252,7 @@ Not callable from the public client.
 | --- | --- |
 | `assertOtpSendAllowed` | Sign-up OTP cooldown / hourly cap |
 | `recordOtpSend` | Bucket `otp_send` |
-| `assertPasswordResetSendAllowed` | Password-reset OTP cooldown / hourly cap |
-| `recordPasswordResetSend` | Bucket `password_reset_send` |
+| `consumePasswordResetRequest` | Atomically checks the reset cooldown / hourly cap and records an accepted request in `password_reset_send` before account lookup |
 | `clearOtpSendLimitsForEmail` | Support/testing reset |
 ### Resume pipeline (`resumeUploads`)
 
@@ -295,8 +294,8 @@ All three emails are queued with the HackUTA email service (`POST /send-email`) 
 | --- | --- | --- | --- |
 | `otp_send` | normalized email | 5 sends | 1 hour |
 | `otp_send` | normalized email | 30 s cooldown | between sends |
-| `password_reset_send` | normalized email | 5 sends | 1 hour |
-| `password_reset_send` | normalized email | 30 s cooldown | between sends |
+| `password_reset_send` | normalized email | 5 accepted requests | 1 hour |
+| `password_reset_send` | normalized email | 30 s cooldown | between accepted requests |
 | `resume_upload` | client IP hash | 5 uploads | 10 minutes |
 | `resume_upload` | global | 100 uploads | 10 minutes |
 
