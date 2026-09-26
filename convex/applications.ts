@@ -29,12 +29,12 @@ import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
+import { validateDraftPatchLimits } from "../shared/registration/draftLimits";
 import { stripAgreementTimestamps } from "../shared/registration/consentTimestamps";
 import {
   applicationToDraftForm,
   savedResumeFromStoredApplication,
 } from "../shared/registration/draftMapping";
-
 export const getMyApplicationDraft = query({
   args: {},
   handler: async (ctx) => {
@@ -78,6 +78,7 @@ export const saveApplicationDraft = mutation({
     }
 
     const normalizedPatch = stripAgreementTimestamps(patch);
+    validateDraftPatchLimits(normalizedPatch as Record<string, unknown>);
 
     const authUser = await getAuthUser(ctx);
     const email = normalizeEmail(authUser?.email) ?? application.email;

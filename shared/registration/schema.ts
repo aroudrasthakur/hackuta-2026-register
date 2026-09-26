@@ -333,12 +333,20 @@ export const registrationPayloadSchema = z
       max: FIELD_LIMITS.otherGender,
       tooLongMessage: "Gender description is too long.",
     }),
-    raceEthnicity: z.array(raceEthnicitySchema).default([]),
+    raceEthnicity: z
+      .array(raceEthnicitySchema)
+      .max(RACE_ETHNICITY_OPTIONS.length)
+      .transform((values) => [...new Set(values)])
+      .default([]),
     otherRaceEthnicity: safeOptionalPlainText({
       max: FIELD_LIMITS.otherRaceEthnicity,
       tooLongMessage: "Race / ethnicity details are too long.",
     }),
-    dietaryRestrictions: z.array(dietaryOptionSchema).default([]),
+    dietaryRestrictions: z
+      .array(dietaryOptionSchema)
+      .max(DIETARY_OPTIONS.length)
+      .transform((values) => [...new Set(values)])
+      .default([]),
     allergyDetails: safeOptionalPlainText({
       max: FIELD_LIMITS.allergyDetails,
       tooLongMessage: "Allergy details are too long.",
