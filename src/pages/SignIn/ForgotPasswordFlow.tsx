@@ -262,10 +262,10 @@ export function ForgotPasswordFlow({
 
   const shellSubtitle: ReactNode =
     step === "email" ? (
-      "Enter the email associated with your account to request a 6-digit reset code."
+      "Enter the email address you used to create your account."
     ) : step === "verify" ? (
       <>
-        Enter the 6-digit reset code if you receive one at{" "}
+        Enter the 6-digit code from the reset email for{" "}
         <span className="sign-in-card__subtitle-email">{email}</span>.
       </>
     ) : (
