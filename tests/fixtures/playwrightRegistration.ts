@@ -53,6 +53,7 @@ export async function fillApplicationForm(page: Page) {
   );
   await page.getByLabel("Expected graduation year", { exact: false }).fill(String(MIN_GRADUATION_YEAR));
   await selectListboxOption(page, "gender", "Man");
+  await clickInput(page, "race-prefer-not-to-answer");
   await selectListboxOption(page, "tshirtSize", "M");
   await dismissOpenListboxes(page);
   await clickInput(page, "dietary-no-beef");
