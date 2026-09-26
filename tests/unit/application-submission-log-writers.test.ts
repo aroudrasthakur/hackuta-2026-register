@@ -44,8 +44,8 @@ describe("application submission log writers", () => {
     const sources = await readConvexSources();
 
     // Schema defines the table. registrations.ts is the only other mention.
-    const mentions = filesMatching(sources, new RegExp(TABLE, "g"));
-    expect(mentions.sort()).toEqual(["registrations.ts", "schema.ts"]);
+    const mentions = [...new Set(filesMatching(sources, new RegExp(TABLE, "g")))];
+    expect(mentions.sort()).toEqual(["maintenance.ts", "registrations.ts", "schema.ts"]);
 
     // Exactly one insert, patch, replace, or delete, and it lives in registrations.ts.
     expect(filesMatching(sources, WRITE)).toEqual(["registrations.ts"]);

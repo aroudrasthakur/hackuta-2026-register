@@ -73,7 +73,9 @@ export default defineSchema({
     kind: emailDeliveryKind,
     recipient: v.string(),
     createdAt: v.number(),
-  }).index("by_recipient", ["recipient"]),
+  })
+    .index("by_recipient", ["recipient"])
+    .index("by_createdAt", ["createdAt"]),
 
   /** Queued emails whose emailDeliveries row could not be written (support lookup). */
   emailDeliveryRecordingFailures: defineTable({
@@ -84,5 +86,6 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_serviceId", ["serviceId"])
-    .index("by_recipient", ["recipient"]),
+    .index("by_recipient", ["recipient"])
+    .index("by_createdAt", ["createdAt"]),
 });
