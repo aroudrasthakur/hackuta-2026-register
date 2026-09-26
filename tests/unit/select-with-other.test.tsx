@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   GENDER_SELF_DESCRIBE_OPTION,
   GENDERS,
+  LEVEL_OF_STUDY_OTHER_OPTION,
+  LEVELS_OF_STUDY,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
 import { SelectWithOther } from "../../src/pages/Register/components/SelectWithOther";
@@ -151,6 +153,57 @@ describe("SelectWithOther", () => {
     expect(
       screen.getByLabelText("Describe your major / field of study"),
     ).toHaveValue("Space Law");
+  });
+
+  it("shows the level-of-study follow-up field when Other is selected", () => {
+    render(
+      <SelectWithOther
+        id="levelOfStudy"
+        otherId="otherLevelOfStudy"
+        variant="listbox"
+        label="Level of study"
+        required
+        value={LEVEL_OF_STUDY_OTHER_OPTION}
+        otherValue="Gap year program"
+        options={LEVELS_OF_STUDY}
+        otherOption={LEVEL_OF_STUDY_OTHER_OPTION}
+        otherPlaceholder="Describe your level of study"
+        onValueChange={vi.fn()}
+        onOtherValueChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("combobox", { name: /Level of study/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: /Describe your level of study/ }),
+    ).toHaveValue("Gap year program");
+  });
+
+  it("renders the other field as a grid sibling instead of nesting it under the picker", () => {
+    const { container } = render(
+      <div className="grid grid-cols-2">
+        <SelectWithOther
+          id="school"
+          otherId="otherSchool"
+          variant="searchable"
+          label="School / university"
+          value={SCHOOL_OTHER_OPTION}
+          otherValue="Mars Academy"
+          options={["Alpha University"]}
+          otherOption="Other (Please Specify)"
+          otherPlaceholder="Enter your school / university"
+          onValueChange={vi.fn()}
+          onOtherValueChange={vi.fn()}
+        />
+        <div data-testid="next-field">Next field</div>
+      </div>,
+    );
+
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.children).toHaveLength(3);
+    expect(grid.children[0]?.querySelector("#school")).not.toBeNull();
+    expect(grid.children[1]?.querySelector("#otherSchool")).not.toBeNull();
+    expect(grid.children[2]).toHaveAttribute("data-testid", "next-field");
   });
 
   it("clears the other value when switching away from Other", async () => {

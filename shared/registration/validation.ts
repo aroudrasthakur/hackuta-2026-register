@@ -2,6 +2,7 @@ import type { ZodError } from "zod";
 import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "./constants";
@@ -48,6 +49,10 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     ),
     internationalStudent: form.internationalStudent ?? undefined,
     levelOfStudy: form.levelOfStudy || undefined,
+    otherLevelOfStudy:
+      form.levelOfStudy === LEVEL_OF_STUDY_OTHER_OPTION
+        ? form.otherLevelOfStudy.trim()
+        : "",
     major: form.major,
     otherMajor:
       form.major === MAJOR_OTHER_OPTION ? form.otherMajor.trim() : "",
@@ -99,6 +104,13 @@ function collectClientFieldErrors(form: ApplicationFormData): FieldErrors {
 
   if (form.major === MAJOR_OTHER_OPTION && !form.otherMajor.trim()) {
     errors.otherMajor = "Please describe your major or field of study.";
+  }
+
+  if (
+    form.levelOfStudy === LEVEL_OF_STUDY_OTHER_OPTION &&
+    !form.otherLevelOfStudy.trim()
+  ) {
+    errors.otherLevelOfStudy = "Please describe your level of study.";
   }
 
   if (

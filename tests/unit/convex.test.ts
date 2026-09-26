@@ -7,6 +7,7 @@ import { RESUME_UPLOAD_BUCKET } from "../../convex/lib/rateLimitBuckets";
 import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
@@ -1638,6 +1639,8 @@ describe("convex applicant auth flows", () => {
       draft: {
         school: SCHOOL_OTHER_OPTION,
         otherSchool: OTHER_OPTION_FIXTURES.school,
+        levelOfStudy: LEVEL_OF_STUDY_OTHER_OPTION,
+        otherLevelOfStudy: OTHER_OPTION_FIXTURES.levelOfStudy,
         major: MAJOR_OTHER_OPTION,
         otherMajor: OTHER_OPTION_FIXTURES.major,
         gender: GENDER_SELF_DESCRIBE_OPTION,
@@ -1656,6 +1659,8 @@ describe("convex applicant auth flows", () => {
     expect(stored).toMatchObject({
       school: SCHOOL_OTHER_OPTION,
       otherSchool: OTHER_OPTION_FIXTURES.school,
+      levelOfStudy: LEVEL_OF_STUDY_OTHER_OPTION,
+      otherLevelOfStudy: OTHER_OPTION_FIXTURES.levelOfStudy,
       major: MAJOR_OTHER_OPTION,
       otherMajor: OTHER_OPTION_FIXTURES.major,
       gender: GENDER_SELF_DESCRIBE_OPTION,
@@ -1674,6 +1679,8 @@ describe("convex applicant auth flows", () => {
     expect(dashboard.registration.answers).toMatchObject({
       school: SCHOOL_OTHER_OPTION,
       otherSchool: OTHER_OPTION_FIXTURES.school,
+      levelOfStudy: LEVEL_OF_STUDY_OTHER_OPTION,
+      otherLevelOfStudy: OTHER_OPTION_FIXTURES.levelOfStudy,
       major: MAJOR_OTHER_OPTION,
       otherMajor: OTHER_OPTION_FIXTURES.major,
       gender: GENDER_SELF_DESCRIBE_OPTION,

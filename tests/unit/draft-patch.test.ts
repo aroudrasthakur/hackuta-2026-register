@@ -3,6 +3,7 @@ import { INITIAL_FORM, type ApplicationFormData } from "../../shared/registratio
 import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
@@ -94,6 +95,8 @@ describe("formToDraftPatch conditional fields", () => {
       ...INITIAL_FORM,
       school: SCHOOL_OTHER_OPTION,
       otherSchool: "  Mars Academy  ",
+      levelOfStudy: LEVEL_OF_STUDY_OTHER_OPTION,
+      otherLevelOfStudy: ` ${OTHER_OPTION_FIXTURES.levelOfStudy} `,
       major: MAJOR_OTHER_OPTION,
       otherMajor: " Space Law ",
       hearAbout: HEAR_ABOUT_OTHER_OPTION,
@@ -103,6 +106,7 @@ describe("formToDraftPatch conditional fields", () => {
     });
 
     expect(patch.otherSchool).toBe("Mars Academy");
+    expect(patch.otherLevelOfStudy).toBe(OTHER_OPTION_FIXTURES.levelOfStudy);
     expect(patch.otherMajor).toBe("Space Law");
     expect(patch.otherHearAbout).toBe(OTHER_OPTION_FIXTURES.hearAbout);
     expect(patch.otherGender).toBe("Genderfluid");
@@ -113,6 +117,8 @@ describe("formToDraftPatch conditional fields", () => {
       ...INITIAL_FORM,
       school: "The University of Texas at Arlington",
       otherSchool: "Mars Academy",
+      levelOfStudy: "Undergraduate University (3+ year)",
+      otherLevelOfStudy: OTHER_OPTION_FIXTURES.levelOfStudy,
       major: "Computer science, computer engineering, or software engineering",
       otherMajor: "Space Law",
       hearAbout: "Discord",
@@ -122,6 +128,7 @@ describe("formToDraftPatch conditional fields", () => {
     });
 
     expect(patch.otherSchool).toBe("");
+    expect(patch.otherLevelOfStudy).toBe("");
     expect(patch.otherMajor).toBe("");
     expect(patch.otherHearAbout).toBe("");
     expect(patch.otherGender).toBe("");

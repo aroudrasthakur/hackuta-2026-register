@@ -40,6 +40,7 @@ export type ApplicationFormData = {
   countryOfResidence: CountryOfResidence | "";
   stateOfResidence: StateOfResidence | "";
   levelOfStudy: LevelOfStudy | "";
+  otherLevelOfStudy: string;
   major: Major | "";
   otherMajor: string;
   graduationYear: string;
@@ -90,6 +91,7 @@ export const FIELD_ORDER: FieldName[] = [
   "stateOfResidence",
   "internationalStudent",
   "levelOfStudy",
+  "otherLevelOfStudy",
   "major",
   "otherMajor",
   "graduationYear",

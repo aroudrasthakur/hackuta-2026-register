@@ -32,6 +32,7 @@ const payload: RegistrationPayload = {
   internationalStudent: false,
   otherRaceEthnicity: undefined,
   levelOfStudy: "Undergraduate University (3+ year)",
+  otherLevelOfStudy: undefined,
   major: "Computer science, computer engineering, or software engineering",
   otherMajor: undefined,
   graduationYear: MIN_GRADUATION_YEAR,

@@ -124,6 +124,7 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     countryOfResidence: application.countryOfResidence,
     stateOfResidence: application.stateOfResidence,
     levelOfStudy: application.levelOfStudy,
+    otherLevelOfStudy: application.otherLevelOfStudy,
     major: application.major,
     otherMajor: application.otherMajor,
     graduationYear: application.graduationYear,

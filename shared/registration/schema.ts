@@ -12,6 +12,7 @@ import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OPTIONS,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   LEVELS_OF_STUDY,
   MAJOR_OTHER_OPTION,
   MAJORS,
@@ -306,6 +307,10 @@ export const registrationPayloadSchema = z
       message: "Please let us know if you are an international student.",
     }),
     levelOfStudy: levelOfStudySchema,
+    otherLevelOfStudy: safeOptionalPlainText({
+      max: FIELD_LIMITS.otherLevelOfStudy,
+      tooLongMessage: "Level of study description is too long.",
+    }),
     major: safePlainText({
       max: FIELD_LIMITS.major,
       message: "Please select a major or field of study.",
@@ -446,6 +451,17 @@ export const registrationPayloadSchema = z
         code: "custom",
         path: ["otherMajor"],
         message: "Please describe your major or field of study.",
+      });
+    }
+
+    if (
+      data.levelOfStudy === LEVEL_OF_STUDY_OTHER_OPTION &&
+      !data.otherLevelOfStudy?.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["otherLevelOfStudy"],
+        message: "Please describe your level of study.",
       });
     }
 
