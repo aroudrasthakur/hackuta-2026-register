@@ -401,6 +401,59 @@ describe("convex registrations", () => {
     })).rejects.toThrow("already submitted");
   }, 15_000);
 
+  it("separates submitted review decisions from applicant-owned drafts and timestamps", async () => {
+    const t = await authTest();
+    await t.mutation("applicant:ensureApplicantApplication", {});
+    expect(await t.run((ctx) => ctx.db.query("applicationReviews").collect())).toEqual([]);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm()),
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      status: "draft",
+      draft: expect.any(Object),
+    });
+    const draft = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(draft?.applicantUpdatedAt).toEqual(expect.any(Number));
+    expect(await t.run((ctx) => ctx.db.query("applicationReviews").collect())).toEqual([]);
+
+    await t.mutation("registrations:submitRegistration", { data: validRegistrationPayload() });
+    const submitted = await t.run((ctx) => ctx.db.query("applications").first());
+    const review = await t.run((ctx) => ctx.db.query("applicationReviews").first());
+    expect(review).toMatchObject({
+      applicationId: submitted?._id,
+      status: "under_review",
+      createdAt: submitted?.submittedAt,
+      updatedAt: submitted?.submittedAt,
+    });
+    expect(await t.run((ctx) => ctx.db.query("applicationReviews").collect())).toHaveLength(1);
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { status: "submitted", updatedAt: submitted?.applicantUpdatedAt },
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(review!._id, {
+        status: "accepted",
+        reviewedAt: Date.now(),
+        reviewedBy: submitted!.authUserId,
+        updatedAt: Date.now(),
+      });
+      await ctx.db.patch(submitted!._id, { status: "draft" });
+    });
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { status: "accepted", updatedAt: submitted?.applicantUpdatedAt },
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      status: "accepted", draft: null,
+    });
+    await expect(t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm()),
+    })).rejects.toThrow("already been submitted");
+    expect(await t.run((ctx) => ctx.db.query("applicationSubmissionLogs").collect())).toEqual([
+      expect.objectContaining({ applicationId: submitted?._id, status: "submitted" }),
+    ]);
+    await drainScheduledFunctions(t);
+  });
+
   it("records one full application snapshot on submit and ignores a rejected resubmit", async () => {
     const t = await authTest();
     await t.mutation("registrations:submitRegistration", {
