@@ -1,6 +1,7 @@
 import { makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { EMERGENCY_CONTACT_FIELDS } from "../shared/registration/emergencyContact";
 import { validateRegistrationPayload } from "../shared/registration/validation";
 import type { RegistrationPayload } from "../shared/registration/types";
 import {
@@ -30,6 +31,29 @@ import {
 const sendApplicationConfirmationEmailRef = makeFunctionReference<"action">(
   "email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail",
 );
+
+const EMERGENCY_CONTACT_STORAGE_FIELDS = [
+  ...EMERGENCY_CONTACT_FIELDS,
+  "emergencyContactPhoneCountry",
+] as const;
+
+/**
+ * A cleared emergency contact is omitted from the validated payload. Convex
+ * patch leaves missing keys untouched and only unsets keys that are present
+ * and undefined, so copy those omissions onto the patch. Otherwise a draft
+ * name and relationship survive after the phone is removed.
+ */
+function withOmittedEmergencyContactCleared(
+  fields: RegistrationPayload,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...fields };
+  if (next.emergencyContactPhone !== undefined) return next;
+
+  for (const field of EMERGENCY_CONTACT_STORAGE_FIELDS) {
+    next[field] = undefined;
+  }
+  return next;
+}
 
 async function upsertRegistration(
   ctx: MutationCtx,
@@ -105,7 +129,7 @@ async function upsertRegistration(
   const keepsDraftResume = Boolean(resumeStorageId) && resumeStorageId === previousResume;
 
   const submissionPatch: Record<string, unknown> = {
-    ...fields,
+    ...withOmittedEmergencyContactCleared(fields),
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
     status: "submitted",

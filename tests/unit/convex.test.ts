@@ -253,6 +253,44 @@ describe("convex registrations", () => {
     await drainScheduledFunctions(t);
   });
 
+  it("drops a drafted emergency contact when the submission omits it", async () => {
+    const t = await authTest();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm()),
+    });
+
+    const data: Record<string, unknown> = { ...validRegistrationPayload() };
+    delete data.emergencyContactName;
+    delete data.emergencyContactRelationship;
+    delete data.emergencyContactPhone;
+    delete data.emergencyContactPhoneCountry;
+
+    await t.mutation("registrations:submitRegistration", { data });
+    const stored = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(stored).toMatchObject({ status: "submitted" });
+    expect(stored).not.toHaveProperty("emergencyContactName");
+    expect(stored).not.toHaveProperty("emergencyContactRelationship");
+    expect(stored).not.toHaveProperty("emergencyContactPhone");
+    expect(stored).not.toHaveProperty("emergencyContactPhoneCountry");
+    await drainScheduledFunctions(t);
+  });
+
+  it("keeps a complete emergency contact when the submission includes it", async () => {
+    const t = await authTest();
+    const data = validRegistrationPayload();
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm()),
+    });
+    await t.mutation("registrations:submitRegistration", { data });
+    expect(await t.run((ctx) => ctx.db.query("applications").first())).toMatchObject({
+      emergencyContactName: data.emergencyContactName,
+      emergencyContactRelationship: data.emergencyContactRelationship,
+      emergencyContactPhone: data.emergencyContactPhone,
+      status: "submitted",
+    });
+    await drainScheduledFunctions(t);
+  });
+
   it("accepts draft patches from clients without phone country fields", async () => {
     const t = await authTest();
     const { phoneCountry, emergencyContactPhoneCountry, ...patch } = formToDraftPatch(validRegistrationForm());
