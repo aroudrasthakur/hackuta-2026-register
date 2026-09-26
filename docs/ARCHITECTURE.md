@@ -80,7 +80,7 @@ Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and 
               → applications:getMyApplicationDraft on load (hydrate fields)
 ```
 
-Legacy draft rows may still have `status: "draft"`, but new drafts derive that status without storing it. No review row exists until submit; afterwards the backend prefers the linked review status. Users can leave and resume until submit. Autosave sends a full form snapshot (including application questions and `hackathonsAttended`) except resume blob fields, which update only on explicit upload/remove.
+Draft status is derived from the application submission markers without storing a status on the application. No review row exists until submit; afterwards the backend reads the linked review status. Users can leave and resume until submit. Autosave sends a full form snapshot (including application questions and `hackathonsAttended`) except resume blob fields, which update only on explicit upload/remove.
 
 ### Application submit
 
@@ -108,7 +108,7 @@ Auth lives on `users` (Convex Auth). Application data lives in **applications** 
 | Table | Purpose |
 | --- | --- |
 | users | Convex Auth identity (email, verification time) |
-| applications | Form fields as columns + applicant draft/submission timestamps (legacy review fields retained during migration) |
+| applications | Applicant form fields and draft/submission timestamps; no organizer review fields |
 | applicationReviews | Organizer decisions linked to submitted applications; dashboard status prefers the review row |
 | applicationSubmissionLogs | Immutable snapshot of the submitted application |
 | rateLimits | Sliding-window counters (OTP, upload) |

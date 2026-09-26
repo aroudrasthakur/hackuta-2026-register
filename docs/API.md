@@ -317,8 +317,8 @@ One row per auth user. All application form fields are top-level columns.
 | --- | --- |
 | `authUserId` | FK to `users` |
 | `email` | Copied from verified auth email |
-| `status`, `updatedAt`, `reviewedAt`, `reviewedBy` | Legacy columns accepted for migration compatibility; new applications do not set them, and existing values are preserved until the guarded strip has run on every deployment |
-| `applicantUpdatedAt` | Applicant draft/submission edits; backfilled from the legacy `updatedAt` |
+| `applicantUpdatedAt` | Applicant draft/submission edits; backfilled from the old timestamp before schema cleanup |
+| `formSubmitted`, `submittedAt` | Applicant-owned submission markers; draft/submitted status is derived from these when no review row exists |
 | `resumeStorageId` | PDF in `_storage` |
 | Applicant fields | See `shared/registration/schema.ts` and `convex/applicationFields.ts` |
 | `builtOrWantToBuild`, `shortDeadlineLearning` | Required multiline answers (max 2,000 chars each) |
@@ -326,7 +326,7 @@ One row per auth user. All application form fields are top-level columns.
 
 ### `applicationReviews`
 
-One row per submitted application, linked by `applicationId`. `under_review` is created atomically with submission; decisions use `accepted`, `waitlisted`, or `rejected`, with legacy `withdrawn` retained for compatibility. `reviewedAt`, `reviewedBy` (auth user ID), and `updatedAt` describe organizer review state. Unmapped historical reviewer strings are retained as `legacyReviewedBy`. Until the migration is complete, user-facing queries prefer the review row but fall back to the legacy application status. No public review-editing mutation exists yet.
+One row per submitted application, linked by `applicationId`. `under_review` is created atomically with submission; decisions use `accepted`, `waitlisted`, or `rejected`, with legacy `withdrawn` retained for compatibility. `reviewedAt`, `reviewedBy` (auth user ID), and `updatedAt` describe organizer review state. Unmapped historical reviewer strings are retained as `legacyReviewedBy`. User-facing queries use the review row for decisions and derive draft/submitted from application submission markers when no review row exists. No public review-editing mutation exists yet.
 
 ### `applicationSubmissionLogs`
 
