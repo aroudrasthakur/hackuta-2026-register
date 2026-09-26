@@ -14,7 +14,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | [auth.config.ts](auth.config.ts) | Auth provider configuration |
 | [http.ts](http.ts) | HTTP router — auth routes + POST /resume-upload |
 | [applicant.ts](applicant.ts) | Application bootstrap and routing state |
-| [eventConfig.ts](eventConfig.ts) | Server-side display name and internal application closing-time control |
+| [eventConfig.ts](eventConfig.ts) | Server-side display name and operator-controlled event timeline dates |
 | [applications.ts](applications.ts) | Draft load/save and applicant dashboard |
 | [registrations.ts](registrations.ts) | Application submission and initial review creation |
 | [resumeUploads.ts](resumeUploads.ts) | Upload rate limits, sessions, discard, scheduled cleanup |

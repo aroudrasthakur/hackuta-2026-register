@@ -71,6 +71,7 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | --- | --- |
 | Update hackathon display name | `npx convex run eventConfig:setHackathonName '{ "name": "HackUTA 2026" }'` |
 | Set or clear application closing time | Internal `eventConfig:setRegistrationClosesAt` accepts `{"closesAt": <UTC epoch milliseconds>}` or `{"closesAt": null}`; confirm the target deployment before running |
+| Update schedule dates | Internal `eventConfig:setTimelineDates` updates opening, closing, decisions, event start, or end using UTC epoch milliseconds; changes are checked for chronological order |
 | Migrate legacy beef/pork answers to dietary restrictions | Convex dashboard → internal `migrations:migrateEatsBeefAndPorkToDietaryRestrictions` (one-time; maps `"No"` only) |
 | Migrate legacy `otherDietary` to `allergyDetails` | `npx convex run migrations:migrateOtherDietaryToAllergyDetails` (add `--prod` for production). Legacy schema field removed; run before deploy if old rows remain. |
 | Migrate legacy `firstHackathon` yes/no to `hackathonsAttended` | `npx convex run migrations:migrateFirstHackathonToHackathonsAttended` (add `--prod` for production). |
@@ -88,18 +89,19 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | Check whether a queued email was sent | Convex dashboard → internal `email/checkEmailStatus:checkEmailStatus` with the row's `serviceId` |
 | Unset stale env var | `npx convex env unset VAR_NAME` |
 
-### Application closing time
+### Event timeline and registration window
 
-The `eventConfig.registrationClosesAt` value is unset by default: deploying this change does **not** close applications. After the backend is deployed, an operator can set or clear the closing time with the internal `eventConfig:setRegistrationClosesAt` mutation without redeploying. Only an operator with Convex deployment access can invoke it; applicants cannot change it.
+The single `eventConfig` row stores optional overrides for registration opening/closing, decisions, and hackathon start/end. Existing rows without these fields use the default schedule; new rows store those defaults. **No closing or decisions date is configured by this change.** Once the backend is deployed, an operator with Convex deployment access can update dates with `eventConfig:setTimelineDates` or set/clear the close time with `eventConfig:setRegistrationClosesAt`, without redeploying. Applicants cannot call these internal mutations. Supplying `null` for opening/start/end resets those dates to their defaults; `null` for closing/decisions clears the date. Dates must remain in chronological order. Changing the decisions date only changes its timeline label; it does not send decision emails.
 
-Supply a UTC epoch millisecond timestamp calculated from the chosen local time in `America/Chicago`. Central time uses **CDT (UTC−05:00)** in daylight-saving months and **CST (UTC−06:00)** otherwise; do not assume a fixed UTC−06:00 offset. No closing date or time is chosen in this repository. With `CLOSES_AT_MS` set to the verified timestamp for the correct deployment:
+Supply UTC epoch millisecond timestamps calculated from the chosen local time in `America/Chicago`. Central time uses **CDT (UTC−05:00)** in daylight-saving months and **CST (UTC−06:00)** otherwise; do not assume a fixed UTC−06:00 offset. With `CLOSES_AT_MS`, `STARTS_AT_MS`, and `ENDS_AT_MS` set to verified timestamps for the correct deployment:
 
 ```bash
 npx convex run eventConfig:setRegistrationClosesAt "{\"closesAt\":${CLOSES_AT_MS}}"
+npx convex run eventConfig:setTimelineDates "{\"startsAt\":${STARTS_AT_MS},\"endsAt\":${ENDS_AT_MS}}"
 npx convex run eventConfig:getPublicEventConfig '{}'
 ```
 
-Use `--prod` only after separately confirming the production target. To reopen, run `npx convex run eventConfig:setRegistrationClosesAt '{"closesAt":null}'` on that deployment. At or after the configured timestamp, the backend rejects draft writes and submissions; saved drafts remain readable, submitted profiles remain accessible, and the registration/profile UI updates without a redeploy. Confirm the configured value and Central-time display before relying on the cutoff.
+Only pass the fields you intend to update; `setTimelineDates` validates the resulting schedule atomically. Use `--prod` only after separately confirming the production target. To reopen, run `npx convex run eventConfig:setRegistrationClosesAt '{"closesAt":null}'` on that deployment. Before opening or at/after closing, the backend rejects draft writes and submissions; saved drafts remain readable, submitted profiles remain accessible, and the registration/profile UI updates without a redeploy. Confirm all configured values and their Central-time display before relying on the window.
 
 ## Monitoring & incidents
 

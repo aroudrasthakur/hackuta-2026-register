@@ -66,7 +66,7 @@ Convex application validators in [convex/applicationFields.ts](../convex/applica
 
 Default schedule in `HACKATHON_SCHEDULE`: applications open **2026-09-25**, applications close **TBA** (`registrationClosesAt: null`), hackathon **2026-11-14 → 2026-11-15**. Timeline shows four milestones (open, close, decisions, event start); null timestamps render as “To be announced”. No RSVP milestone.
 
-Schedule dates are used by applications:getMyApplicantDashboard. The close time defaults to unset/open and, when configured, is read from `eventConfig` alongside the display name ([convex/eventConfig.ts](../convex/eventConfig.ts)). Times shown to applicants use `America/Chicago` (CST or CDT depending on the date).
+`eventConfig` stores the display name and optional overrides for every schedule date, used by applications:getMyApplicantDashboard and the public registration UI ([convex/eventConfig.ts](../convex/eventConfig.ts)). Existing rows without overrides use the defaults above; new rows store those defaults. No close or decisions date is assigned by this change. Times shown to applicants use `America/Chicago` (CST or CDT depending on the date).
 
 ## Lib (`lib/`)
 

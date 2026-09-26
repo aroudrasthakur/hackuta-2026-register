@@ -73,7 +73,7 @@ Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Password re
 
 ### `eventConfig:getPublicEventConfig`
 
-**Auth:** none · no args — `{ name: string; registrationClosesAt: number | null }` for the registration UI. `null` means applications are open; a number is UTC epoch milliseconds, displayed in `America/Chicago`.
+**Auth:** none · no args — returns the display name and resolved `registrationOpensAt`, `registrationClosesAt`, `decisionsReleasedAt`, `startsAt`, and `endsAt` timestamps. The date fields use UTC epoch milliseconds; `registrationClosesAt: null` means no close time, and `decisionsReleasedAt: null` means the decision date is unannounced. Applicant-facing times use `America/Chicago`.
 
 ### `applicant:getApplicantRoutingState`
 
@@ -285,7 +285,8 @@ All three emails are queued with the HackUTA email service (`POST /send-email`) 
 | Function | Purpose |
 | --- | --- |
 | `eventConfig:setHackathonName` | Internal — update the displayed name without redeploying |
-| `eventConfig:setRegistrationClosesAt` | Internal — set UTC epoch milliseconds or `null` to reopen; no time is configured by default |
+| `eventConfig:setRegistrationClosesAt` | Internal — set UTC epoch milliseconds or `null` to reopen; no close time is configured by default |
+| `eventConfig:setTimelineDates` | Internal — atomically update optional opening, closing, decisions, start, and end dates with chronological validation |
 
 ### Maintenance
 
@@ -351,7 +352,7 @@ Indexed by `applicationId` (`by_application`). Its validator is separate from th
 
 | Table | Purpose |
 | --- | --- |
-| `eventConfig` | Server-side name and optional application closing timestamp (single row) |
+| `eventConfig` | Server-side name and operator-controlled schedule dates (single row) |
 | `rateLimits` | Throttle counters |
 | `resumeUploadSessions` | Upload capability tokens |
 | Auth tables | Managed by `@convex-dev/auth` |
