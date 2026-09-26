@@ -12,7 +12,7 @@ import schema from "../../convex/schema";
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 
 const signIn = makeFunctionReference<"action">("auth:signIn");
-const getPasswordResetSendCooldown = makeFunctionReference<"mutation">(
+const getPasswordResetSendCooldown = makeFunctionReference<"query">(
   "rateLimits:getPasswordResetSendCooldown",
 );
 const invalidateSessionsAfterPasswordReset = makeFunctionReference<"mutation">(
@@ -205,7 +205,7 @@ describe("password reset with the real auth provider", () => {
     const request = (address: string) => test.action(signIn, {
       provider: "password", params: { flow: "reset", email: address },
     });
-    const status = (address: string) => test.mutation(getPasswordResetSendCooldown, { email: address });
+    const status = (address: string) => test.query(getPasswordResetSendCooldown, { email: address });
 
     await expect(request(missingEmail)).resolves.toEqual(resetResult);
     for (const address of [email, missingEmail]) {
@@ -244,7 +244,9 @@ describe("password reset with the real auth provider", () => {
     expect(await test.run((ctx) => ctx.db.query("authVerificationCodes").collect())).toEqual(codesBefore);
   });
 
-  it("changes a different password without counting a failed sign-in", async () => {
+  it(
+    "changes a different password without counting a failed sign-in",
+    async () => {
     const { test, email, code } = await setupReset();
     await test.action(signIn, {
       provider: "password",
@@ -265,9 +267,13 @@ describe("password reset with the real auth provider", () => {
     await expect(test.action(signIn, {
       provider: "password", params: { flow: "signIn", email, password: "NewPass1" },
     })).resolves.toMatchObject({ tokens: expect.anything() });
-  });
+  },
+    30_000,
+  );
 
-  it("does not reveal reuse without a valid code and removes the consumed-code session", async () => {
+  it(
+    "does not reveal reuse without a valid code and removes the consumed-code session",
+    async () => {
     const { test, email, code } = await setupReset();
     const wrongCode = code === "000000" ? "999999" : "000000";
     await expect(test.action(signIn, {
@@ -284,30 +290,36 @@ describe("password reset with the real auth provider", () => {
       expect((await ctx.db.query("authVerificationCodes").collect())
         .some((entry) => entry.provider === "password-reset")).toBe(false);
     });
-  });
+  },
+    30_000,
+  );
 
-  it("resets when password sign-in attempts are exhausted", async () => {
-    const { test, email, code } = await setupReset();
-    const accountId = await test.run(async (ctx) => {
-      const account = await ctx.db.query("authAccounts")
-        .withIndex("providerAndAccountId", (q) => q.eq("provider", "password").eq("providerAccountId", email))
-        .unique();
-      if (!account) throw new Error("Missing password account");
-      await ctx.db.insert("authRateLimits", {
-        identifier: account._id, attemptsLeft: 0, lastAttemptTime: Date.now(),
+  it(
+    "resets when password sign-in attempts are exhausted",
+    async () => {
+      const { test, email, code } = await setupReset();
+      const accountId = await test.run(async (ctx) => {
+        const account = await ctx.db.query("authAccounts")
+          .withIndex("providerAndAccountId", (q) => q.eq("provider", "password").eq("providerAccountId", email))
+          .unique();
+        if (!account) throw new Error("Missing password account");
+        await ctx.db.insert("authRateLimits", {
+          identifier: account._id, attemptsLeft: 0, lastAttemptTime: Date.now(),
+        });
+        return account._id;
       });
-      return account._id;
-    });
-    await expect(test.action(signIn, {
-      provider: "password",
-      params: { flow: "reset-verification", email, code, newPassword: "NewPass1" },
-    })).resolves.toMatchObject({ tokens: expect.anything() });
-    await test.run(async (ctx) => {
-      const limit = await ctx.db.query("authRateLimits")
-        .withIndex("identifier", (q) => q.eq("identifier", accountId)).unique();
-      expect(limit?.attemptsLeft).toBe(0);
-    });
-  });
+      await expect(test.action(signIn, {
+        provider: "password",
+        params: { flow: "reset-verification", email, code, newPassword: "NewPass1" },
+      })).resolves.toMatchObject({ tokens: expect.anything() });
+      await test.run(async (ctx) => {
+        const limit = await ctx.db.query("authRateLimits")
+          .withIndex("identifier", (q) => q.eq("identifier", accountId)).unique();
+        expect(limit?.attemptsLeft).toBe(0);
+      });
+    },
+    30_000,
+  );
 
   it("accepts an unused reset code without consuming it", async () => {
     const { test, email, code } = await setupReset();

@@ -1,6 +1,7 @@
 import { Email } from "@convex-dev/auth/providers/Email";
 import { convexAuth } from "@convex-dev/auth/server";
 import { HackutaPassword } from "./lib/hackutaPassword";
+import { getClientAddressFromMeta } from "./lib/clientAddress";
 import type { GenericActionCtx } from "convex/server";
 import { makeFunctionReference } from "convex/server";
 import { ConvexError } from "convex/values";
@@ -11,15 +12,22 @@ const sendOtpEmailRef = makeFunctionReference<"action">("email/sendOtpEmail:send
 const sendPasswordResetEmailRef = makeFunctionReference<"action">(
   "email/sendPasswordResetEmail:sendPasswordResetEmail",
 );
-const assertOtpSendAllowedRef = makeFunctionReference<"mutation">("rateLimits:assertOtpSendAllowed");
-const recordOtpSendRef = makeFunctionReference<"mutation">("rateLimits:recordOtpSend");
+const consumeOtpSendRequestRef = makeFunctionReference<"mutation">(
+  "rateLimits:consumeOtpSendRequest",
+);
 
 const OTP_MAX_AGE_SECONDS = 10 * 60;
 
 function generateSixDigitOtp(): string {
-  const bytes = new Uint32Array(1);
-  crypto.getRandomValues(bytes);
-  return (bytes[0]! % 1_000_000).toString().padStart(6, "0");
+  const max = 1_000_000;
+  const unbiasedLimit = Math.floor(0x1_0000_0000 / max) * max;
+  let value: number;
+  do {
+    const bytes = new Uint32Array(1);
+    crypto.getRandomValues(bytes);
+    value = bytes[0]!;
+  } while (value >= unbiasedLimit);
+  return (value % max).toString().padStart(6, "0");
 }
 
 const EmailVerification = Email({
@@ -31,13 +39,15 @@ const EmailVerification = Email({
     ctx: GenericActionCtx<Record<string, never>>,
   ) => {
     const { identifier, token, expires } = params;
-    await ctx.runMutation(assertOtpSendAllowedRef, { email: identifier });
+    await ctx.runMutation(consumeOtpSendRequestRef, {
+      email: identifier,
+      clientAddress: await getClientAddressFromMeta(ctx),
+    });
     await ctx.runAction(sendOtpEmailRef, {
       email: identifier,
       code: token,
       expiresAt: expires.getTime(),
     });
-    await ctx.runMutation(recordOtpSendRef, { email: identifier });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any,
 });
