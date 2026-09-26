@@ -19,7 +19,7 @@ import {
   OTHER_OPTION_FIXTURES,
 } from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm, validRegistrationPayload } from "../fixtures/validRegistrationForm";
-import { INITIAL_FORM } from "../../shared/registration/types";
+import { INITIAL_FORM, type ApplicationFormData } from "../../shared/registration/types";
 import {
   MAX_RESUME_BYTES,
   MAX_RESUME_PAGES,
@@ -1723,7 +1723,7 @@ describe("convex applicant auth flows", () => {
     await expect(t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch({
         ...validRegistrationForm(),
-        raceEthnicity: ["Definitely not a valid option"],
+        raceEthnicity: ["Definitely not a valid option"] as unknown as ApplicationFormData["raceEthnicity"],
       }),
     })).rejects.toThrow(DRAFT_ARRAY_INVALID_VALUE_MESSAGE);
   });
