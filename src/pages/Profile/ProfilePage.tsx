@@ -4,11 +4,12 @@ import { OdysseyButton } from "../../components/OdysseyButton";
 import { PageShell } from "../../components/PageShell";
 import { SignOutButton } from "../../components/SignOutButton";
 import { StormPageFrame } from "../../components/StormPageFrame";
-import { useHackathonName } from "../../hooks/useHackathonName";
+import { useHackathonName, useRegistrationClosed } from "../../hooks/useHackathonName";
 import { useMockAuth } from "../../hooks/useMockAuth";
 import { getMyApplicantDashboardRef } from "../../convex/api";
 import { getConvexClient } from "../../convex/client";
 import { resolveHackathonTimelineSource } from "../../../shared/hackathon/schedule";
+import { APPLICATION_CLOSED_MESSAGE } from "../../../shared/registration/submitErrors";
 import { buildHackathonTimeline } from "../../../shared/hackathon/timeline";
 import { getApplicantStatusLabel } from "./applicantStatus";
 import { ApplicantTimeline } from "./ApplicantTimeline";
@@ -93,6 +94,9 @@ export default function ProfilePage() {
     getMyApplicantDashboardRef,
     client && !mockAuth.enabled ? {} : "skip",
   );
+  const closed = useRegistrationClosed(
+    mockAuth.enabled ? null : dashboard?.hackathon?.registrationClosesAt ?? null,
+  );
 
   if (!mockAuth.enabled && dashboard === undefined) {
     return (
@@ -171,7 +175,9 @@ export default function ProfilePage() {
           >
             {submitted
               ? "Nothing left to do. We'll email you when decisions go out."
-              : "Start or finish your application before the deadline. Your progress is saved automatically."}
+              : closed
+                ? APPLICATION_CLOSED_MESSAGE
+                : "Start or finish your application before the deadline. Your progress is saved automatically."}
           </p>
         </header>
 
@@ -198,7 +204,7 @@ export default function ProfilePage() {
               ) : null}
             </dl>
 
-            {!submitted ? (
+            {!submitted && !closed ? (
               <div className="flex justify-start">
                 <OdysseyButton
                   href="/register"

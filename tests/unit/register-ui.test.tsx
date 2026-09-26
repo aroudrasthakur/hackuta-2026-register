@@ -19,6 +19,7 @@ import {
 } from "../fixtures/fillApplicationForm";
 import { LANDING_URL } from "../../src/constants/site";
 import { ApplicationForm } from "../../src/pages/Register/ApplicationForm";
+import RegisterPage from "../../src/pages/Register/RegisterPage";
 import { SuccessStep } from "../../src/pages/Register/SuccessStep";
 
 vi.mock("../../src/hooks/useSessionAuth", () => ({
@@ -46,7 +47,10 @@ vi.mock("../../src/pages/Register/registerApi", () => ({
 
 const draftApi = vi.hoisted(() => ({
   result: null as
-    { status: string; draft: Partial<ApplicationFormData> } | null | undefined,
+    | { status: string; draft: Partial<ApplicationFormData> }
+    | { name: string; registrationClosesAt: number | null }
+    | null
+    | undefined,
   save: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
@@ -115,6 +119,50 @@ describe("SuccessStep", () => {
     expect(
       screen.getByRole("link", { name: "View your application" }),
     ).toHaveAttribute("href", "/profile");
+  });
+});
+
+describe("RegisterPage closing", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it("shows a closed page instead of the form after the deadline", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    draftApi.result = { name: "HackUTA 2026", registrationClosesAt: Date.now() - 1_000 };
+    render(<MemoryRouter><RegisterPage /></MemoryRouter>);
+    expect(screen.getByRole("heading", { name: "Applications are closed" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit application" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View your profile" })).toHaveAttribute("href", "/profile");
+  });
+
+  it("keeps the form available while registration is open", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    draftApi.result = { name: "HackUTA 2026", registrationClosesAt: Date.now() + 60_000 };
+    render(<MemoryRouter><RegisterPage /></MemoryRouter>);
+    expect(screen.getByRole("button", { name: "Submit application" })).toBeInTheDocument();
+  });
+
+  it("closes an already-open form at the exact deadline without reloading", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    const now = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    draftApi.result = { name: "HackUTA 2026", registrationClosesAt: now + 1_000 };
+    render(<MemoryRouter><RegisterPage /></MemoryRouter>);
+    expect(screen.getByRole("button", { name: "Submit application" })).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(screen.getByRole("heading", { name: "Applications are closed" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit application" })).not.toBeInTheDocument();
+  });
+
+  it("waits for close-date configuration before rendering the form", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    draftApi.result = undefined;
+    render(<MemoryRouter><RegisterPage /></MemoryRouter>);
+    expect(screen.getByText("Loading registration…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit application" })).not.toBeInTheDocument();
   });
 });
 

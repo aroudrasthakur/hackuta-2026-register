@@ -13,6 +13,7 @@ import {
   RESUME_UPLOAD_EXPIRED_MESSAGE,
 } from "../../shared/registration/resume";
 import {
+  APPLICATION_CLOSED_MESSAGE,
   DRAFT_SAVE_ERROR_MESSAGE,
   RESUME_REMOVE_ERROR_MESSAGE,
   RESUME_UPLOAD_ERROR_MESSAGE,
@@ -282,6 +283,15 @@ describe("ApplicationForm submission failures and recovery", () => {
     expect(screen.getByText(DRAFT_SAVE_ERROR_MESSAGE)).toBeInTheDocument();
     expect(submitRegistration).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Submit application" })).toBeEnabled();
+  });
+
+  it("shows the closed message instead of a pointless retry when a draft save crosses the cutoff", async () => {
+    env.saveDraft.mockRejectedValue(new Error(APPLICATION_CLOSED_MESSAGE));
+    renderValidForm();
+    await submit();
+    expect(screen.getByText(APPLICATION_CLOSED_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try saving again" })).not.toBeInTheDocument();
+    expect(submitRegistration).not.toHaveBeenCalled();
   });
 
   it("shows upload failures on the resume field, scrolls to it, and does not submit", async () => {

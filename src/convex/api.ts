@@ -3,7 +3,7 @@ import { makeFunctionReference } from "convex/server";
 export const getPublicEventConfigRef = makeFunctionReference<
   "query",
   Record<string, never>,
-  { name: string }
+  { name: string; registrationClosesAt: number | null }
 >("eventConfig:getPublicEventConfig");
 
 export const getApplicantRoutingStateRef = makeFunctionReference<
