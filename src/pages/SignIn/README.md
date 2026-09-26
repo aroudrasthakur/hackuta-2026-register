@@ -37,7 +37,7 @@ Password, OTP, and reset copy: [shared/auth/](../../../shared/auth/).
 | Request reset code | `reset` | `email` |
 | Set new password | `reset-verification` | `email`, `code`, `newPassword` |
 
-After a successful reset, the app invalidates all auth sessions, signs out, and shows a success banner on the sign-in form. Reset code requests always show neutral copy (“If an account exists…”) regardless of whether the email is registered.
+After a successful reset, the app invalidates all auth sessions, signs out, and shows a success banner on the sign-in form. Accepted reset code requests return the same non-session result for registered and unregistered emails. Both advance to the code step with neutral copy (“If an account exists…”) and the same request cooldown. Operational errors keep the user on the email step with a generic error; request limits apply to all addresses before account lookup.
 
 Signup OTPs use provider `email-verification`; reset OTPs use `password-reset` (separate buckets and email templates).
 

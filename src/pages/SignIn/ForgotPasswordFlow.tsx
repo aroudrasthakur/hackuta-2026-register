@@ -101,15 +101,9 @@ export function ForgotPasswordFlow({
         throw new Error(PASSWORD_RESET_REQUESTED_MESSAGE);
       }
 
-      try {
-        await convexSignIn("password", formData);
-      } catch (err) {
-        const message = mapPasswordResetError(err);
-        if (message.includes("Please wait") || message.includes("Too many reset")) {
-          throw err;
-        }
-        // Do not reveal whether the account exists.
-      }
+      // Existing and missing accounts both resolve without starting a session.
+      // Show the same confirmation for either; only operational errors reject.
+      await convexSignIn("password", formData);
 
       const status = await fetchResetCooldown(normalized);
       setHourlyLimitReached(status.hourlyLimitReached);
@@ -268,10 +262,10 @@ export function ForgotPasswordFlow({
 
   const shellSubtitle: ReactNode =
     step === "email" ? (
-      "Enter the email for your account and we'll send a 6-digit reset code."
+      "Enter the email address you used to create your account."
     ) : step === "verify" ? (
       <>
-        Enter the 6-digit code we sent to{" "}
+        Enter the 6-digit code from the reset email for{" "}
         <span className="sign-in-card__subtitle-email">{email}</span>.
       </>
     ) : (

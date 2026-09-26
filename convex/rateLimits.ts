@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { OTP_SEND_MAX_PER_HOUR } from "../shared/auth/otpRateLimit";
 import { internalMutation, mutation } from "./_generated/server";
 import { normalizeEmail } from "./lib/normalizeEmail";
@@ -163,7 +163,9 @@ export const getPasswordResetSendCooldown = mutation({
   },
 });
 
-export const assertPasswordResetSendAllowed = internalMutation({
+// Count requests for all addresses, including missing accounts. Checking and
+// recording in one mutation also prevents concurrent requests bypassing limits.
+export const consumePasswordResetRequest = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
     const normalized = normalizeEmail(email);
@@ -171,28 +173,19 @@ export const assertPasswordResetSendAllowed = internalMutation({
       throw new Error("Invalid email.");
     }
 
+    const now = Date.now();
     const status = await lookupOtpSendStatus(
       ctx,
       normalized,
-      Date.now(),
+      now,
       PASSWORD_RESET_SEND_BUCKET,
     );
     if (status.hourlyLimitReached) {
-      throw new Error("Too many reset requests. Please try again later.");
+      throw new ConvexError("Too many reset requests. Please try again later.");
     }
     if (status.waitSeconds > 0) {
-      throw new Error("Please wait before requesting another code.");
+      throw new ConvexError("Please wait before requesting another code.");
     }
-  },
-});
-
-export const recordPasswordResetSend = internalMutation({
-  args: { email: v.string() },
-  handler: async (ctx, { email }) => {
-    const normalized = normalizeEmail(email);
-    if (!normalized) return;
-
-    const now = Date.now();
     await ctx.db.insert("rateLimits", {
       bucket: PASSWORD_RESET_SEND_BUCKET,
       key: normalized,

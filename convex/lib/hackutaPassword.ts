@@ -17,6 +17,9 @@ import { assertPasswordNotReused } from "./assertPasswordNotReused";
 const invalidateResetSessionRef = makeFunctionReference<"mutation">(
   "passwordReset:invalidateResetSession",
 );
+const consumePasswordResetRequestRef = makeFunctionReference<"mutation">(
+  "rateLimits:consumePasswordResetRequest",
+);
 
 function validateDefaultPasswordRequirements(password: string) {
   if (!password || password.length < 8) {
@@ -101,13 +104,25 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
         if (!config.reset) {
           throw new Error(`Password reset is not enabled for ${provider}`);
         }
-        const { account } = await retrieveAccount(ctx, {
+        // Apply the same limits before lookup so cooldowns cannot reveal accounts.
+        await ctx.runMutation(consumePasswordResetRequestRef, { email });
+        const retrieved = await retrieveAccount(ctx, {
           provider,
           account: { id: email },
+        }).catch((error: unknown) => {
+          // Convex Auth throws for a missing account; only this expected case
+          // gets the same null result as a successful reset-code request.
+          if (error instanceof Error && error.message === "InvalidAccountId") {
+            return null;
+          }
+          throw error;
         });
+        if (retrieved === null) {
+          return null;
+        }
         return await signInViaProvider(ctx, config.reset, {
-          accountId: account._id,
-          params,
+          accountId: retrieved.account._id,
+          params: { ...params, email },
         });
       }
 
@@ -117,6 +132,11 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
         }
         if (params.newPassword === undefined) {
           throw new Error("Missing `newPassword` param for `reset-verification` flow");
+        }
+        // Without a code, the email provider would start another send. All sends
+        // must go through the rate-limited reset request branch above.
+        if (typeof params.code !== "string" || !/^\d{6}$/.test(params.code)) {
+          throw new Error("Invalid code");
         }
 
         const newPassword = params.newPassword as string;

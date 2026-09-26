@@ -21,13 +21,10 @@ const getPasswordResetSendCooldown = makeFunctionReference<"mutation">(
   "rateLimits:getPasswordResetSendCooldown",
 );
 const assertOtpSendAllowed = makeFunctionReference<"mutation">("rateLimits:assertOtpSendAllowed");
-const assertPasswordResetSendAllowed = makeFunctionReference<"mutation">(
-  "rateLimits:assertPasswordResetSendAllowed",
+const consumePasswordResetRequest = makeFunctionReference<"mutation">(
+  "rateLimits:consumePasswordResetRequest",
 );
 const recordOtpSend = makeFunctionReference<"mutation">("rateLimits:recordOtpSend");
-const recordPasswordResetSend = makeFunctionReference<"mutation">(
-  "rateLimits:recordPasswordResetSend",
-);
 const clearOtpSendLimitsForEmail = makeFunctionReference<"mutation">(
   "rateLimits:clearOtpSendLimitsForEmail",
 );
@@ -159,11 +156,11 @@ describe("rateLimits", () => {
     });
   });
 
-  it("tracks password reset sends separately from signup OTP sends", async () => {
+  it("tracks password reset requests separately from signup OTP sends", async () => {
     const test = convexTest(schema, modules);
     await test.run(async (ctx) => {
       const email = "reset-only@example.com";
-      await ctx.runMutation(recordPasswordResetSend, { email });
+      await ctx.runMutation(consumePasswordResetRequest, { email });
 
       const resetAttempts = await ctx.db
         .query("rateLimits")
@@ -194,7 +191,7 @@ describe("rateLimits", () => {
         createdAt: now - 5_000,
       });
 
-      await expect(ctx.runMutation(assertPasswordResetSendAllowed, { email })).rejects.toThrow(
+      await expect(ctx.runMutation(consumePasswordResetRequest, { email })).rejects.toThrow(
         "Please wait before requesting another code.",
       );
     });
@@ -231,7 +228,7 @@ describe("rateLimits", () => {
         });
       }
 
-      await expect(ctx.runMutation(assertPasswordResetSendAllowed, { email })).rejects.toThrow(
+      await expect(ctx.runMutation(consumePasswordResetRequest, { email })).rejects.toThrow(
         "Too many reset requests. Please try again later.",
       );
       const status = await ctx.runMutation(getPasswordResetSendCooldown, { email });
@@ -298,7 +295,7 @@ describe("rateLimits", () => {
 
   it.each([
     ["assertOtpSendAllowed", assertOtpSendAllowed],
-    ["assertPasswordResetSendAllowed", assertPasswordResetSendAllowed],
+    ["consumePasswordResetRequest", consumePasswordResetRequest],
   ])("%s rejects blank emails", async (_name, ref) => {
     const test = convexTest(schema, modules);
     await test.run(async (ctx) => {
@@ -308,7 +305,6 @@ describe("rateLimits", () => {
 
   it.each([
     ["recordOtpSend", recordOtpSend],
-    ["recordPasswordResetSend", recordPasswordResetSend],
   ])("%s ignores blank emails", async (_name, ref) => {
     const test = convexTest(schema, modules);
     await test.run(async (ctx) => {
@@ -319,7 +315,7 @@ describe("rateLimits", () => {
 
   it.each([
     ["recordOtpSend", recordOtpSend, OTP_SEND_BUCKET],
-    ["recordPasswordResetSend", recordPasswordResetSend, PASSWORD_RESET_SEND_BUCKET],
+    ["consumePasswordResetRequest", consumePasswordResetRequest, PASSWORD_RESET_SEND_BUCKET],
   ])("%s prunes entries older than the send window", async (_name, ref, bucket) => {
     const test = convexTest(schema, modules);
     await test.run(async (ctx) => {
@@ -337,6 +333,17 @@ describe("rateLimits", () => {
       expect(mine.every((row) => row.createdAt >= now - OTP_SEND_WINDOW_MS)).toBe(true);
       expect(rows.some((row) => row.key === "other@example.com")).toBe(true);
     });
+  });
+
+  it("normalizes reset request keys and does not count a rejected retry", async () => {
+    const test = convexTest(schema, modules);
+    await test.mutation(consumePasswordResetRequest, { email: " Reset@Example.COM " });
+    await expect(test.mutation(consumePasswordResetRequest, { email: "reset@example.com" }))
+      .rejects.toThrow("Please wait before requesting another code.");
+
+    const attempts = await test.run((ctx) => ctx.db.query("rateLimits").collect());
+    expect(attempts).toHaveLength(1);
+    expect(attempts[0]).toMatchObject({ bucket: PASSWORD_RESET_SEND_BUCKET, key: "reset@example.com" });
   });
 
   it("clears OTP send limits for one email only", async () => {

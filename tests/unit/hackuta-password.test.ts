@@ -1,4 +1,5 @@
 import { ConvexError } from "convex/values";
+import { getFunctionName } from "convex/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PASSWORD_REUSE_MESSAGE } from "../../shared/auth/passwordResetMessages";
 
@@ -212,8 +213,60 @@ describe("HackutaPassword reset", () => {
     vi.mocked(signInViaProvider).mockResolvedValue(null as never);
     const params = { flow: "reset", email: "a@b.co" };
 
-    await provider({ reset: reset as never }).authorize(params, ctx);
+    await expect(provider({ reset: reset as never }).authorize(params, ctx)).resolves.toBeNull();
+    expect(getFunctionName(ctx.runMutation.mock.calls[0]?.[0])).toBe("rateLimits:consumePasswordResetRequest");
+    expect(ctx.runMutation.mock.calls[0]?.[1]).toEqual({ email: "a@b.co" });
+    expect(ctx.runMutation.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(retrieveAccount).mock.invocationCallOrder[0]!,
+    );
     expect(signInViaProvider).toHaveBeenCalledWith(ctx, reset, { accountId: "account1", params });
+  });
+
+  it("returns the same result without creating reset state for a missing account", async () => {
+    vi.mocked(retrieveAccount).mockRejectedValue(new Error("InvalidAccountId"));
+
+    await expect(
+      provider({ reset: reset as never }).authorize({ flow: "reset", email: "a@b.co" }, ctx),
+    ).resolves.toBeNull();
+    expect(ctx.runMutation).toHaveBeenCalledWith(expect.anything(), { email: "a@b.co" });
+    expect(signInViaProvider).not.toHaveBeenCalled();
+  });
+
+  it("does not hide unexpected lookup failures", async () => {
+    const error = new Error("Database unavailable");
+    vi.mocked(retrieveAccount).mockRejectedValue(error);
+
+    await expect(
+      provider({ reset: reset as never }).authorize({ flow: "reset", email: "a@b.co" }, ctx),
+    ).rejects.toBe(error);
+    expect(signInViaProvider).not.toHaveBeenCalled();
+  });
+
+  it("enforces request limits before looking up an account or creating a code", async () => {
+    const error = new ConvexError("Please wait before requesting another code.");
+    ctx.runMutation.mockRejectedValue(error);
+
+    await expect(
+      provider({ reset: reset as never }).authorize({ flow: "reset", email: "a@b.co" }, ctx),
+    ).rejects.toBe(error);
+    expect(retrieveAccount).not.toHaveBeenCalled();
+    expect(signInViaProvider).not.toHaveBeenCalled();
+  });
+
+  it("uses the normalized profile email for limits, lookup, and delivery", async () => {
+    vi.mocked(retrieveAccount).mockResolvedValue(account() as never);
+    const params = { flow: "reset", email: " A@B.CO " };
+
+    await provider({ reset: reset as never, profile: () => ({ email: "a@b.co" }) })
+      .authorize(params, ctx);
+
+    expect(ctx.runMutation).toHaveBeenCalledWith(expect.anything(), { email: "a@b.co" });
+    expect(retrieveAccount).toHaveBeenCalledWith(ctx, {
+      provider: "password", account: { id: "a@b.co" },
+    });
+    expect(signInViaProvider).toHaveBeenCalledWith(ctx, reset, {
+      accountId: "account1", params: { flow: "reset", email: "a@b.co" },
+    });
   });
 
   it.each(["reset", "reset-verification"])("fails closed when reset is disabled (%s)", async (flow) => {
@@ -226,6 +279,16 @@ describe("HackutaPassword reset", () => {
 describe("HackutaPassword reset-verification", () => {
   const params = { flow: "reset-verification", email: "a@b.co", code: "123456", newPassword: "NewPass1" };
   const currentHash = () => provider().crypto.hashSecret("OldPass1");
+
+  it.each([undefined, null, "", "12345", "abcdef", 123456])(
+    "rejects missing or malformed code %j without requesting another email",
+    async (code) => {
+      await expect(provider({ reset: reset as never }).authorize({ ...params, code }, ctx))
+        .rejects.toThrow("Invalid code");
+      expect(retrieveAccount).not.toHaveBeenCalled();
+      expect(signInViaProvider).not.toHaveBeenCalled();
+    },
+  );
 
   it("updates credentials and revokes every other session on success", async () => {
     vi.mocked(retrieveAccount).mockResolvedValue(

@@ -393,24 +393,30 @@ describe("ForgotPasswordFlow with Convex auth", () => {
     await user.click(screen.getByRole("button", { name: "Save new password" }));
   }
 
-  it("requests a reset code and shows a neutral confirmation", async () => {
+  it.each(["Reset@Example.com", "Missing@Example.com"])("shows the same reset confirmation for %s", async (email) => {
+    // The backend returns the same non-session result for either account status.
+    state.signIn.mockResolvedValueOnce({ signingIn: false });
     const user = userEvent.setup();
     await openForgotPassword(user);
-    await requestCode(user);
+    await requestCode(user, email);
 
     expect(await screen.findByText(PASSWORD_RESET_REQUESTED_MESSAGE)).toBeInTheDocument();
-    expect(formDataOf(state.signIn.mock.calls[0])).toEqual({ email: "reset@example.com", flow: "reset" });
-    expect(screen.getByText("reset@example.com")).toBeInTheDocument();
+    expect(formDataOf(state.signIn.mock.calls[0])).toEqual({ email: email.toLowerCase(), flow: "reset" });
+    expect(screen.getByRole("heading", { name: "Enter your reset code" })).toBeInTheDocument();
+    expect(screen.getByText(email.toLowerCase())).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Resend code in \d+s/ })).toBeDisabled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("does not reveal whether the account exists when the server errors", async () => {
-    state.signIn.mockRejectedValueOnce(new Error("Account not found"));
+  it("stays on the email step after an operational failure with a generic error", async () => {
+    state.signIn.mockRejectedValueOnce(new Error("Network unavailable"));
     const user = userEvent.setup();
     await openForgotPassword(user);
     await requestCode(user, "missing@example.com");
 
-    expect(await screen.findByRole("heading", { name: "Enter your reset code" })).toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(PASSWORD_RESET_FAILED_MESSAGE);
+    expect(screen.getByRole("heading", { name: "Reset your password" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Enter your reset code" })).not.toBeInTheDocument();
   });
 
   it("surfaces reset rate limits and stays on the email step", async () => {
