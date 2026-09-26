@@ -333,7 +333,9 @@ export const registrationPayloadSchema = z
       max: FIELD_LIMITS.otherGender,
       tooLongMessage: "Gender description is too long.",
     }),
-    raceEthnicity: z.array(raceEthnicitySchema).default([]),
+    raceEthnicity: z
+      .array(raceEthnicitySchema)
+      .min(1, "Please select your race or ethnicity."),
     otherRaceEthnicity: safeOptionalPlainText({
       max: FIELD_LIMITS.otherRaceEthnicity,
       tooLongMessage: "Race / ethnicity details are too long.",

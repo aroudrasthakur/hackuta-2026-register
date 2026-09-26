@@ -138,6 +138,13 @@ function collectClientFieldErrors(form: ApplicationFormData): FieldErrors {
     errors.otherGender = "Please describe your gender.";
   }
 
+  if (
+    form.raceEthnicity.includes("Other (Please Specify)") &&
+    !form.otherRaceEthnicity.trim()
+  ) {
+    errors.otherRaceEthnicity = "Please specify your race or ethnicity.";
+  }
+
   // Mirrors the schema's superRefine, which Zod skips while other fields are invalid.
   if (
     form.dietaryRestrictions.includes("Allergies") &&

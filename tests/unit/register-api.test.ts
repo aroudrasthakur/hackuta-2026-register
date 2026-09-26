@@ -38,7 +38,7 @@ const payload: RegistrationPayload = {
   graduationYear: MIN_GRADUATION_YEAR,
   gender: "Man",
   otherGender: undefined,
-  raceEthnicity: [],
+  raceEthnicity: ["Prefer Not to Answer"],
   dietaryRestrictions: [],
   allergyDetails: "",
   otherDietaryRestrictions: undefined,
