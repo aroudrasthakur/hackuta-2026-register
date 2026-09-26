@@ -47,6 +47,8 @@ const RESUME_FIELD_MESSAGES = new Set([
   "Please upload a PDF.",
   "The file is not a valid PDF.",
   "The file is not a valid PDF. Please choose another file.",
+  "This PDF contains content that is not allowed.",
+  "A resume must have at least one page.",
   "Content-Length header is required.",
   "Invalid upload request.",
   "The PDF has too many pages.",

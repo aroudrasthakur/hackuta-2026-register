@@ -52,6 +52,15 @@ describe("submit error mapping", () => {
     expect(mapResumeUploadHttpError(422, {})).toBe(
       "The file is not a valid PDF. Please choose another file.",
     );
+    expect(
+      mapResumeUploadHttpError(422, { error: "This PDF contains content that is not allowed." }),
+    ).toBe("This PDF contains content that is not allowed.");
+    expect(mapResumeUploadHttpError(422, { error: "The file is not a valid PDF." })).toBe(
+      "The file is not a valid PDF.",
+    );
+    expect(mapResumeUploadHttpError(422, { error: "A resume must have at least one page." })).toBe(
+      "A resume must have at least one page.",
+    );
     expect(mapResumeUploadHttpError(429, { error: "Too many uploads. Please try again later." }))
       .toBe("Too many uploads. Please try again later.");
     expect(mapResumeUploadHttpError(429, {})).toBe("Too many uploads. Please try again later.");
