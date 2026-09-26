@@ -80,7 +80,7 @@ Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and 
               → applications:getMyApplicationDraft on load (hydrate fields)
 ```
 
-Draft rows still use legacy `status: "draft"` during the additive review migration. No review row exists until submit; afterwards the backend prefers the linked review status. Users can leave and resume until submit. Autosave sends a full form snapshot (including application questions and `hackathonsAttended`) except resume blob fields, which update only on explicit upload/remove.
+Legacy draft rows may still have `status: "draft"`, but new drafts derive that status without storing it. No review row exists until submit; afterwards the backend prefers the linked review status. Users can leave and resume until submit. Autosave sends a full form snapshot (including application questions and `hackathonsAttended`) except resume blob fields, which update only on explicit upload/remove.
 
 ### Application submit
 

@@ -317,7 +317,7 @@ One row per auth user. All application form fields are top-level columns.
 | --- | --- |
 | `authUserId` | FK to `users` |
 | `email` | Copied from verified auth email |
-| `status` | Legacy lifecycle/review status; remains during the additive migration, then removed |
+| `status`, `updatedAt`, `reviewedAt`, `reviewedBy` | Legacy columns accepted for migration compatibility; new applications do not set them, and existing values are preserved until the guarded strip has run on every deployment |
 | `applicantUpdatedAt` | Applicant draft/submission edits; backfilled from the legacy `updatedAt` |
 | `resumeStorageId` | PDF in `_storage` |
 | Applicant fields | See `shared/registration/schema.ts` and `convex/applicationFields.ts` |
@@ -335,7 +335,7 @@ Append-only snapshot written once on successful submit (`registrations:submitReg
 | Field | Notes |
 | --- | --- |
 | `applicationId` | FK to `applications` |
-| Application columns | Full copy of the submitted application row at submit time |
+| Application columns | Submitted applicant data snapshot; `status: submitted` and `updatedAt` are explicitly recorded for historical log compatibility, not stored on new application rows |
 | `submittedAt` | Submission timestamp — use this instead of `createdAt`, which reflects when the draft row was first created |
 
 Indexed by `applicationId` (`by_application`). Its validator is separate from the live application row so historical snapshots remain valid after the review migration.
