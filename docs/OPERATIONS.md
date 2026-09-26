@@ -70,6 +70,7 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | Task | Command |
 | --- | --- |
 | Update hackathon display name | `npx convex run eventConfig:setHackathonName '{ "name": "HackUTA 2026" }'` |
+| Set or clear application closing time | Internal `eventConfig:setRegistrationClosesAt` accepts `{"closesAt": <UTC epoch milliseconds>}` or `{"closesAt": null}`; confirm the target deployment before running |
 | Migrate legacy beef/pork answers to dietary restrictions | Convex dashboard → internal `migrations:migrateEatsBeefAndPorkToDietaryRestrictions` (one-time; maps `"No"` only) |
 | Migrate legacy `otherDietary` to `allergyDetails` | `npx convex run migrations:migrateOtherDietaryToAllergyDetails` (add `--prod` for production). Legacy schema field removed; run before deploy if old rows remain. |
 | Migrate legacy `firstHackathon` yes/no to `hackathonsAttended` | `npx convex run migrations:migrateFirstHackathonToHackathonsAttended` (add `--prod` for production). |
@@ -86,6 +87,19 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | Find emails sent to an address | Convex dashboard → internal `emailDeliveries:listEmailDeliveriesForRecipient` |
 | Check whether a queued email was sent | Convex dashboard → internal `email/checkEmailStatus:checkEmailStatus` with the row's `serviceId` |
 | Unset stale env var | `npx convex env unset VAR_NAME` |
+
+### Application closing time
+
+The `eventConfig.registrationClosesAt` value is unset by default: deploying this change does **not** close applications. After the backend is deployed, an operator can set or clear the closing time with the internal `eventConfig:setRegistrationClosesAt` mutation without redeploying. Only an operator with Convex deployment access can invoke it; applicants cannot change it.
+
+Supply a UTC epoch millisecond timestamp calculated from the chosen local time in `America/Chicago`. Central time uses **CDT (UTC−05:00)** in daylight-saving months and **CST (UTC−06:00)** otherwise; do not assume a fixed UTC−06:00 offset. No closing date or time is chosen in this repository. With `CLOSES_AT_MS` set to the verified timestamp for the correct deployment:
+
+```bash
+npx convex run eventConfig:setRegistrationClosesAt "{\"closesAt\":${CLOSES_AT_MS}}"
+npx convex run eventConfig:getPublicEventConfig '{}'
+```
+
+Use `--prod` only after separately confirming the production target. To reopen, run `npx convex run eventConfig:setRegistrationClosesAt '{"closesAt":null}'` on that deployment. At or after the configured timestamp, the backend rejects draft writes and submissions; saved drafts remain readable, submitted profiles remain accessible, and the registration/profile UI updates without a redeploy. Confirm the configured value and Central-time display before relying on the cutoff.
 
 ## Monitoring & incidents
 
