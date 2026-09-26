@@ -56,4 +56,17 @@ describe("validateResumePdfBytes", () => {
     );
   });
 
+  it.each(["/JavaScript", "/OpenAction", "/EmbeddedFile"] as const)(
+    "rejects PDFs containing %s markers",
+    async (marker) => {
+      const bytes = await validPdfBytes();
+      const injected = new Uint8Array(bytes.length + marker.length + 16);
+      injected.set(bytes);
+      injected.set(new TextEncoder().encode(`\n${marker}\n`), bytes.length);
+      await expect(validateResumePdfBytes(injected)).rejects.toThrow(
+        "This PDF contains content that is not allowed.",
+      );
+    },
+  );
+
 });

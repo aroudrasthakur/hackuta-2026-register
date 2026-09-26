@@ -29,6 +29,7 @@ const state = vi.hoisted(() => ({
   ensureApplication: undefined as unknown as ReturnType<typeof vi.fn>,
   invalidateSessions: undefined as unknown as ReturnType<typeof vi.fn>,
   clientMutation: undefined as unknown as ReturnType<typeof vi.fn>,
+  clientQuery: undefined as unknown as ReturnType<typeof vi.fn>,
   hasClient: true,
   isAuthenticated: false,
   isLoading: false,
@@ -55,7 +56,10 @@ vi.mock("convex/react", () => ({
 }));
 
 vi.mock("../../src/convex/client", () => ({
-  getConvexClient: () => (state.hasClient ? { mutation: state.clientMutation } : null),
+  getConvexClient: () =>
+    state.hasClient
+      ? { mutation: state.clientMutation, query: state.clientQuery }
+      : null,
 }));
 
 vi.mock("../../src/components/SignInStormBackdrop", () => ({
@@ -118,6 +122,7 @@ beforeEach(() => {
   state.ensureApplication = vi.fn(async () => ({ applicationId: "p1", status: "draft" }));
   state.invalidateSessions = vi.fn(async () => undefined);
   state.clientMutation = vi.fn(async () => ({ waitSeconds: 0, hourlyLimitReached: false }));
+  state.clientQuery = vi.fn(async () => ({ waitSeconds: 0, hourlyLimitReached: false }));
   state.hasClient = true;
   state.isAuthenticated = false;
   state.isLoading = false;
@@ -215,7 +220,7 @@ describe("SignInPage with Convex auth: sign up and verification", () => {
     await fillSignUp(user, "dupe@example.com");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "An account with this email already exists. Sign in instead.",
+      "If this email can be used, check your inbox or sign in.",
     );
     expect(screen.getByLabelText(/^Email$/i)).toHaveAttribute("aria-invalid", "true");
 
@@ -251,12 +256,12 @@ describe("SignInPage with Convex auth: resend code", () => {
 
     await waitFor(() => expect(state.signIn).toHaveBeenCalledTimes(2));
     expect(formDataOf(state.signIn.mock.calls[1])).toMatchObject({ flow: "signUp", email: "resend@example.com" });
-    expect(state.clientMutation).toHaveBeenCalledWith(expect.anything(), { email: "resend@example.com" });
+    expect(state.clientQuery).toHaveBeenCalledWith(expect.anything(), { email: "resend@example.com" });
     expect(await screen.findByRole("button", { name: "Resend code in 30s" })).toBeDisabled();
   });
 
   it("locks resend when the server reports the hourly limit", async () => {
-    state.clientMutation.mockResolvedValue({ waitSeconds: 0, hourlyLimitReached: true });
+    state.clientQuery.mockResolvedValue({ waitSeconds: 0, hourlyLimitReached: true });
     const user = userEvent.setup();
     await user.click(await reachVerifyWithExpiredCooldown(user));
 
@@ -264,7 +269,7 @@ describe("SignInPage with Convex auth: resend code", () => {
   });
 
   it("recovers from a failed cooldown lookup by applying the default cooldown", async () => {
-    state.clientMutation.mockRejectedValue(new Error("network"));
+    state.clientQuery.mockRejectedValue(new Error("network"));
     const user = userEvent.setup();
     await user.click(await reachVerifyWithExpiredCooldown(user));
 
@@ -430,7 +435,7 @@ describe("ForgotPasswordFlow with Convex auth", () => {
   });
 
   it("locks the resend button when the reset hourly limit is reached", async () => {
-    state.clientMutation.mockResolvedValue({ waitSeconds: 0, hourlyLimitReached: true });
+    state.clientQuery.mockResolvedValue({ waitSeconds: 0, hourlyLimitReached: true });
     const user = userEvent.setup();
     await openForgotPassword(user);
     await requestCode(user);
@@ -445,7 +450,7 @@ describe("ForgotPasswordFlow with Convex auth", () => {
     await screen.findByRole("heading", { name: "Enter your reset code" });
 
     vi.spyOn(Date, "now").mockReturnValue(Date.now() + 31_000);
-    state.clientMutation.mockRejectedValueOnce(new Error("offline"));
+    state.clientQuery.mockRejectedValueOnce(new Error("offline"));
     await user.click(await screen.findByRole("button", { name: "Resend code" }, { timeout: 2_500 }));
 
     await waitFor(() => expect(state.signIn).toHaveBeenCalledTimes(2));

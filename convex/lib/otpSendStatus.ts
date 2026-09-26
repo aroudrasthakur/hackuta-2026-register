@@ -33,13 +33,9 @@ export async function lookupOtpSendStatus(
   const windowStart = now - OTP_SEND_WINDOW_MS;
   const recent = await ctx.db
     .query("rateLimits")
-    .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", bucket))
-    .filter((q) =>
-      q.and(
-        q.eq(q.field("key"), normalized),
-        q.gte(q.field("createdAt"), windowStart),
-      ),
-    )
+    .withIndex("by_bucket_key_createdAt", (q) => q.eq("bucket", bucket))
+    .filter((q) => q.eq(q.field("key"), normalized))
+    .filter((q) => q.gte(q.field("createdAt"), windowStart))
     .collect();
 
   if (recent.length >= OTP_SEND_MAX_PER_HOUR) {

@@ -1,7 +1,41 @@
-if (window.trustedTypes?.createPolicy) {
+(function initTrustedTypesPolicy() {
+  if (!window.trustedTypes?.createPolicy) {
+    return;
+  }
+
+  function isSameOriginScriptUrl(value) {
+    if (typeof value !== "string" || !value) {
+      return false;
+    }
+    if (value.startsWith("/")) {
+      return true;
+    }
+    try {
+      const url = new URL(value, window.location.origin);
+      return url.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }
+
   window.trustedTypes.createPolicy("default", {
-    createHTML: (value) => value,
-    createScript: (value) => value,
-    createScriptURL: (value) => value,
+    createHTML(value) {
+      if (typeof value !== "string") {
+        throw new TypeError("HTML sink blocked.");
+      }
+      if (/<\s*script|onerror\s*=|javascript:/i.test(value)) {
+        throw new TypeError("HTML injection blocked.");
+      }
+      throw new TypeError("HTML sink blocked.");
+    },
+    createScript() {
+      throw new TypeError("Script sink blocked.");
+    },
+    createScriptURL(value) {
+      if (!isSameOriginScriptUrl(value)) {
+        throw new TypeError("Script URL blocked.");
+      }
+      return value;
+    },
   });
-}
+})();

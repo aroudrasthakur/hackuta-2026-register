@@ -24,7 +24,7 @@ describe("authentication error mapping", () => {
   it("maps known credential failures to actionable copy", () => {
     expect(mapAuthError(new Error("Invalid credentials"))).toBe(AUTH_FAILED_MESSAGE);
     expect(mapAuthError(new Error("An account with this email already exists"))).toBe(
-      "An account with this email already exists. Sign in instead.",
+      "If this email can be used, check your inbox or sign in.",
     );
   });
 
@@ -78,8 +78,8 @@ describe("mapAuthError", () => {
     ["Password must contain a number", PASSWORD_REQUIREMENTS_MESSAGE],
     ["Invalid email", "Please enter a valid email address."],
     ["Enter a valid email address", "Please enter a valid email address."],
-    ["User is already registered", "An account with this email already exists. Sign in instead."],
-    ["This email is already in use", "An account with this email already exists. Sign in instead."],
+    ["User is already registered", "If this email can be used, check your inbox or sign in."],
+    ["This email is already in use", "If this email can be used, check your inbox or sign in."],
     ["Expired code", OTP_INVALID_MESSAGE],
     ["Incorrect password", AUTH_FAILED_MESSAGE],
     ["Wrong password supplied", AUTH_FAILED_MESSAGE],

@@ -34,7 +34,9 @@ export default defineSchema({
     bucket: v.string(),
     key: v.string(),
     createdAt: v.number(),
-  }).index("by_bucket_createdAt", ["bucket", "createdAt"]),
+  })
+    .index("by_bucket_createdAt", ["bucket", "createdAt"])
+    .index("by_bucket_key_createdAt", ["bucket", "key", "createdAt"]),
 
   resumeUploadSessions: defineTable({
     token: v.string(),

@@ -31,7 +31,8 @@ export function isAllowedResumeFilename(filename: string | null | undefined): bo
   if (
     normalized.includes("/") ||
     normalized.includes("\\") ||
-    normalized.includes("\0")
+    normalized.includes("\0") ||
+    /[\r\n\x00-\x1f\x7f]/.test(normalized)
   ) {
     return false;
   }

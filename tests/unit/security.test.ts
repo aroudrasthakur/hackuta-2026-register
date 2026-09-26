@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { contentSecurityPolicy } from "../../security/csp";
-import { permissionsPolicy, referrerPolicy } from "../../security/headers";
+import {
+  crossOriginResourcePolicy,
+  htmlCacheControl,
+  permissionsPolicy,
+  referrerPolicy,
+  xContentTypeOptions,
+} from "../../security/headers";
 import vercelConfig from "../../vercel.json" with { type: "json" };
 
 function deployedHeader(key: string) {
-  return vercelConfig.headers
-    .flatMap((rule) => rule.headers)
-    .find((header) => header.key === key)?.value;
+  const catchAll = vercelConfig.headers.find((rule) => rule.source === "/(.*)");
+  return catchAll?.headers.find((header) => header.key === key)?.value;
 }
 
 describe("contentSecurityPolicy", () => {
@@ -22,5 +27,9 @@ describe("response security headers", () => {
     expect(deployedHeader("Content-Security-Policy")).toBe(contentSecurityPolicy);
     expect(deployedHeader("Permissions-Policy")).toBe(permissionsPolicy);
     expect(deployedHeader("Referrer-Policy")).toBe(referrerPolicy);
+    expect(deployedHeader("X-Content-Type-Options")).toBe(xContentTypeOptions);
+    expect(deployedHeader("Cross-Origin-Resource-Policy")).toBe(crossOriginResourcePolicy);
+    expect(deployedHeader("Cache-Control")).toBe(htmlCacheControl);
+    expect(deployedHeader("Strict-Transport-Security")).toContain("max-age=31536000");
   });
 });

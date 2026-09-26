@@ -27,6 +27,8 @@ import {
   uploadSessionOwnedByUser,
 } from "./lib/resumeUpload";
 
+import { consumeSubmitAllowance } from "./lib/userRateLimits";
+
 const sendApplicationConfirmationEmailRef = makeFunctionReference<"action">(
   "email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail",
 );
@@ -52,6 +54,7 @@ async function upsertRegistration(
   resumeUploadToken?: string,
 ) {
   const authUser = await requireVerifiedAuthUser(ctx);
+  await consumeSubmitAllowance(ctx, authUser._id);
 
   const verifiedEmail = normalizeEmail(authUser.email);
   if (!verifiedEmail) {

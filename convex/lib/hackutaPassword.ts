@@ -105,7 +105,9 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
           throw new Error(`Password reset is not enabled for ${provider}`);
         }
         // Apply the same limits before lookup so cooldowns cannot reveal accounts.
-        await ctx.runMutation(consumePasswordResetRequestRef, { email });
+        const clientAddress =
+          typeof params.clientAddress === "string" ? params.clientAddress : undefined;
+        await ctx.runMutation(consumePasswordResetRequestRef, { email, clientAddress });
         const retrieved = await retrieveAccount(ctx, {
           provider,
           account: { id: email },

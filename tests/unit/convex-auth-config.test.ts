@@ -108,16 +108,15 @@ describe("convex auth configuration", () => {
 describe("OTP email delivery", () => {
   const expires = new Date(1_700_000_000_000);
 
-  it("checks the rate limit, sends the code, then records the send", async () => {
+  it("consumes the rate limit atomically before sending the code", async () => {
     const ctx = fakeActionCtx();
     await password.verify.sendVerificationRequest(
       { identifier: "a@b.co", token: "123456", expires },
       ctx,
     );
     expect(ctx.calls).toEqual([
-      "rateLimits:assertOtpSendAllowed",
+      "rateLimits:consumeOtpSendRequest",
       "email/sendOtpEmail:sendOtpEmail",
-      "rateLimits:recordOtpSend",
     ]);
     expect(ctx.runAction.mock.calls[0]?.[1]).toEqual({
       email: "a@b.co",
@@ -136,13 +135,14 @@ describe("OTP email delivery", () => {
     expect(ctx.runMutation).toHaveBeenCalledTimes(1);
   });
 
-  it("does not record a send when email delivery fails", async () => {
+  it("does not send when email delivery fails after consuming the rate limit", async () => {
     const ctx = fakeActionCtx();
     ctx.runAction.mockRejectedValueOnce(new Error("Email service down"));
     await expect(
       password.verify.sendVerificationRequest({ identifier: "a@b.co", token: "1", expires }, ctx),
     ).rejects.toThrow("Email service down");
     expect(ctx.runMutation).toHaveBeenCalledTimes(1);
+    expect(ctx.calls[0]).toBe("rateLimits:consumeOtpSendRequest");
   });
 
   it("delivers reset codes without consuming a second request allowance", async () => {

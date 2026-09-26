@@ -1,32 +1,37 @@
 import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import schema from "../../convex/schema";
 import {
   OTP_RESEND_COOLDOWN_MS,
   OTP_SEND_MAX_PER_HOUR,
   OTP_SEND_WINDOW_MS,
-  OTP_STATUS_LOOKUP_MAX_PER_HOUR,
+  RATE_LIMIT_RETENTION_MS,
 } from "../../convex/rateLimits";
 import {
   OTP_SEND_BUCKET,
-  OTP_STATUS_LOOKUP_BUCKET,
   PASSWORD_RESET_SEND_BUCKET,
 } from "../../convex/lib/rateLimitBuckets";
 
 const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 
-const getOtpSendCooldown = makeFunctionReference<"mutation">("rateLimits:getOtpSendCooldown");
-const getPasswordResetSendCooldown = makeFunctionReference<"mutation">(
+const getOtpSendCooldown = makeFunctionReference<"query">("rateLimits:getOtpSendCooldown");
+const getPasswordResetSendCooldown = makeFunctionReference<"query">(
   "rateLimits:getPasswordResetSendCooldown",
 );
 const assertOtpSendAllowed = makeFunctionReference<"mutation">("rateLimits:assertOtpSendAllowed");
+const consumeOtpSendRequest = makeFunctionReference<"mutation">(
+  "rateLimits:consumeOtpSendRequest",
+);
 const consumePasswordResetRequest = makeFunctionReference<"mutation">(
   "rateLimits:consumePasswordResetRequest",
 );
 const recordOtpSend = makeFunctionReference<"mutation">("rateLimits:recordOtpSend");
 const clearOtpSendLimitsForEmail = makeFunctionReference<"mutation">(
   "rateLimits:clearOtpSendLimitsForEmail",
+);
+const pruneExpiredRateLimits = makeFunctionReference<"mutation">(
+  "rateLimits:pruneExpiredRateLimits",
 );
 
 describe("rateLimits", () => {
@@ -42,7 +47,7 @@ describe("rateLimits", () => {
         createdAt: now - 15_000,
       });
 
-      const status = await ctx.runMutation(getOtpSendCooldown, { email });
+      const status = await ctx.runQuery(getOtpSendCooldown, { email });
       expect(status.hourlyLimitReached).toBe(false);
       expect(status.waitSeconds).toBeGreaterThan(0);
       expect(status.waitSeconds).toBeLessThanOrEqual(30);
@@ -113,8 +118,9 @@ describe("rateLimits", () => {
 
       const attempts = await ctx.db
         .query("rateLimits")
-        .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
-        .filter((q) => q.eq(q.field("key"), email))
+        .withIndex("by_bucket_key_createdAt", (q) =>
+          q.eq("bucket", OTP_SEND_BUCKET).eq("key", email),
+        )
         .collect();
 
       expect(attempts).toHaveLength(1);
@@ -131,28 +137,69 @@ describe("rateLimits", () => {
     });
   });
 
-  it("returns neutral OTP cooldown status after lookup rate limit is exceeded", async () => {
+  it("rejects a second consumeOtpSendRequest during cooldown", async () => {
+    const now = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    const test = convexTest(schema, modules);
+    await test.mutation(consumeOtpSendRequest, { email: "concurrent@example.com" });
+    vi.setSystemTime(now + 1_000);
+    await expect(test.mutation(consumeOtpSendRequest, { email: "concurrent@example.com" }))
+      .rejects.toThrow("Please wait before requesting another code.");
+    vi.useRealTimers();
+
+    const attempts = await test.run((ctx) =>
+      ctx.db
+        .query("rateLimits")
+        .withIndex("by_bucket_key_createdAt", (q) =>
+          q.eq("bucket", OTP_SEND_BUCKET).eq("key", "concurrent@example.com"),
+        )
+        .collect(),
+    );
+    expect(attempts).toHaveLength(1);
+  });
+
+  it("cooldown queries do not insert rate limit rows", async () => {
     const test = convexTest(schema, modules);
     await test.run(async (ctx) => {
-      const email = "probe@example.com";
+      const email = "read-only@example.com";
       const now = Date.now();
-
       await ctx.db.insert("rateLimits", {
         bucket: OTP_SEND_BUCKET,
         key: email,
         createdAt: now - 15_000,
       });
 
-      for (let i = 0; i < OTP_STATUS_LOOKUP_MAX_PER_HOUR; i++) {
+      const before = await ctx.db.query("rateLimits").collect();
+      await ctx.runQuery(getOtpSendCooldown, { email });
+      await ctx.runQuery(getPasswordResetSendCooldown, { email });
+      const after = await ctx.db.query("rateLimits").collect();
+
+      expect(after).toHaveLength(before.length);
+    });
+  });
+
+  it("reads only the requested key when other keys share the bucket", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const email = "target@example.com";
+      const now = Date.now();
+
+      for (let i = 0; i < 500; i++) {
         await ctx.db.insert("rateLimits", {
-          bucket: OTP_STATUS_LOOKUP_BUCKET,
-          key: email,
-          createdAt: now - (i * 1000),
+          bucket: OTP_SEND_BUCKET,
+          key: `noise-${i}@example.com`,
+          createdAt: now - 5_000,
         });
       }
+      await ctx.db.insert("rateLimits", {
+        bucket: OTP_SEND_BUCKET,
+        key: email,
+        createdAt: now - 15_000,
+      });
 
-      const status = await ctx.runMutation(getOtpSendCooldown, { email });
-      expect(status).toEqual({ waitSeconds: 0, hourlyLimitReached: false });
+      const status = await ctx.runQuery(getOtpSendCooldown, { email });
+      expect(status.waitSeconds).toBeGreaterThan(0);
     });
   });
 
@@ -164,13 +211,15 @@ describe("rateLimits", () => {
 
       const resetAttempts = await ctx.db
         .query("rateLimits")
-        .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", PASSWORD_RESET_SEND_BUCKET))
-        .filter((q) => q.eq(q.field("key"), email))
+        .withIndex("by_bucket_key_createdAt", (q) =>
+          q.eq("bucket", PASSWORD_RESET_SEND_BUCKET).eq("key", email),
+        )
         .collect();
       const signupAttempts = await ctx.db
         .query("rateLimits")
-        .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
-        .filter((q) => q.eq(q.field("key"), email))
+        .withIndex("by_bucket_key_createdAt", (q) =>
+          q.eq("bucket", OTP_SEND_BUCKET).eq("key", email),
+        )
         .collect();
 
       expect(resetAttempts).toHaveLength(1);
@@ -209,7 +258,7 @@ describe("rateLimits", () => {
         createdAt: now - 15_000,
       });
 
-      const status = await ctx.runMutation(getPasswordResetSendCooldown, { email });
+      const status = await ctx.runQuery(getPasswordResetSendCooldown, { email });
       expect(status.hourlyLimitReached).toBe(false);
       expect(status.waitSeconds).toBeGreaterThan(0);
     });
@@ -231,51 +280,8 @@ describe("rateLimits", () => {
       await expect(ctx.runMutation(consumePasswordResetRequest, { email })).rejects.toThrow(
         "Too many reset requests. Please try again later.",
       );
-      const status = await ctx.runMutation(getPasswordResetSendCooldown, { email });
+      const status = await ctx.runQuery(getPasswordResetSendCooldown, { email });
       expect(status.hourlyLimitReached).toBe(true);
-    });
-  });
-
-  it("returns neutral password reset status after the lookup limit is exceeded", async () => {
-    const test = convexTest(schema, modules);
-    await test.run(async (ctx) => {
-      const email = "reset-probe@example.com";
-      const now = Date.now();
-      await ctx.db.insert("rateLimits", {
-        bucket: PASSWORD_RESET_SEND_BUCKET,
-        key: email,
-        createdAt: now - 5_000,
-      });
-      for (let i = 0; i < OTP_STATUS_LOOKUP_MAX_PER_HOUR; i++) {
-        await ctx.db.insert("rateLimits", {
-          bucket: OTP_STATUS_LOOKUP_BUCKET,
-          key: email,
-          createdAt: now - i * 1000,
-        });
-      }
-
-      await expect(ctx.runMutation(getPasswordResetSendCooldown, { email })).resolves.toEqual({
-        waitSeconds: 0,
-        hourlyLimitReached: false,
-      });
-    });
-  });
-
-  it("ignores lookup probes older than the lookup window", async () => {
-    const test = convexTest(schema, modules);
-    await test.run(async (ctx) => {
-      const email = "old-probes@example.com";
-      const now = Date.now();
-      await ctx.db.insert("rateLimits", { bucket: OTP_SEND_BUCKET, key: email, createdAt: now - 5_000 });
-      for (let i = 0; i < OTP_STATUS_LOOKUP_MAX_PER_HOUR; i++) {
-        await ctx.db.insert("rateLimits", {
-          bucket: OTP_STATUS_LOOKUP_BUCKET,
-          key: email,
-          createdAt: now - 2 * 60 * 60 * 1000,
-        });
-      }
-      const status = await ctx.runMutation(getOtpSendCooldown, { email });
-      expect(status.waitSeconds).toBeGreaterThan(0);
     });
   });
 
@@ -285,7 +291,7 @@ describe("rateLimits", () => {
   ])("%s returns a neutral status for blank emails without recording a lookup", async (_name, ref) => {
     const test = convexTest(schema, modules);
     await test.run(async (ctx) => {
-      await expect(ctx.runMutation(ref, { email: "   " })).resolves.toEqual({
+      await expect(ctx.runQuery(ref, { email: "   " })).resolves.toEqual({
         waitSeconds: 0,
         hourlyLimitReached: false,
       });
@@ -295,6 +301,7 @@ describe("rateLimits", () => {
 
   it.each([
     ["assertOtpSendAllowed", assertOtpSendAllowed],
+    ["consumeOtpSendRequest", consumeOtpSendRequest],
     ["consumePasswordResetRequest", consumePasswordResetRequest],
   ])("%s rejects blank emails", async (_name, ref) => {
     const test = convexTest(schema, modules);
@@ -315,6 +322,7 @@ describe("rateLimits", () => {
 
   it.each([
     ["recordOtpSend", recordOtpSend, OTP_SEND_BUCKET],
+    ["consumeOtpSendRequest", consumeOtpSendRequest, OTP_SEND_BUCKET],
     ["consumePasswordResetRequest", consumePasswordResetRequest, PASSWORD_RESET_SEND_BUCKET],
   ])("%s prunes entries older than the send window", async (_name, ref, bucket) => {
     const test = convexTest(schema, modules);
@@ -336,12 +344,24 @@ describe("rateLimits", () => {
   });
 
   it("normalizes reset request keys and does not count a rejected retry", async () => {
+    const now = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
     const test = convexTest(schema, modules);
     await test.mutation(consumePasswordResetRequest, { email: " Reset@Example.COM " });
+    vi.setSystemTime(now + 1_000);
     await expect(test.mutation(consumePasswordResetRequest, { email: "reset@example.com" }))
       .rejects.toThrow("Please wait before requesting another code.");
+    vi.useRealTimers();
 
-    const attempts = await test.run((ctx) => ctx.db.query("rateLimits").collect());
+    const attempts = await test.run((ctx) =>
+      ctx.db
+        .query("rateLimits")
+        .withIndex("by_bucket_key_createdAt", (q) =>
+          q.eq("bucket", PASSWORD_RESET_SEND_BUCKET).eq("key", "reset@example.com"),
+        )
+        .collect(),
+    );
     expect(attempts).toHaveLength(1);
     expect(attempts[0]).toMatchObject({ bucket: PASSWORD_RESET_SEND_BUCKET, key: "reset@example.com" });
   });
@@ -370,6 +390,32 @@ describe("rateLimits", () => {
       expect(remaining.map((row) => `${row.bucket}:${row.key}`).sort()).toEqual(
         [`${OTP_SEND_BUCKET}:keep@example.com`, `${PASSWORD_RESET_SEND_BUCKET}:clear@example.com`].sort(),
       );
+    });
+  });
+
+  it("prunes expired rate limit rows and keeps live ones", async () => {
+    const test = convexTest(schema, modules);
+    await test.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.insert("rateLimits", {
+        bucket: OTP_SEND_BUCKET,
+        key: "old@example.com",
+        createdAt: now - RATE_LIMIT_RETENTION_MS - 1,
+      });
+      await ctx.db.insert("rateLimits", {
+        bucket: OTP_SEND_BUCKET,
+        key: "live@example.com",
+        createdAt: now - 60_000,
+      });
+
+      await expect(ctx.runMutation(pruneExpiredRateLimits, {})).resolves.toMatchObject({
+        deleted: 1,
+        rescheduled: false,
+      });
+
+      const remaining = await ctx.db.query("rateLimits").collect();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]?.key).toBe("live@example.com");
     });
   });
 });

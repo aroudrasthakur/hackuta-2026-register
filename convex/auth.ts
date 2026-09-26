@@ -11,10 +11,22 @@ const sendOtpEmailRef = makeFunctionReference<"action">("email/sendOtpEmail:send
 const sendPasswordResetEmailRef = makeFunctionReference<"action">(
   "email/sendPasswordResetEmail:sendPasswordResetEmail",
 );
-const assertOtpSendAllowedRef = makeFunctionReference<"mutation">("rateLimits:assertOtpSendAllowed");
-const recordOtpSendRef = makeFunctionReference<"mutation">("rateLimits:recordOtpSend");
+const consumeOtpSendRequestRef = makeFunctionReference<"mutation">(
+  "rateLimits:consumeOtpSendRequest",
+);
 
 const OTP_MAX_AGE_SECONDS = 10 * 60;
+
+async function actionClientAddress(
+  ctx: GenericActionCtx<Record<string, never>>,
+): Promise<string | undefined> {
+  try {
+    const { ip } = await ctx.meta.getRequestMetadata();
+    return ip ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function generateSixDigitOtp(): string {
   const bytes = new Uint32Array(1);
@@ -31,13 +43,15 @@ const EmailVerification = Email({
     ctx: GenericActionCtx<Record<string, never>>,
   ) => {
     const { identifier, token, expires } = params;
-    await ctx.runMutation(assertOtpSendAllowedRef, { email: identifier });
+    await ctx.runMutation(consumeOtpSendRequestRef, {
+      email: identifier,
+      clientAddress: await actionClientAddress(ctx),
+    });
     await ctx.runAction(sendOtpEmailRef, {
       email: identifier,
       code: token,
       expiresAt: expires.getTime(),
     });
-    await ctx.runMutation(recordOtpSendRef, { email: identifier });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any,
 });

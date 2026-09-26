@@ -1,4 +1,8 @@
-/** Production CSP — keep vercel.json Content-Security-Policy in sync. */
+/**
+ * Production CSP — keep vercel.json Content-Security-Policy in sync.
+ * Convex hosts use wildcards so Vercel preview builds can point at any deployment
+ * without rebuilding headers; production sets VITE_CONVEX_URL to the prod deployment.
+ */
 export const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' https://vercel.live",
