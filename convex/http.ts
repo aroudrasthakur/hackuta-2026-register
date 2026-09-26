@@ -27,6 +27,14 @@ const createVerifiedUploadSessionRef = makeFunctionReference<"mutation">(
 );
 const CONVEX_TEST_ORIGIN = "https://hackuta.test";
 
+/** Exact strings returned in 422 bodies; anything else is logged and mapped to the generic message. */
+const RESUME_VALIDATION_RESPONSE_MESSAGES = new Set([
+  "The file is not a valid PDF.",
+  "This PDF contains content that is not allowed.",
+  "A resume must have at least one page.",
+  "The PDF has too many pages.",
+]);
+
 function requestOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (origin) {
@@ -203,11 +211,13 @@ const uploadResume = httpAction(async (ctx, request) => {
   } catch (error) {
     const detail = error instanceof Error ? error.message.trim() : "";
     const message =
-      detail === "The PDF has too many pages."
+      detail && RESUME_VALIDATION_RESPONSE_MESSAGES.has(detail)
         ? detail
-        : detail === "This PDF contains content that is not allowed."
-          ? detail
-          : "The file is not a valid PDF.";
+        : "The file is not a valid PDF.";
+    console.error("Resume upload PDF validation failed", {
+      validationError: detail || "(empty)",
+      responseError: message,
+    });
     return response(request, { error: message }, 422, origin);
   }
 
