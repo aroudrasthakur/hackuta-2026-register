@@ -45,6 +45,15 @@ JWT keys: `node scripts/generateAuthKeys.mjs` — generate **per environment**, 
 
 Dev sync helper: `node scripts/sync-dev-convex-env.mjs` (copies email service settings, sets localhost origins).
 
+### Application review rollout
+
+The first deployment is additive: it creates `applicationReviews` and writes a review when an application is submitted, but keeps the old `applications.status`, `updatedAt`, `reviewedAt`, and `reviewedBy` fields so existing rows and older code remain valid. Draft edits use `applicantUpdatedAt`; profile queries prefer the review row and fall back to legacy status until backfill is complete.
+
+1. Deploy to a personal or shared dev deployment; test draft save, submit, confirmation email, and `/profile` before backfilling. Do not deploy a schema that removes the legacy fields yet.
+2. Run `npx convex run migrations:backfillApplicationReviews '{}'`. Repeat with `'{"cursor":"<continueCursor>"}'` until `isDone` is true. The migration processes at most 50 applications per call, is safe to repeat, and preserves unrecognized historical reviewer strings as `legacyReviewedBy`.
+3. Compare counts and decisions between submitted applications and review rows; investigate any nonzero `unresolvedDraftReviews` before removing old fields, and check historical `applicationSubmissionLogs` still load. Test `/profile` for a backfilled application before considering production.
+4. After review and approval, repeat the additive deploy and backfill on production. Only in a later deploy, after verifying every deployment is backfilled, remove legacy columns and the old `applications.by_status` index.
+
 ## Scheduled maintenance
 
 | Job | Schedule | Function |
@@ -68,6 +77,7 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | Strip removed `internalNotes` field | `npx convex run migrations:stripInternalNotesFromApplications` (add `--prod` for production) |
 | Strip removed `eligibilityStatus` field | `npx convex run migrations:stripEligibilityStatusFromApplications` (add `--prod` for production) |
 | Strip removed `confirmationStatus` field | `npx convex run migrations:stripConfirmationStatusFromApplications` (add `--prod` for production) |
+| Backfill submitted application reviews | `npx convex run migrations:backfillApplicationReviews '{}'` on the linked dev deployment; repeat with `'{"cursor":"<continueCursor>"}'` until `isDone` is true. Check row counts and decisions before using `--prod`. This copies data and is safe to rerun. |
 | Remove an orphaned table (not in schema) | Convex dashboard → **Data** → table → **⋮** → **Delete table** |
 | Reset all data (**destructive**) | Convex dashboard → internal `maintenance:resetAllData` |
 | Clear sign-up OTP rate limit for email | Convex dashboard → internal `rateLimits:clearOtpSendLimitsForEmail` |

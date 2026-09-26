@@ -16,6 +16,20 @@ export async function getApplicationByUser(
     .first();
 }
 
+export async function getApplicationReview(ctx: AuthCtx, applicationId: ApplicationDoc["_id"]) {
+  return ctx.db
+    .query("applicationReviews")
+    .withIndex("by_application", (q) => q.eq("applicationId", applicationId))
+    .unique();
+}
+
+export async function getApplicationStatus(ctx: AuthCtx, application: ApplicationDoc) {
+  const review = await getApplicationReview(ctx, application._id);
+  if (review) return review.status === "under_review" ? "submitted" : review.status;
+  if (application.status === "draft" && applicationFormWasSubmitted(application)) return "submitted";
+  return application.status;
+}
+
 /** Whether the applicant completed a successful registration form submit. */
 export function applicationFormWasSubmitted(
   application: Pick<ApplicationDoc, "formSubmitted" | "submittedAt">,
@@ -36,10 +50,12 @@ export async function ensureDraftApplication(ctx: MutationCtx) {
     const emailVerificationTime =
       authUser.emailVerificationTime ?? existing.emailVerificationTime;
     if (emailVerificationTime !== existing.emailVerificationTime) {
+      const updatedAt = Date.now();
       await ctx.db.patch(existing._id, {
         emailVerificationTime,
         email,
-        updatedAt: Date.now(),
+        updatedAt,
+        applicantUpdatedAt: updatedAt,
       });
     }
     return existing;
@@ -55,6 +71,7 @@ export async function ensureDraftApplication(ctx: MutationCtx) {
     status: "draft",
     createdAt: now,
     updatedAt: now,
+    applicantUpdatedAt: now,
   });
   const application = await ctx.db.get(applicationId);
   if (!application) {

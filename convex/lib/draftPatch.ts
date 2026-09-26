@@ -17,6 +17,7 @@ export async function replaceApplicationWithDraftPatch(
     email: string;
     emailVerificationTime?: number;
     updatedAt: number;
+    applicantUpdatedAt: number;
   },
 ) {
   const authUser = await requireAuthUser(ctx);
