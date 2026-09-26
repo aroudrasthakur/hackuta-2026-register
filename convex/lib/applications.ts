@@ -26,8 +26,7 @@ export async function getApplicationReview(ctx: AuthCtx, applicationId: Applicat
 export async function getApplicationStatus(ctx: AuthCtx, application: ApplicationDoc) {
   const review = await getApplicationReview(ctx, application._id);
   if (review) return review.status === "under_review" ? "submitted" : review.status;
-  if (application.status === "draft" && applicationFormWasSubmitted(application)) return "submitted";
-  return application.status;
+  return applicationFormWasSubmitted(application) ? "submitted" : "draft";
 }
 
 /** Whether the applicant completed a successful registration form submit. */
@@ -54,7 +53,6 @@ export async function ensureDraftApplication(ctx: MutationCtx) {
       await ctx.db.patch(existing._id, {
         emailVerificationTime,
         email,
-        updatedAt,
         applicantUpdatedAt: updatedAt,
       });
     }
@@ -68,9 +66,7 @@ export async function ensureDraftApplication(ctx: MutationCtx) {
     ...(authUser.emailVerificationTime !== undefined
       ? { emailVerificationTime: authUser.emailVerificationTime }
       : {}),
-    status: "draft",
     createdAt: now,
-    updatedAt: now,
     applicantUpdatedAt: now,
   });
   const application = await ctx.db.get(applicationId);

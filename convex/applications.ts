@@ -61,7 +61,7 @@ export const getMyApplicationDraft = query({
       draft: applicationToDraftForm(application),
       savedResume: resumeFileExists ? storedResume : null,
       resumeMissing: storedResume !== null && !resumeFileExists,
-      updatedAt: application.applicantUpdatedAt ?? application.updatedAt,
+      updatedAt: application.applicantUpdatedAt ?? application.createdAt,
     };
   },
 });
@@ -91,7 +91,6 @@ export const saveApplicationDraft = mutation({
         email,
         emailVerificationTime:
           authUser?.emailVerificationTime ?? application.emailVerificationTime,
-        updatedAt,
         applicantUpdatedAt: updatedAt,
       },
     );
@@ -142,7 +141,7 @@ export const getMyApplicantDashboard = query({
             id: application._id,
             status,
             submittedAt: application.submittedAt ?? null,
-            updatedAt: application.applicantUpdatedAt ?? application.updatedAt,
+            updatedAt: application.applicantUpdatedAt ?? application.createdAt,
             answers: applicantAnswers,
             resumeStatus,
           }

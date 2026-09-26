@@ -105,13 +105,7 @@ const applicantRecordFields = {
  * Applicant application — one row per auth user.
  * Passwords and auth secrets live in Convex Auth tables only.
  */
-export const applicationRecord = {
-  ...applicantRecordFields,
-  status: applicationStatus,
-  updatedAt: v.number(),
-  reviewedAt: v.optional(v.number()),
-  reviewedBy: v.optional(v.string()),
-};
+export const applicationRecord = applicantRecordFields;
 
 export const applicationSubmissionLogRecord = {
   ...applicantRecordFields,

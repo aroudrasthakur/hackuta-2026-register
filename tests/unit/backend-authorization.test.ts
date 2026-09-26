@@ -65,9 +65,6 @@ const ref = {
   stripConfirmationStatus: makeFunctionReference<"mutation">(
     "migrations:stripConfirmationStatusFromApplications",
   ),
-  backfillApplicationReviews: makeFunctionReference<"mutation">(
-    "migrations:backfillApplicationReviews",
-  ),
   migrateMergedOtherFields: makeFunctionReference<"mutation">(
     "migrations:migrateMergedOtherFieldsToSeparateColumns",
   ),
@@ -120,9 +117,8 @@ async function insertApplication(
     ctx.db.insert("applications", {
       authUserId,
       email: "applicant@example.com",
-      status: "draft",
       createdAt: 1,
-      updatedAt: 1,
+      applicantUpdatedAt: 1,
       ...fields,
     } as never),
   );
@@ -259,7 +255,24 @@ describe("profile lifecycle", () => {
     const before = await t.run((ctx) => ctx.db.query("applications").first());
     await client.mutation(ref.ensureApplicantApplication, {});
     const after = await t.run((ctx) => ctx.db.query("applications").first());
-    expect(after?.updatedAt).toBe(before?.updatedAt);
+    expect(after?.applicantUpdatedAt).toBe(before?.applicantUpdatedAt);
+  });
+
+  it("keeps applicant draft metadata without legacy review fields", async () => {
+    const t = createTest();
+    const userId = await seedUser(t);
+    const applicationId = await insertApplication(t, userId);
+    const client = asUser(t, userId);
+    await client.mutation(ref.saveDraft, { patch: formToDraftPatch(INITIAL_FORM) });
+    const application = await t.run((ctx) => ctx.db.get(applicationId));
+    for (const key of ["status", "updatedAt", "reviewedAt", "reviewedBy"]) {
+      expect(application).not.toHaveProperty(key);
+    }
+    expect(application?.applicantUpdatedAt).toEqual(expect.any(Number));
+    await expect(client.query(ref.getDraft, {})).resolves.toMatchObject({ status: "draft" });
+    await expect(client.query(ref.dashboard, {})).resolves.toMatchObject({
+      registration: { status: "draft", updatedAt: application?.applicantUpdatedAt },
+    });
   });
 
   it("syncs, updates, and clears the auth display name from draft names", async () => {
@@ -289,7 +302,7 @@ describe("profile lifecycle", () => {
   it("blocks draft edits after the application is submitted", async () => {
     const t = createTest();
     const userId = await seedUser(t);
-    await insertApplication(t, userId, { status: "submitted", formSubmitted: true, submittedAt: 5 });
+    await insertApplication(t, userId, { formSubmitted: true, submittedAt: 5 });
     await expect(
       asUser(t, userId).mutation(ref.saveDraft, { patch: formToDraftPatch(INITIAL_FORM) }),
     ).rejects.toThrow("Your application has already been submitted.");
@@ -298,16 +311,16 @@ describe("profile lifecycle", () => {
   it("reports submitted routing state from either submission marker", async () => {
     const t = createTest();
     const userId = await seedUser(t);
-    await insertApplication(t, userId, { status: "draft", submittedAt: 5 });
+    await insertApplication(t, userId, { submittedAt: 5 });
     await expect(asUser(t, userId).query(ref.routingState, {})).resolves.toMatchObject({
       hasSubmittedRegistration: true,
     });
   });
 
-  it("keeps legacy submissions readable before review backfill", async () => {
+  it("keeps submitted rows readable even when no review row exists", async () => {
     const t = createTest();
     const userId = await seedUser(t);
-    await insertApplication(t, userId, { status: "draft", submittedAt: 5 });
+    await insertApplication(t, userId, { submittedAt: 5 });
     const client = asUser(t, userId);
     await expect(client.query(ref.getDraft, {})).resolves.toMatchObject({
       status: "submitted", draft: null,
@@ -537,62 +550,6 @@ describe("event config", () => {
 });
 
 describe("maintenance and migrations", () => {
-  it("backfills submitted reviews without losing legacy decisions or duplicating rows", async () => {
-    const t = createTest();
-    const draftUser = await seedUser(t, { email: "draft@example.com" });
-    const submittedUser = await seedUser(t, { email: "submitted@example.com" });
-    const acceptedUser = await seedUser(t, { email: "accepted@example.com" });
-    const reviewerId = await seedUser(t, { email: "reviewer@example.com" });
-    const draftId = await insertApplication(t, draftUser, {
-      email: "draft@example.com", reviewedAt: 9, reviewedBy: "pre-submit reviewer",
-    });
-    const submittedId = await insertApplication(t, submittedUser, {
-      email: "submitted@example.com", status: "submitted", formSubmitted: true,
-      submittedAt: 4, updatedAt: 5, reviewedAt: 6, reviewedBy: reviewerId,
-    });
-    const acceptedId = await insertApplication(t, acceptedUser, {
-      email: "accepted@example.com", status: "accepted", formSubmitted: true,
-      submittedAt: 7, updatedAt: 8, reviewedBy: "legacy-reviewer",
-    });
-
-    const first = await t.mutation(ref.backfillApplicationReviews, { limit: 2 }) as {
-      created: number; isDone: boolean; continueCursor: string;
-    };
-    expect(first).toMatchObject({ created: 1, unresolvedDraftReviews: 1, isDone: false });
-    const second = await t.mutation(ref.backfillApplicationReviews, {
-      cursor: first.continueCursor, limit: 2,
-    });
-    expect(second).toMatchObject({ created: 1, isDone: true });
-    await t.run(async (ctx) => {
-      const reviews = await ctx.db.query("applicationReviews").collect();
-      expect(reviews).toHaveLength(2);
-      expect(reviews.find((row) => row.applicationId === draftId)).toBeUndefined();
-      expect(reviews.find((row) => row.applicationId === submittedId)).toMatchObject({
-        status: "under_review", reviewedAt: 6, reviewedBy: reviewerId,
-      });
-      expect(reviews.find((row) => row.applicationId === acceptedId)).toMatchObject({
-        status: "accepted", legacyReviewedBy: "legacy-reviewer",
-      });
-      expect((await ctx.db.get(draftId))?.applicantUpdatedAt).toBe(1);
-      expect((await ctx.db.get(submittedId))?.applicantUpdatedAt).toBe(5);
-      expect((await ctx.db.get(acceptedId))?.status).toBe("accepted");
-      expect((await ctx.db.get(acceptedId))?.reviewedBy).toBe("legacy-reviewer");
-    });
-
-    await t.run(async (ctx) => {
-      const review = await ctx.db.query("applicationReviews")
-        .withIndex("by_application", (q) => q.eq("applicationId", submittedId))
-        .unique();
-      await ctx.db.patch(review!._id, { status: "waitlisted", updatedAt: 10 });
-    });
-    await expect(t.mutation(ref.backfillApplicationReviews, {})).resolves.toMatchObject({
-      created: 0, isDone: true,
-    });
-    const reviewsAfter = await t.run((ctx) => ctx.db.query("applicationReviews").collect());
-    expect(reviewsAfter).toHaveLength(2);
-    expect(reviewsAfter.find((row) => row.applicationId === submittedId)?.status).toBe("waitlisted");
-  });
-
   it("wipes every application and auth table plus stored files, across multiple pages", async () => {
     const t = createTest();
     const userId = await seedUser(t);
@@ -651,9 +608,10 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "clean@example.com",
-        status: "submitted",
         createdAt: 2,
-        updatedAt: 2,
+        applicantUpdatedAt: 2,
+        formSubmitted: true,
+        submittedAt: 2,
       });
     });
 
@@ -664,9 +622,7 @@ describe("maintenance and migrations", () => {
 
     const applications = await t.run((ctx) => ctx.db.query("applications").collect());
     expect(applications.some((application) => "eligibilityStatus" in application)).toBe(false);
-    expect(applications.find((application) => application.email === "clean@example.com")?.status).toBe(
-      "submitted",
-    );
+    expect(applications.find((application) => application.email === "clean@example.com")?.formSubmitted).toBe(true);
 
     await expect(t.mutation(ref.stripEligibilityStatus, {})).resolves.toEqual({
       ok: true,
@@ -692,9 +648,10 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "clean@example.com",
-        status: "submitted",
         createdAt: 2,
-        updatedAt: 2,
+        applicantUpdatedAt: 2,
+        formSubmitted: true,
+        submittedAt: 2,
       });
     });
 
@@ -705,9 +662,7 @@ describe("maintenance and migrations", () => {
 
     const applications = await t.run((ctx) => ctx.db.query("applications").collect());
     expect(applications.some((application) => "confirmationStatus" in application)).toBe(false);
-    expect(applications.find((application) => application.email === "clean@example.com")?.status).toBe(
-      "submitted",
-    );
+    expect(applications.find((application) => application.email === "clean@example.com")?.formSubmitted).toBe(true);
 
     await expect(t.mutation(ref.stripConfirmationStatus, {})).resolves.toEqual({
       ok: true,
@@ -733,9 +688,10 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "clean@example.com",
-        status: "submitted",
         createdAt: 2,
-        updatedAt: 2,
+        applicantUpdatedAt: 2,
+        formSubmitted: true,
+        submittedAt: 2,
       });
     });
 
@@ -746,9 +702,7 @@ describe("maintenance and migrations", () => {
 
     const applications = await t.run((ctx) => ctx.db.query("applications").collect());
     expect(applications.some((application) => "internalNotes" in application)).toBe(false);
-    expect(applications.find((application) => application.email === "clean@example.com")?.status).toBe(
-      "submitted",
-    );
+    expect(applications.find((application) => application.email === "clean@example.com")?.formSubmitted).toBe(true);
 
     await expect(t.mutation(ref.stripInternalNotes, {})).resolves.toEqual({
       ok: true,
@@ -775,9 +729,10 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "clean@example.com",
-        status: "submitted",
         createdAt: 4,
-        updatedAt: 4,
+        applicantUpdatedAt: 4,
+        formSubmitted: true,
+        submittedAt: 4,
       });
     });
 
@@ -789,9 +744,7 @@ describe("maintenance and migrations", () => {
     const applications = await t.run((ctx) => ctx.db.query("applications").collect());
     expect(applications.some((application) => "checkedInAt" in application)).toBe(false);
     expect(applications.some((application) => "confirmedAt" in application)).toBe(false);
-    expect(applications.find((application) => application.email === "clean@example.com")?.status).toBe(
-      "submitted",
-    );
+    expect(applications.find((application) => application.email === "clean@example.com")?.formSubmitted).toBe(true);
 
     await expect(t.mutation(ref.stripCheckInAndConfirmedAt, {})).resolves.toEqual({
       ok: true,
@@ -825,9 +778,8 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "already-migrated@example.com",
-        status: "draft",
         createdAt: 3,
-        updatedAt: 3,
+        applicantUpdatedAt: 3,
         hackathonsAttended: 5,
       });
     });
@@ -885,9 +837,8 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "already-migrated@example.com",
-        status: "draft",
         createdAt: 3,
-        updatedAt: 3,
+        applicantUpdatedAt: 3,
         allergyDetails: "Tree nuts",
       });
     });
@@ -953,9 +904,10 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "merged-other@example.com",
-        status: "submitted",
         createdAt: 1,
-        updatedAt: 1,
+        applicantUpdatedAt: 1,
+        formSubmitted: true,
+        submittedAt: 1,
         school: "Mars Academy",
         major: "Biomedical engineering",
         hearAbout: "Professor announcement",
@@ -964,18 +916,16 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "legacy-sentinel@example.com",
-        status: "draft",
         createdAt: 2,
-        updatedAt: 2,
+        applicantUpdatedAt: 2,
         school: LEGACY_SCHOOL_OTHER_OPTION,
         otherSchool: "Homeschool Co-op",
       });
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "already-split@example.com",
-        status: "draft",
         createdAt: 3,
-        updatedAt: 3,
+        applicantUpdatedAt: 3,
         school: SCHOOL_OTHER_OPTION,
         otherSchool: "Mars Academy",
         major: MAJOR_OTHER_OPTION,
@@ -1041,9 +991,8 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "already-migrated@example.com",
-        status: "draft",
         createdAt: 3,
-        updatedAt: 3,
+        applicantUpdatedAt: 3,
         sponsorSharingConsentAt: 300,
         foodAllergyWaiverAgreedAt: 400,
       });
@@ -1120,9 +1069,8 @@ describe("maintenance and migrations", () => {
       await ctx.db.insert("applications", {
         authUserId: userId,
         email: "already-migrated@example.com",
-        status: "draft",
         createdAt: 4,
-        updatedAt: 4,
+        applicantUpdatedAt: 4,
         mlhCodeOfConductAgreed: true,
       });
     });

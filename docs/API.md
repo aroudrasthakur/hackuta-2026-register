@@ -317,8 +317,8 @@ One row per auth user. All application form fields are top-level columns.
 | --- | --- |
 | `authUserId` | FK to `users` |
 | `email` | Copied from verified auth email |
-| `status` | Legacy lifecycle/review status; remains during the additive migration, then removed |
-| `applicantUpdatedAt` | Applicant draft/submission edits; backfilled from the legacy `updatedAt` |
+| `applicantUpdatedAt` | Applicant draft/submission edits; backfilled from the old timestamp before schema cleanup |
+| `formSubmitted`, `submittedAt` | Applicant-owned submission markers; draft/submitted status is derived from these when no review row exists |
 | `resumeStorageId` | PDF in `_storage` |
 | Applicant fields | See `shared/registration/schema.ts` and `convex/applicationFields.ts` |
 | `builtOrWantToBuild`, `shortDeadlineLearning` | Required multiline answers (max 2,000 chars each) |
@@ -326,7 +326,7 @@ One row per auth user. All application form fields are top-level columns.
 
 ### `applicationReviews`
 
-One row per submitted application, linked by `applicationId`. `under_review` is created atomically with submission; decisions use `accepted`, `waitlisted`, or `rejected`, with legacy `withdrawn` retained for compatibility. `reviewedAt`, `reviewedBy` (auth user ID), and `updatedAt` describe organizer review state. Unmapped historical reviewer strings are retained as `legacyReviewedBy`. Until the migration is complete, user-facing queries prefer the review row but fall back to the legacy application status. No public review-editing mutation exists yet.
+One row per submitted application, linked by `applicationId`. `under_review` is created atomically with submission; decisions use `accepted`, `waitlisted`, or `rejected`, with legacy `withdrawn` retained for compatibility. `reviewedAt`, `reviewedBy` (auth user ID), and `updatedAt` describe organizer review state. Unmapped historical reviewer strings are retained as `legacyReviewedBy`. User-facing queries use the review row for decisions and derive draft/submitted from application submission markers when no review row exists. No public review-editing mutation exists yet.
 
 ### `applicationSubmissionLogs`
 
@@ -335,7 +335,7 @@ Append-only snapshot written once on successful submit (`registrations:submitReg
 | Field | Notes |
 | --- | --- |
 | `applicationId` | FK to `applications` |
-| Application columns | Full copy of the submitted application row at submit time |
+| Application columns | Submitted applicant data snapshot; `status: submitted` and `updatedAt` are explicitly recorded for historical log compatibility, not stored on new application rows |
 | `submittedAt` | Submission timestamp — use this instead of `createdAt`, which reflects when the draft row was first created |
 
 Indexed by `applicationId` (`by_application`). Its validator is separate from the live application row so historical snapshots remain valid after the review migration.

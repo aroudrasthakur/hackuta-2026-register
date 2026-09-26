@@ -1,5 +1,4 @@
 import type { GenericMutationCtx } from "convex/server";
-import { v } from "convex/values";
 import { resolveAllergyDetailsFromLegacy } from "../shared/registration/allergyMigration";
 import {
   splitLegacyGender,
@@ -9,58 +8,10 @@ import {
 } from "../shared/registration/otherOptionMigration";
 import { mergeLegacyMeatPreferencesIntoDietaryRestrictions } from "../shared/registration/dietaryMigration";
 import { internalMutation } from "./_generated/server";
-import { applicationFormWasSubmitted, getApplicationReview } from "./lib/applications";
 
 /** Wide db for one-time reads of legacy tables removed from the schema. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- legacy migration only
 type LegacyMigrationDb = GenericMutationCtx<any>["db"];
-
-export const backfillApplicationReviews = internalMutation({
-  args: { cursor: v.optional(v.string()), limit: v.optional(v.number()) },
-  handler: async (ctx, { cursor, limit }) => {
-    const { page, continueCursor, isDone } = await ctx.db
-      .query("applications")
-      .paginate({ cursor: cursor ?? null, numItems: Math.min(Math.max(Math.floor(limit ?? 50), 1), 50) });
-    let created = 0;
-    let patched = 0;
-    let unresolvedDraftReviews = 0;
-
-    for (const application of page) {
-      if (application.applicantUpdatedAt === undefined) {
-        await ctx.db.patch(application._id, { applicantUpdatedAt: application.updatedAt });
-        patched += 1;
-      }
-      if (!applicationFormWasSubmitted(application) && application.status === "draft") {
-        if (application.reviewedAt !== undefined || application.reviewedBy !== undefined) {
-          unresolvedDraftReviews += 1;
-        }
-        continue;
-      }
-      if (await getApplicationReview(ctx, application._id)) continue;
-
-      const reviewer = application.reviewedBy
-        ? ctx.db.normalizeId("users", application.reviewedBy)
-        : null;
-      const reviewedBy = reviewer && (await ctx.db.get(reviewer)) ? reviewer : undefined;
-      const status = application.status === "draft" || application.status === "submitted"
-        ? "under_review" as const
-        : application.status;
-      await ctx.db.insert("applicationReviews", {
-        applicationId: application._id,
-        status,
-        createdAt: application.submittedAt ?? application.createdAt,
-        updatedAt: application.reviewedAt ?? application.updatedAt,
-        ...(application.reviewedAt !== undefined ? { reviewedAt: application.reviewedAt } : {}),
-        ...(reviewedBy ? { reviewedBy } : application.reviewedBy
-          ? { legacyReviewedBy: application.reviewedBy }
-          : {}),
-      });
-      created += 1;
-    }
-
-    return { created, patched, unresolvedDraftReviews, isDone, continueCursor };
-  },
-});
 
 /** One-time cleanup after removing image and points from the users schema. */
 export const stripLegacyUserImageAndPoints = internalMutation({
