@@ -116,6 +116,90 @@ export const migrateEatsBeefAndPorkToDietaryRestrictions = internalMutation({
   },
 });
 
+/** One-time cleanup after removing internalNotes from the applications schema. */
+export const stripInternalNotesFromApplications = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      if (!("internalNotes" in application)) {
+        continue;
+      }
+      const {
+        _id,
+        _creationTime,
+        internalNotes: _internalNotes,
+        ...replacement
+      } = application as typeof application & {
+        internalNotes?: string;
+      };
+      void _creationTime;
+      void _internalNotes;
+      await ctx.db.replace(_id, replacement);
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
+/** One-time cleanup after removing eligibilityStatus from the applications schema. */
+export const stripEligibilityStatusFromApplications = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      if (!("eligibilityStatus" in application)) {
+        continue;
+      }
+      const {
+        _id,
+        _creationTime,
+        eligibilityStatus: _eligibilityStatus,
+        ...replacement
+      } = application as typeof application & {
+        eligibilityStatus?: string;
+      };
+      void _creationTime;
+      void _eligibilityStatus;
+      await ctx.db.replace(_id, replacement);
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
+/** One-time cleanup after removing confirmationStatus from the applications schema. */
+export const stripConfirmationStatusFromApplications = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let updated = 0;
+
+    for await (const application of ctx.db.query("applications")) {
+      if (!("confirmationStatus" in application)) {
+        continue;
+      }
+      const {
+        _id,
+        _creationTime,
+        confirmationStatus: _confirmationStatus,
+        ...replacement
+      } = application as typeof application & {
+        confirmationStatus?: string;
+      };
+      void _creationTime;
+      void _confirmationStatus;
+      await ctx.db.replace(_id, replacement);
+      updated += 1;
+    }
+
+    return { ok: true as const, updated };
+  },
+});
+
 /** One-time cleanup after removing checkedInAt and confirmedAt from the applications schema. */
 export const stripLegacyApplicationCheckInAndConfirmedAt = internalMutation({
   args: {},

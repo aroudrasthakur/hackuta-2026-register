@@ -20,6 +20,7 @@ export const TRIMMED_STRING_FIELDS = [
   "builtOrWantToBuild",
   "shortDeadlineLearning",
   "emergencyContactName",
+  "emergencyContactRelationship",
   "emergencyContactPhone",
 ] as const;
 
@@ -41,6 +42,7 @@ export const PLAIN_STRING_FIELDS = [
 /** Cleared when parent select is not "Other"; trimmed when active. */
 export const CONDITIONAL_STRING_FIELDS = [
   "otherSchool",
+  "otherLevelOfStudy",
   "otherMajor",
   "otherHearAbout",
   "otherGender",

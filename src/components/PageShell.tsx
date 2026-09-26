@@ -78,7 +78,7 @@ export function PageShell({
         />
 
         <div
-          className={`relative z-10 overflow-hidden rounded-2xl border-2 border-(--sand) bg-(--light) shadow-[0_10px_40px_rgba(26,58,82,0.12)] ${
+          className={`relative z-10 overflow-visible rounded-2xl border-2 border-(--sand) bg-(--light) shadow-[0_10px_40px_rgba(26,58,82,0.12)] ${
             compact
               ? "flex min-h-[min(78vh,50rem)] flex-col p-6 sm:p-10 lg:p-12"
               : "p-8 sm:p-12"

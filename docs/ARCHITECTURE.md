@@ -53,12 +53,12 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 ```
 /sign-in → Password provider (email + password)
          → email-verification OTP (6 digits via the HackUTA email service)
-         → JWT session
+         → JWT session (sessionStorage in the browser tab)
          → ensureApplicantApplication
          → route to /register or /profile
 ```
 
-Sign-in mode skips OTP when the account is already verified.
+Sign-in mode skips OTP when the account is already verified. [AuthBootstrap](../src/components/AuthBootstrap.tsx) waits for the initial Convex Auth read on page load; it does not invalidate restored sessions, so refresh keeps the applicant signed in within the same tab.
 
 ### Forgot password
 
@@ -71,7 +71,7 @@ Sign-in mode skips OTP when the account is already verified.
          → return to sign-in with success message
 ```
 
-Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and reset OTPs use separate providers and rate-limit buckets. New passwords must differ from the current password ([assertPasswordNotReused](../convex/lib/assertPasswordNotReused.ts)).
+Reset code requests use neutral copy (no account enumeration). Sign-up OTPs and reset OTPs use separate providers and rate-limit buckets. New passwords must differ from the current password ([assertPasswordNotReused](../convex/lib/assertPasswordNotReused.ts)); the hash comparison happens only after a valid reset OTP, without attempting a password sign-in. A reused password consumes the OTP and the newly created reset session is invalidated; the user must request another code.
 
 ### Application draft
 

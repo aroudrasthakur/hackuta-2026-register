@@ -6,7 +6,7 @@ React hooks and context providers for auth, routing state, and UI mood. Flat dir
 
 | File | Summary |
 | --- | --- |
-| [useSessionAuth.tsx](useSessionAuth.tsx) | SessionAuthProvider, useSessionAuth() — loading state and sign-out |
+| [useSessionAuth.tsx](useSessionAuth.tsx) | SessionAuthProvider, useSessionAuth() — Convex Auth loading state, persistence, and sign-out |
 | [mockAuthContext.ts](mockAuthContext.ts) | MockAuthContext, MockAuthContextValue, defaultMockAuthValue |
 | [useMockAuth.ts](useMockAuth.ts) | useMockAuth() — reads MockAuthContext |
 | [useApplicantRouting.ts](useApplicantRouting.ts) | useApplicantRouting() — auth, verified email, hasSubmittedRegistration |

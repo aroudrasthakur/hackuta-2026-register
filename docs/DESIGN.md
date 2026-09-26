@@ -93,7 +93,7 @@ Notable required applicant fields (2026):
 | `allergyDetails` | Text input in **Event Preferences** (when Allergies is checked) | Required with Allergies; up to 500 characters |
 | `otherDietaryRestrictions` | Optional text input in **Event Preferences** | Optional free-text dietary notes |
 
-Exact question labels live in `APPLICATION_QUESTIONS` ([shared/registration/constants.ts](../shared/registration/constants.ts)). Legacy `firstHackathon` yes/no answers hydrate as counts and are migrated server-side.
+Exact question labels live in `APPLICATION_QUESTIONS` ([shared/registration/constants.ts](../shared/registration/constants.ts)).
 
 ## Form UX (current behavior)
 

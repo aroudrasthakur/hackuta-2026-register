@@ -61,6 +61,7 @@ export function fillValidApplicationForm() {
   );
   selectListboxOption(/How did you hear about HackUTA/, "Discord");
   setInputValue(/Emergency contact name/, "Jane Test");
+  setInputValue(/Emergency contact relationship/, "Parent");
   setInputValue(/Emergency contact phone/, "2025550124");
   fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
   fireEvent.click(screen.getByLabelText(/authorize HackUTA to share my registration information/));

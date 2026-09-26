@@ -81,21 +81,6 @@ describe("allergyDetails field", () => {
     expect(restored.allergyDetails).toBe("No peanuts");
   });
 
-  it("hydrates legacy otherDietary values into allergyDetails", () => {
-    const restored = applicationToDraftForm({
-      otherDietary: "Shellfish",
-    } as Record<string, unknown>);
-    expect(restored.allergyDetails).toBe("Shellfish");
-  });
-
-  it("prefers stored allergyDetails over legacy otherDietary", () => {
-    const restored = applicationToDraftForm({
-      allergyDetails: "Peanuts",
-      otherDietary: "Shellfish",
-    } as Record<string, unknown>);
-    expect(restored.allergyDetails).toBe("Peanuts");
-  });
-
   it("clears stored allergyDetails when the draft sends an empty string", () => {
     const patch = formToDraftPatch({ ...INITIAL_FORM, allergyDetails: "" });
     expect(patch.allergyDetails).toBe("");

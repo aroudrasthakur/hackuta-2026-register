@@ -10,9 +10,16 @@ import {
   retrieveAccount,
   signInViaProvider,
 } from "@convex-dev/auth/server";
-import type { GenericDataModel } from "convex/server";
+import { makeFunctionReference, type GenericDataModel } from "convex/server";
 import { Scrypt } from "lucia";
 import { assertPasswordNotReused } from "./assertPasswordNotReused";
+
+const invalidateResetSessionRef = makeFunctionReference<"mutation">(
+  "passwordReset:invalidateResetSession",
+);
+const consumePasswordResetRequestRef = makeFunctionReference<"mutation">(
+  "rateLimits:consumePasswordResetRequest",
+);
 
 function validateDefaultPasswordRequirements(password: string) {
   if (!password || password.length < 8) {
@@ -97,13 +104,25 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
         if (!config.reset) {
           throw new Error(`Password reset is not enabled for ${provider}`);
         }
-        const { account } = await retrieveAccount(ctx, {
+        // Apply the same limits before lookup so cooldowns cannot reveal accounts.
+        await ctx.runMutation(consumePasswordResetRequestRef, { email });
+        const retrieved = await retrieveAccount(ctx, {
           provider,
           account: { id: email },
+        }).catch((error: unknown) => {
+          // Convex Auth throws for a missing account; only this expected case
+          // gets the same null result as a successful reset-code request.
+          if (error instanceof Error && error.message === "InvalidAccountId") {
+            return null;
+          }
+          throw error;
         });
+        if (retrieved === null) {
+          return null;
+        }
         return await signInViaProvider(ctx, config.reset, {
-          accountId: account._id,
-          params,
+          accountId: retrieved.account._id,
+          params: { ...params, email },
         });
       }
 
@@ -114,10 +133,13 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
         if (params.newPassword === undefined) {
           throw new Error("Missing `newPassword` param for `reset-verification` flow");
         }
+        // Without a code, the email provider would start another send. All sends
+        // must go through the rate-limited reset request branch above.
+        if (typeof params.code !== "string" || !/^\d{6}$/.test(params.code)) {
+          throw new Error("Invalid code");
+        }
 
         const newPassword = params.newPassword as string;
-        await assertPasswordNotReused(ctx, provider, email, newPassword);
-
         const { account: resetAccount } = await retrieveAccount(ctx, {
           provider,
           account: { id: email },
@@ -127,16 +149,24 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
           throw new Error("Invalid code");
         }
         const { userId, sessionId } = result;
-        if (resetAccount.userId !== userId) {
-          throw new Error("Invalid code");
+        try {
+          if (resetAccount.userId !== userId) {
+            throw new Error("Invalid code");
+          }
+          await assertPasswordNotReused(
+            typeof resetAccount.secret === "string" ? resetAccount.secret : undefined,
+            newPassword,
+          );
+          await modifyAccountCredentials(ctx, {
+            provider,
+            account: { id: email, secret: newPassword },
+          });
+          await invalidateSessions(ctx, { userId, except: [sessionId] });
+          return { userId, sessionId };
+        } catch (error) {
+          await ctx.runMutation(invalidateResetSessionRef, { userId, sessionId });
+          throw error;
         }
-
-        await modifyAccountCredentials(ctx, {
-          provider,
-          account: { id: email, secret: newPassword },
-        });
-        await invalidateSessions(ctx, { userId, except: [sessionId] });
-        return { userId, sessionId };
       }
 
       if (flow === "email-verification") {

@@ -40,6 +40,7 @@ export type ApplicationFormData = {
   countryOfResidence: CountryOfResidence | "";
   stateOfResidence: StateOfResidence | "";
   levelOfStudy: LevelOfStudy | "";
+  otherLevelOfStudy: string;
   major: Major | "";
   otherMajor: string;
   graduationYear: string;
@@ -65,6 +66,7 @@ export type ApplicationFormData = {
   builtOrWantToBuild: string;
   shortDeadlineLearning: string;
   emergencyContactName: string;
+  emergencyContactRelationship: string;
   emergencyContactPhone: string;
   emergencyContactPhoneCountry: CountryCode | "";
   mlhCodeOfConductAgreed: boolean;
@@ -90,6 +92,7 @@ export const FIELD_ORDER: FieldName[] = [
   "stateOfResidence",
   "internationalStudent",
   "levelOfStudy",
+  "otherLevelOfStudy",
   "major",
   "otherMajor",
   "graduationYear",
@@ -112,6 +115,7 @@ export const FIELD_ORDER: FieldName[] = [
   "portfolio",
   "devpost",
   "emergencyContactName",
+  "emergencyContactRelationship",
   "emergencyContactPhone",
   "mlhCodeOfConductAgreed",
   "mlhDataSharingConsent",

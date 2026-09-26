@@ -12,6 +12,8 @@ export const LEVELS_OF_STUDY = [
   "Prefer not to answer",
 ] as const;
 
+export const LEVEL_OF_STUDY_OTHER_OPTION = "Other" as const;
+
 export const EXPERIENCE_LEVELS = [
   "Beginner",
   "Intermediate",
@@ -142,7 +144,7 @@ export const MAJORS = [
 export const MAJOR_OTHER_OPTION = "Other (please specify)" as const;
 export const SCHOOL_OTHER_OPTION = "Other (Please Specify)" as const;
 
-export const TSHIRT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
+export const TSHIRT_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"] as const;
 
 export const HEAR_ABOUT_OPTIONS = [
   "Instagram",
@@ -166,6 +168,7 @@ export const APPLICATION_QUESTIONS = {
 
 export const FIELD_LIMITS = {
   name: 100,
+  emergencyContactRelationship: 100,
   phone: 30,
   email: 254,
   school: 200,
@@ -178,6 +181,7 @@ export const FIELD_LIMITS = {
   allergyDetails: 500,
   otherDietaryRestrictions: 500,
   otherMajor: 200,
+  otherLevelOfStudy: 200,
   otherSchool: 200,
   otherHearAbout: 200,
   otherGender: 200,

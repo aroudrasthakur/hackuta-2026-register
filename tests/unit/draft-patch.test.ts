@@ -3,14 +3,10 @@ import { INITIAL_FORM, type ApplicationFormData } from "../../shared/registratio
 import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
-import {
-  INTERIM_MLH_CODE_OF_CONDUCT_FIELD,
-  LEGACY_CODE_OF_CONDUCT_FIELD,
-  MLH_CODE_OF_CONDUCT_FIELD,
-} from "../../shared/registration/consentFieldMigration";
 import { OTHER_OPTION_FIXTURES } from "../fixtures/otherOptionFixtures";
 import { validRegistrationForm } from "../fixtures/validRegistrationForm";
 import {
@@ -99,6 +95,8 @@ describe("formToDraftPatch conditional fields", () => {
       ...INITIAL_FORM,
       school: SCHOOL_OTHER_OPTION,
       otherSchool: "  Mars Academy  ",
+      levelOfStudy: LEVEL_OF_STUDY_OTHER_OPTION,
+      otherLevelOfStudy: ` ${OTHER_OPTION_FIXTURES.levelOfStudy} `,
       major: MAJOR_OTHER_OPTION,
       otherMajor: " Space Law ",
       hearAbout: HEAR_ABOUT_OTHER_OPTION,
@@ -108,6 +106,7 @@ describe("formToDraftPatch conditional fields", () => {
     });
 
     expect(patch.otherSchool).toBe("Mars Academy");
+    expect(patch.otherLevelOfStudy).toBe(OTHER_OPTION_FIXTURES.levelOfStudy);
     expect(patch.otherMajor).toBe("Space Law");
     expect(patch.otherHearAbout).toBe(OTHER_OPTION_FIXTURES.hearAbout);
     expect(patch.otherGender).toBe("Genderfluid");
@@ -118,6 +117,8 @@ describe("formToDraftPatch conditional fields", () => {
       ...INITIAL_FORM,
       school: "The University of Texas at Arlington",
       otherSchool: "Mars Academy",
+      levelOfStudy: "Undergraduate University (3+ year)",
+      otherLevelOfStudy: OTHER_OPTION_FIXTURES.levelOfStudy,
       major: "Computer science, computer engineering, or software engineering",
       otherMajor: "Space Law",
       hearAbout: "Discord",
@@ -127,6 +128,7 @@ describe("formToDraftPatch conditional fields", () => {
     });
 
     expect(patch.otherSchool).toBe("");
+    expect(patch.otherLevelOfStudy).toBe("");
     expect(patch.otherMajor).toBe("");
     expect(patch.otherHearAbout).toBe("");
     expect(patch.otherGender).toBe("");
@@ -174,77 +176,11 @@ describe("applicationToDraftForm", () => {
     expect(applicationToDraftForm(formToDraftPatch(form))).toEqual(expected);
   });
 
-  it("hydrates legacy merged school text as Other + otherSchool", () => {
-    const restored = applicationToDraftForm({
-      school: "Mars Academy",
-    });
-
-    expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
-    expect(restored.otherSchool).toBe("Mars Academy");
-  });
-
-  it("normalizes the legacy school Other sentinel on hydration", () => {
-    const restored = applicationToDraftForm({
-      school: "Other:",
-      otherSchool: "Mars Academy",
-    });
-
-    expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
-    expect(restored.otherSchool).toBe("Mars Academy");
-  });
-
-  it("hydrates legacy merged major and hear-about text", () => {
-    const restored = applicationToDraftForm({
-      major: "Biomedical engineering",
-      hearAbout: "Professor announcement",
-    });
-
-    expect(restored.major).toBe(MAJOR_OTHER_OPTION);
-    expect(restored.otherMajor).toBe("Biomedical engineering");
-    expect(restored.hearAbout).toBe(HEAR_ABOUT_OTHER_OPTION);
-    expect(restored.otherHearAbout).toBe("Professor announcement");
-  });
-
-  it("hydrates legacy codeOfConductAgreed into mlhCodeOfConductAgreed", () => {
-    const restored = applicationToDraftForm({
-      codeOfConductAgreed: true,
-    } as Parameters<typeof applicationToDraftForm>[0]);
-
-    expect(restored.mlhCodeOfConductAgreed).toBe(true);
-  });
-
   it("includes mlhCodeOfConductAgreed in draft autosave patches", () => {
     const form = validRegistrationForm();
     form.mlhCodeOfConductAgreed = true;
 
     expect(formToDraftPatch(form).mlhCodeOfConductAgreed).toBe(true);
-  });
-
-  it("strips legacy code of conduct columns when merging mlhCodeOfConductAgreed", () => {
-    const patch = formToDraftPatch(validRegistrationForm());
-    patch.mlhCodeOfConductAgreed = true;
-
-    const merged = mergeDraftPatchIntoApplication(
-      {
-        [LEGACY_CODE_OF_CONDUCT_FIELD]: false,
-        [INTERIM_MLH_CODE_OF_CONDUCT_FIELD]: false,
-      },
-      patch,
-      { email: "sam@example.com", updatedAt: 1 },
-    );
-
-    expect(merged).toMatchObject({ [MLH_CODE_OF_CONDUCT_FIELD]: true });
-    expect(merged).not.toHaveProperty(LEGACY_CODE_OF_CONDUCT_FIELD);
-    expect(merged).not.toHaveProperty(INTERIM_MLH_CODE_OF_CONDUCT_FIELD);
-  });
-
-  it("hydrates legacy merged gender text as self-describe + otherGender", () => {
-    const restored = applicationToDraftForm({
-      gender: "Genderfluid",
-    });
-
-    expect(restored.gender).toBe(GENDER_SELF_DESCRIBE_OPTION);
-    expect(restored.otherGender).toBe("Genderfluid");
   });
 
   it("defaults every field for an empty application", () => {
@@ -264,17 +200,6 @@ describe("applicationToDraftForm", () => {
     const restored = applicationToDraftForm({ age: 0, graduationYear: null });
     expect(restored.age).toBe("0");
     expect(restored.graduationYear).toBe("");
-  });
-
-  it("maps legacy firstHackathon answers to hackathonsAttended counts", () => {
-    const legacy = (value: Record<string, unknown>) =>
-      applicationToDraftForm(value as Parameters<typeof applicationToDraftForm>[0]);
-
-    expect(legacy({ firstHackathon: true }).hackathonsAttended).toBe("0");
-    expect(legacy({ firstHackathon: false }).hackathonsAttended).toBe("1");
-    expect(legacy({ firstHackathon: false, hackathonsAttended: 4 }).hackathonsAttended).toBe(
-      "4",
-    );
   });
 
   it("loads older drafts without new answers as unanswered", () => {
@@ -369,8 +294,6 @@ describe("mergeDraftPatchIntoApplication", () => {
       authUserId: "user1",
       email: "test@example.com",
       status: "draft" as const,
-      eligibilityStatus: "unreviewed" as const,
-      confirmationStatus: "unconfirmed" as const,
       createdAt: 1,
       updatedAt: 1,
       firstName: "Old",

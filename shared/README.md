@@ -22,9 +22,8 @@ Isomorphic TypeScript imported by the React client and Convex backend. Keeps val
 | [constants.ts](registration/constants.ts) | MLH enums, `APPLICATION_QUESTIONS` labels, `FIELD_LIMITS`, graduation year and hackathons-attended bounds |
 | [draftPatch.ts](registration/draftPatch.ts) | Draft patch shape and cleared-value sentinel |
 | [draftMapping.ts](registration/draftMapping.ts) | Profile row ↔ autosave form mapping |
-| [allergyMigration.ts](registration/allergyMigration.ts) | Legacy `otherDietary` → `allergyDetails` merge helper |
-| [otherOptionMigration.ts](registration/otherOptionMigration.ts) | Split merged Other/self-describe answers into parent sentinel + `other*` columns |
-| [consentFieldMigration.ts](registration/consentFieldMigration.ts) | Legacy `codeOfConductAgreed` / `MLHcodeOfConductAgreed` → `mlhCodeOfConductAgreed` |
+| [allergyMigration.ts](registration/allergyMigration.ts) | One-time migration helper: legacy `otherDietary` → `allergyDetails` |
+| [otherOptionMigration.ts](registration/otherOptionMigration.ts) | One-time migration helper: split merged Other/self-describe answers |
 | [consentTimestamps.ts](registration/consentTimestamps.ts) | Server-managed agreement timestamps (MLH consents, sponsor sharing, food waiver) |
 | [resume.ts](registration/resume.ts) | Client resume validation, upload headers, size limits |
 | [submitErrors.ts](registration/submitErrors.ts) | User-facing error mapping for Convex and HTTP upload |
@@ -48,8 +47,6 @@ Convex application validators in [convex/applicationFields.ts](../convex/applica
 | `otherSchool`, `otherMajor`, `otherHearAbout`, `otherGender` | `CONDITIONAL_STRING_FIELDS` | Free text when parent select is an Other/self-describe sentinel |
 | `mlhCodeOfConductAgreed` | `REQUIRED_BOOLEAN_FIELDS` | Required MLH Code of Conduct consent on submit |
 | `mlhCodeOfConductAgreedAt`, `mlhDataSharingConsentAt`, `mlhCommunicationsConsentAt`, `sponsorSharingConsentAt`, `foodAllergyWaiverAgreedAt` | Server-only (`applicationRecord`) | Set/cleared by backend when the matching agreement toggles; not in draft patches |
-
-Draft hydration maps legacy `firstHackathon: true` → `"0"` and `false` → `"1"` when `hackathonsAttended` is absent, legacy `otherDietary` → `allergyDetails` when needed ([draftMapping.ts](registration/draftMapping.ts)), merged Other answers → sentinel + `other*` columns ([otherOptionMigration.ts](registration/otherOptionMigration.ts)), and legacy code-of-conduct columns → `mlhCodeOfConductAgreed` ([consentFieldMigration.ts](registration/consentFieldMigration.ts)).
 
 ## Auth (`auth/`)
 

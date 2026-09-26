@@ -9,7 +9,11 @@ import {
 } from "react";
 import { DropdownChevron } from "./DropdownChevron";
 import { FieldError, RequiredMark } from "./FormFields";
-import { dropdownOptionClass, dropdownPanelClass } from "./dropdownStyles";
+import {
+  dropdownContainerClass,
+  dropdownOptionClass,
+  dropdownPanelClass,
+} from "./dropdownStyles";
 import { fieldClass, labelClass, legendClass } from "./formFieldStyles";
 import { useDropdownDismiss } from "./useDropdownDismiss";
 
@@ -147,7 +151,7 @@ export const SearchableSelect = memo(function SearchableSelect({
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className={dropdownContainerClass(open)}>
       <label className={labelClass} htmlFor={id}>
         <span className={legendClass}>
           {label}

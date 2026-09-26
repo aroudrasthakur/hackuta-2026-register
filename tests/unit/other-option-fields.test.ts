@@ -6,6 +6,7 @@ import {
 import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "../../shared/registration/constants";
@@ -27,6 +28,7 @@ import { validRegistrationForm, validRegistrationPayload } from "../fixtures/val
 
 const OTHER_FIELD_KEYS = [
   "otherSchool",
+  "otherLevelOfStudy",
   "otherMajor",
   "otherHearAbout",
   "otherGender",
@@ -60,6 +62,19 @@ describe("other option field regression", () => {
         expect(result.payload.school).toBe(SCHOOL_OTHER_OPTION);
         expect(result.payload.otherSchool).toBe(OTHER_OPTION_FIXTURES.school);
         expect(result.payload.school).not.toBe(OTHER_OPTION_FIXTURES.school);
+      }
+    });
+
+    it("stores level-of-study sentinel and otherLevelOfStudy separately", () => {
+      const form = validRegistrationForm();
+      form.levelOfStudy = LEVEL_OF_STUDY_OTHER_OPTION;
+      form.otherLevelOfStudy = OTHER_OPTION_FIXTURES.levelOfStudy;
+
+      const result = validateApplicationForm(form);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.payload.levelOfStudy).toBe(LEVEL_OF_STUDY_OTHER_OPTION);
+        expect(result.payload.otherLevelOfStudy).toBe(OTHER_OPTION_FIXTURES.levelOfStudy);
       }
     });
 
@@ -106,6 +121,8 @@ describe("other option field regression", () => {
       const form = validRegistrationForm();
       form.school = SCHOOL_OTHER_OPTION;
       form.otherSchool = OTHER_OPTION_FIXTURES.school;
+      form.levelOfStudy = LEVEL_OF_STUDY_OTHER_OPTION;
+      form.otherLevelOfStudy = OTHER_OPTION_FIXTURES.levelOfStudy;
       form.major = MAJOR_OTHER_OPTION;
       form.otherMajor = OTHER_OPTION_FIXTURES.major;
       form.hearAbout = HEAR_ABOUT_OTHER_OPTION;
@@ -114,6 +131,7 @@ describe("other option field regression", () => {
       form.otherGender = OTHER_OPTION_FIXTURES.gender;
 
       form.school = validRegistrationForm().school;
+      form.levelOfStudy = validRegistrationForm().levelOfStudy;
       form.major = validRegistrationForm().major;
       form.hearAbout = validRegistrationForm().hearAbout;
       form.gender = validRegistrationForm().gender;
@@ -122,6 +140,7 @@ describe("other option field regression", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.payload.otherSchool ?? "").toBe("");
+        expect(result.payload.otherLevelOfStudy ?? "").toBe("");
         expect(result.payload.otherMajor ?? "").toBe("");
         expect(result.payload.otherHearAbout ?? "").toBe("");
         expect(result.payload.otherGender ?? "").toBe("");
@@ -135,6 +154,24 @@ describe("other option field regression", () => {
         ...validRegistrationPayload(),
         school: "Mars Academy",
         otherSchool: "Mars Academy",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects a custom level of study without the Other sentinel", () => {
+      const result = validateRegistrationPayload({
+        ...validRegistrationPayload(),
+        levelOfStudy: OTHER_OPTION_FIXTURES.levelOfStudy,
+        otherLevelOfStudy: OTHER_OPTION_FIXTURES.levelOfStudy,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects Other level of study without otherLevelOfStudy text", () => {
+      const result = validateRegistrationPayload({
+        ...validRegistrationPayload(),
+        levelOfStudy: LEVEL_OF_STUDY_OTHER_OPTION,
+        otherLevelOfStudy: "",
       });
       expect(result.success).toBe(false);
     });
@@ -191,6 +228,8 @@ describe("other option field regression", () => {
 
       expect(restored.school).toBe(SCHOOL_OTHER_OPTION);
       expect(restored.otherSchool).toBe(OTHER_OPTION_FIXTURES.school);
+      expect(restored.levelOfStudy).toBe(LEVEL_OF_STUDY_OTHER_OPTION);
+      expect(restored.otherLevelOfStudy).toBe(OTHER_OPTION_FIXTURES.levelOfStudy);
       expect(restored.major).toBe(MAJOR_OTHER_OPTION);
       expect(restored.otherMajor).toBe(OTHER_OPTION_FIXTURES.major);
       expect(restored.hearAbout).toBe(HEAR_ABOUT_OTHER_OPTION);

@@ -2,9 +2,14 @@ import type { ZodError } from "zod";
 import {
   GENDER_SELF_DESCRIBE_OPTION,
   HEAR_ABOUT_OTHER_OPTION,
+  LEVEL_OF_STUDY_OTHER_OPTION,
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "./constants";
+import {
+  EMERGENCY_CONTACT_REQUIRED_MESSAGES,
+  missingEmergencyContactFields,
+} from "./emergencyContact";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
 import { requiresUsState, stateForRegistrationPayload } from "./residence";
 import { registrationPayloadSchema } from "./schema";
@@ -48,6 +53,10 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     ),
     internationalStudent: form.internationalStudent ?? undefined,
     levelOfStudy: form.levelOfStudy || undefined,
+    otherLevelOfStudy:
+      form.levelOfStudy === LEVEL_OF_STUDY_OTHER_OPTION
+        ? form.otherLevelOfStudy.trim()
+        : "",
     major: form.major,
     otherMajor:
       form.major === MAJOR_OTHER_OPTION ? form.otherMajor.trim() : "",
@@ -80,6 +89,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     builtOrWantToBuild: form.builtOrWantToBuild,
     shortDeadlineLearning: form.shortDeadlineLearning,
     emergencyContactName: form.emergencyContactName,
+    emergencyContactRelationship: form.emergencyContactRelationship,
     emergencyContactPhone: form.emergencyContactPhone,
     emergencyContactPhoneCountry: form.emergencyContactPhoneCountry || undefined,
     mlhCodeOfConductAgreed: form.mlhCodeOfConductAgreed ? true : undefined,
@@ -102,6 +112,13 @@ function collectClientFieldErrors(form: ApplicationFormData): FieldErrors {
   }
 
   if (
+    form.levelOfStudy === LEVEL_OF_STUDY_OTHER_OPTION &&
+    !form.otherLevelOfStudy.trim()
+  ) {
+    errors.otherLevelOfStudy = "Please describe your level of study.";
+  }
+
+  if (
     form.school &&
     form.school !== SCHOOL_OTHER_OPTION &&
     !MLH_SCHOOLS_SET.has(form.school)
@@ -119,6 +136,11 @@ function collectClientFieldErrors(form: ApplicationFormData): FieldErrors {
 
   if (form.gender === GENDER_SELF_DESCRIBE_OPTION && !form.otherGender.trim()) {
     errors.otherGender = "Please describe your gender.";
+  }
+
+  // Mirrors the schema's superRefine, which Zod skips while other fields are invalid.
+  for (const field of missingEmergencyContactFields(form)) {
+    errors[field] = EMERGENCY_CONTACT_REQUIRED_MESSAGES[field];
   }
 
   return errors;

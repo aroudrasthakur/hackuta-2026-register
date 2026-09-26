@@ -19,20 +19,6 @@ export const applicationStatus = v.union(
   v.literal("withdrawn"),
 );
 
-/** Organizer eligibility review (separate from accept/waitlist/reject). */
-export const eligibilityStatus = v.union(
-  v.literal("unreviewed"),
-  v.literal("eligible"),
-  v.literal("ineligible"),
-);
-
-/** Attendance confirmation after acceptance (set by organizers or applicant). */
-export const confirmationStatus = v.union(
-  v.literal("unconfirmed"),
-  v.literal("confirmed"),
-  v.literal("declined"),
-);
-
 const draftNullableString = v.union(v.string(), v.null());
 const draftNullableNumber = v.union(v.number(), v.null());
 const draftNullableBoolean = v.union(v.boolean(), v.null());
@@ -74,9 +60,11 @@ export const APPLICANT_DRAFT_PATCH_FIELD_KEYS = [
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */
 const applicantDraftPatchFields = {
-  // Older clients can still save drafts without the new country selections.
+  // Older clients can still save drafts without the newer fields.
   ...fieldsFromKeys(applicantStringFieldKeys, (key) =>
-    key === "phoneCountry" || key === "emergencyContactPhoneCountry"
+    key === "phoneCountry" ||
+    key === "emergencyContactPhoneCountry" ||
+    key === "emergencyContactRelationship"
       ? v.optional(draftNullableString)
       : draftNullableString,
   ),
@@ -95,7 +83,6 @@ export const applicationRecord = {
   email: v.string(),
   emailVerificationTime: v.optional(v.number()),
   status: applicationStatus,
-  eligibilityStatus,
   createdAt: v.number(),
   updatedAt: v.number(),
   /** Set to true when the registration form is successfully submitted; never cleared. */
@@ -106,26 +93,11 @@ export const applicationRecord = {
   mlhCommunicationsConsentAt: v.optional(v.number()),
   sponsorSharingConsentAt: v.optional(v.number()),
   foodAllergyWaiverAgreedAt: v.optional(v.number()),
-  /**
-   * Legacy agreement timestamp columns (pre-`*At` rename).
-   * Keep optional until `migrateLegacyAgreementSubmittedAtFields` has run in
-   * every deployment, then remove and redeploy.
-   */
-  sponsorSharingConsentSubmittedAt: v.optional(v.number()),
-  foodAllergyWaiverSubmittedAt: v.optional(v.number()),
   reviewedAt: v.optional(v.number()),
   reviewedBy: v.optional(v.string()),
-  confirmationStatus: v.optional(confirmationStatus),
-  internalNotes: v.optional(v.string()),
   resumeStorageId: v.optional(v.id("_storage")),
   resumeFilename: v.optional(v.string()),
   ...applicantAnswerFields,
-  /**
-   * Legacy allergy text column (pre-`allergyDetails` rename).
-   * Keep optional until `migrateOtherDietaryToAllergyDetails` has run in every
-   * deployment, then remove this field and redeploy.
-   */
-  otherDietary: v.optional(v.string()),
 };
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */

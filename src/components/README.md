@@ -7,7 +7,7 @@ Shared React UI for the HackUTA registration app: auth shell, route guards, them
 | Path | Summary |
 | --- | --- |
 | [art/](art/README.md) | Odyssey-themed SVG logo wrapper and decorative illustrations |
-| [AuthBootstrap.tsx](AuthBootstrap.tsx) | Clears any persisted session on full page load, then renders the app |
+| [AuthBootstrap.tsx](AuthBootstrap.tsx) | Waits for the initial Convex Auth read before rendering routed pages |
 | [MockAuthProvider.tsx](MockAuthProvider.tsx) | In-memory auth when VITE_USE_MOCK_API=true (dev/tests only) |
 | [OdysseyButton.tsx](OdysseyButton.tsx) | Primary CTA: internal Link, external anchor, or button |
 | [OtpCodeInput.tsx](OtpCodeInput.tsx) | Six-digit OTP input (sign-up verify and forgot-password verify steps) |
@@ -40,6 +40,7 @@ Shared React UI for the HackUTA registration app: auth shell, route guards, them
 | Location | Role |
 | --- | --- |
 | [hooks/README.md](../hooks/README.md) | Session auth and routing hooks consumed here |
+| [main.tsx](../main.tsx) | Convex Auth uses `sessionStorage`; AuthBootstrap restores sessions on refresh |
 | [constants/README.md](../constants/README.md) | Logo paths and storm config |
 | [styles/README.md](../styles/README.md) | CSS classes referenced by these components |
 

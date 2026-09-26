@@ -4,6 +4,7 @@ import type { CountryCode } from "libphonenumber-js/max";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { PhoneField } from "../../src/pages/Register/components/PhoneField";
+import { phoneCountries } from "../../src/pages/Register/components/phoneCountryOptions";
 
 function renderPhoneField(
   props: Partial<Parameters<typeof PhoneField>[0]> = {},
@@ -23,13 +24,26 @@ function renderPhoneField(
 }
 
 describe("PhoneField", () => {
+  it("matches the country selector height styling to the phone input", () => {
+    renderPhoneField();
+
+    const countrySelect = screen.getByLabelText("Applicant calling code");
+    const phoneInput = screen.getByLabelText(/Phone number/);
+
+    expect(countrySelect.className).toContain("h-full");
+    expect(countrySelect.className).toContain("text-sm");
+    expect(countrySelect.className).not.toContain("text-xs");
+    expect(phoneInput.className).toContain("py-3");
+    expect(countrySelect.className).toContain("py-3");
+  });
+
   it("defaults the country selector to US with a compact +code label", () => {
     renderPhoneField();
 
     const countrySelect = screen.getByLabelText("Applicant calling code");
     expect(countrySelect).toHaveValue("US");
     expect(screen.getByRole("option", { name: "+1 US" })).toBeInTheDocument();
-    expect(countrySelect.querySelector("option")?.textContent).toBe("+1 US");
+    expect(countrySelect.querySelector("option")?.value).toBe(phoneCountries[0]);
   });
 
   it("accepts digits-only input and caps at 15 digits", async () => {

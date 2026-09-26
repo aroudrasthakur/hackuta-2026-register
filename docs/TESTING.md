@@ -64,7 +64,7 @@ In CI, the **quality** job fails if any threshold is missed. It then writes a pe
 | Password auth (UI) | sign-in.test.tsx, sign-in-extended.test.tsx, sign-in-convex.test.tsx, forgot-password.test.tsx |
 | Password auth (backend) | hackuta-password.test.ts, convex-auth-config.test.ts, password-reset-backend.test.ts, assert-password-not-reused.test.ts |
 | Auth error + OTP helpers | auth-error-messages.test.ts, otp-rate-limit.test.ts, rate-limits.test.ts |
-| Route guards + session | auth-components.test.tsx, auth-bootstrap.test.tsx, use-session-auth.test.tsx, use-applicant-routing.test.tsx |
+| Route guards + session persistence | auth-components.test.tsx, auth-bootstrap.test.tsx, use-session-auth.test.tsx, use-applicant-routing.test.tsx |
 | Profile drafts + submit | convex.test.ts, register-ui.test.tsx, register-form-workflows.test.tsx, register-api.test.ts |
 | Backend authorization + maintenance | backend-authorization.test.ts |
 | Input sanitization | sanitize-input.test.ts |

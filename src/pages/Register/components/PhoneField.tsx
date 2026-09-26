@@ -1,12 +1,4 @@
-import {
-
-  getCountries,
-
-  getCountryCallingCode,
-
-  type CountryCode,
-
-} from "libphonenumber-js/max";
+import { type CountryCode } from "libphonenumber-js/max";
 
 import { useState } from "react";
 
@@ -28,31 +20,11 @@ import {
 
 } from "./formFieldStyles";
 
-
-
-const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
-
-
-
-/** ISO country codes for phone calling codes — United States first. */
-
-const phoneCountries = [...getCountries()].sort((a, b) => {
-
-  if (a === "US") return -1;
-
-  if (b === "US") return 1;
-
-  return a.localeCompare(b);
-
-});
-
-
-
-function formatPhoneCountryOption(country: CountryCode) {
-
-  return `+${getCountryCallingCode(country)} ${country}`;
-
-}
+import {
+  countryDisplayName,
+  formatPhoneCountryOption,
+  phoneCountries,
+} from "./phoneCountryOptions";
 
 
 
@@ -72,6 +44,8 @@ export function PhoneField({
 
   autoComplete,
 
+  required = true,
+
 }: {
 
   id: string;
@@ -87,6 +61,8 @@ export function PhoneField({
   error?: string | undefined;
 
   autoComplete?: string;
+
+  required?: boolean;
 
 }) {
 
@@ -114,11 +90,11 @@ export function PhoneField({
 
       <label className={legendClass} htmlFor={id}>
 
-        {label}<RequiredMark />
+        {label}{required ? <RequiredMark /> : null}
 
       </label>
 
-      <div className="flex min-w-0 gap-2">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-2">
 
         <label className="sr-only" htmlFor={`${id}-country`}>
 
@@ -132,7 +108,7 @@ export function PhoneField({
 
             id={`${id}-country`}
 
-            className={`${countryCodeSelectClass(error)} w-[5.25rem] tabular-nums`}
+            className={`${countryCodeSelectClass(error)} h-full w-[5.25rem] tabular-nums`}
 
             value={selectedCountry}
 
@@ -152,7 +128,7 @@ export function PhoneField({
 
                 value={option}
 
-                title={countryNames.of(option) ?? option}
+                title={countryDisplayName(option)}
 
               >
 
@@ -178,7 +154,7 @@ export function PhoneField({
 
           pattern="[0-9]*"
 
-          required
+          required={required}
 
           autoComplete={autoComplete}
 

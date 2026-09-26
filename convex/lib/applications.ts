@@ -53,8 +53,6 @@ export async function ensureDraftApplication(ctx: MutationCtx) {
       ? { emailVerificationTime: authUser.emailVerificationTime }
       : {}),
     status: "draft",
-    eligibilityStatus: "unreviewed",
-    confirmationStatus: "unconfirmed",
     createdAt: now,
     updatedAt: now,
   });
@@ -124,6 +122,7 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     countryOfResidence: application.countryOfResidence,
     stateOfResidence: application.stateOfResidence,
     levelOfStudy: application.levelOfStudy,
+    otherLevelOfStudy: application.otherLevelOfStudy,
     major: application.major,
     otherMajor: application.otherMajor,
     graduationYear: application.graduationYear,
@@ -147,6 +146,7 @@ export function projectApplicantAnswers(application: ApplicationDoc) {
     builtOrWantToBuild: application.builtOrWantToBuild,
     shortDeadlineLearning: application.shortDeadlineLearning,
     emergencyContactName: application.emergencyContactName,
+    emergencyContactRelationship: application.emergencyContactRelationship,
     emergencyContactPhone: application.emergencyContactPhone,
     emergencyContactPhoneCountry: application.emergencyContactPhoneCountry,
     mlhCodeOfConductAgreed: application.mlhCodeOfConductAgreed === true,

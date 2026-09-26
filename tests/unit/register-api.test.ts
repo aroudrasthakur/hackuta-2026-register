@@ -32,6 +32,7 @@ const payload: RegistrationPayload = {
   internationalStudent: false,
   otherRaceEthnicity: undefined,
   levelOfStudy: "Undergraduate University (3+ year)",
+  otherLevelOfStudy: undefined,
   major: "Computer science, computer engineering, or software engineering",
   otherMajor: undefined,
   graduationYear: MIN_GRADUATION_YEAR,
@@ -56,6 +57,7 @@ const payload: RegistrationPayload = {
   shortDeadlineLearning:
     "Before a hackathon demo, I learned GitHub Actions in one night to deploy our project.",
   emergencyContactName: "Jane Test",
+  emergencyContactRelationship: "Parent",
   emergencyContactPhone: "+442079460958",
   mlhCodeOfConductAgreed: true,
   mlhDataSharingConsent: true,

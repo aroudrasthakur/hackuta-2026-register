@@ -52,7 +52,6 @@ async function seedApplication(
       authUserId,
       email: "draft-resume@example.com",
       status: "draft",
-      eligibilityStatus: "unreviewed",
       createdAt: Date.now(),
       updatedAt: Date.now(),
       ...fields,

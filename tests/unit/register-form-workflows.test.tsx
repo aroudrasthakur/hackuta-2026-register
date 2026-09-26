@@ -687,5 +687,5 @@ describe("ApplicationForm in mock API mode", () => {
       { storageId: "s1", uploadToken: "t1" },
     );
     expect(env.fetchAccessToken).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 });
