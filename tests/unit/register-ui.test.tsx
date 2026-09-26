@@ -48,7 +48,7 @@ vi.mock("../../src/pages/Register/registerApi", () => ({
 const draftApi = vi.hoisted(() => ({
   result: null as
     | { status: string; draft: Partial<ApplicationFormData> }
-    | { name: string; registrationClosesAt: number | null }
+    | { name: string; registrationClosesAt: number | null; registrationOpensAt?: number }
     | null
     | undefined,
   save: vi.fn().mockResolvedValue({ ok: true }),
@@ -155,6 +155,23 @@ describe("RegisterPage closing", () => {
     act(() => vi.advanceTimersByTime(1_000));
     expect(screen.getByRole("heading", { name: "Applications are closed" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit application" })).not.toBeInTheDocument();
+  });
+
+  it("keeps registration read-only until the configured opening instant", () => {
+    vi.stubEnv("VITE_USE_MOCK_API", "false");
+    const now = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    draftApi.result = {
+      name: "HackUTA 2026",
+      registrationOpensAt: now + 1_000,
+      registrationClosesAt: null,
+    };
+    render(<MemoryRouter><RegisterPage /></MemoryRouter>);
+    expect(screen.getByRole("heading", { name: "Applications haven't opened yet" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit application" })).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(screen.getByRole("button", { name: "Submit application" })).toBeInTheDocument();
   });
 
   it("waits for close-date configuration before rendering the form", () => {

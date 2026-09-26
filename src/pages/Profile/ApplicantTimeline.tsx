@@ -1,5 +1,5 @@
 import type { TimelineEvent } from "../../../shared/hackathon/timeline";
-import { formatCentralDeadline } from "../../../shared/hackathon/schedule";
+import { formatCentralRegistrationTime } from "../../../shared/hackathon/schedule";
 import {
   profileTimelineDate,
   profileTimelineDescription,
@@ -11,8 +11,8 @@ import { formatTimelineDate } from "./timelineDate";
 function eventDateLabel(event: TimelineEvent) {
   if (event.dateLabel) return event.dateLabel;
   if (event.timestamp) {
-    return event.id === "application-deadline"
-      ? formatCentralDeadline(event.timestamp)
+    return event.id === "applications-open" || event.id === "application-deadline"
+      ? formatCentralRegistrationTime(event.timestamp)
       : formatTimelineDate(event.timestamp);
   }
   return "To be announced";

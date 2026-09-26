@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { useEffect, useState } from "react";
-import { isRegistrationClosed } from "../../shared/hackathon/schedule";
+import { getRegistrationPhase, resolveHackathonTimelineSource } from "../../shared/hackathon/schedule";
 import { DEFAULT_HACKATHON_NAME } from "../../shared/hackathon/eventDefaults";
 import { getPublicEventConfigRef } from "../convex/api";
 import { getConvexClient } from "../convex/client";
@@ -16,7 +16,7 @@ export function useHackathonConfig() {
   );
   return {
     name: config?.name ?? DEFAULT_HACKATHON_NAME,
-    registrationClosesAt: config?.registrationClosesAt ?? null,
+    ...resolveHackathonTimelineSource(config),
     isLoading: Boolean(client && !mockAuth.enabled && config === undefined),
   };
 }
@@ -25,17 +25,21 @@ export function useHackathonName() {
   return useHackathonConfig().name;
 }
 
-export function useRegistrationClosed(closesAt: number | null) {
+export function useRegistrationWindow(registrationOpensAt: number, registrationClosesAt: number | null) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    if (closesAt === null) return;
-    const remaining = closesAt - Date.now();
-    if (remaining <= 0) return;
+    const now = Date.now();
+    const next = now < registrationOpensAt
+      ? registrationOpensAt
+      : registrationClosesAt !== null && now < registrationClosesAt
+        ? registrationClosesAt
+        : null;
+    if (next === null) return;
     const timer = window.setTimeout(
       () => setTick((value) => value + 1),
-      Math.min(remaining, 2_147_483_647),
+      Math.min(next - now, 2_147_483_647),
     );
     return () => window.clearTimeout(timer);
-  }, [closesAt, tick]);
-  return isRegistrationClosed(closesAt);
+  }, [registrationOpensAt, registrationClosesAt, tick]);
+  return getRegistrationPhase({ registrationOpensAt, registrationClosesAt });
 }
