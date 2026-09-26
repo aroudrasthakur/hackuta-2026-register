@@ -1,41 +1,37 @@
-import { ConvexError, v } from "convex/values";
+import { makeFunctionReference } from "convex/server";
+import { v } from "convex/values";
 import { OTP_SEND_MAX_PER_HOUR } from "../shared/auth/otpRateLimit";
-import { internalMutation, mutation } from "./_generated/server";
+import { internalMutation, query } from "./_generated/server";
 import { normalizeEmail } from "./lib/normalizeEmail";
+import {
+  consumeOtpSendAllowance,
+  consumePasswordResetAllowance,
+} from "./lib/authSendRateLimits";
 import { lookupOtpSendStatus, OTP_SEND_WINDOW_MS } from "./lib/otpSendStatus";
+import { listRateLimitsForBucketKey, pruneStaleRateLimits } from "./lib/rateLimitHelpers";
+import {
+  consumeDraftSaveAllowance,
+  consumeSubmitAllowance,
+} from "./lib/userRateLimits";
 import {
   OTP_SEND_BUCKET,
-  OTP_STATUS_LOOKUP_BUCKET,
   PASSWORD_RESET_SEND_BUCKET,
 } from "./lib/rateLimitBuckets";
 
 export { OTP_RESEND_COOLDOWN_MS, OTP_SEND_WINDOW_MS } from "./lib/otpSendStatus";
 export { OTP_SEND_MAX_PER_HOUR };
 
-export const OTP_STATUS_LOOKUP_MAX_PER_HOUR = 30;
-export const OTP_STATUS_LOOKUP_WINDOW_MS = 60 * 60 * 1000;
-
 const NEUTRAL_OTP_STATUS = { waitSeconds: 0, hourlyLimitReached: false } as const;
 
-async function countRecentRateLimits(
-  ctx: { db: Parameters<typeof lookupOtpSendStatus>[0]["db"] },
-  bucket: string,
-  key: string,
-  windowStart: number,
-) {
-  return ctx.db
-    .query("rateLimits")
-    .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", bucket))
-    .filter((q) =>
-      q.and(
-        q.eq(q.field("key"), key),
-        q.gte(q.field("createdAt"), windowStart),
-      ),
-    )
-    .collect();
-}
+const PRUNE_BATCH_SIZE = 100;
+/** Keep rows for one hour after their bucket window so lookups stay accurate. */
+export const RATE_LIMIT_RETENTION_MS = OTP_SEND_WINDOW_MS + 60 * 60 * 1000;
 
-export const getOtpSendCooldown = mutation({
+const pruneExpiredRateLimitsRef = makeFunctionReference<"mutation">(
+  "rateLimits:pruneExpiredRateLimits",
+);
+
+export const getOtpSendCooldown = query({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
     const normalized = normalizeEmail(email);
@@ -43,26 +39,19 @@ export const getOtpSendCooldown = mutation({
       return NEUTRAL_OTP_STATUS;
     }
 
-    const now = Date.now();
-    const lookupWindowStart = now - OTP_STATUS_LOOKUP_WINDOW_MS;
-    const lookups = await countRecentRateLimits(
-      ctx,
-      OTP_STATUS_LOOKUP_BUCKET,
-      normalized,
-      lookupWindowStart,
-    );
+    return lookupOtpSendStatus(ctx, normalized);
+  },
+});
 
-    await ctx.db.insert("rateLimits", {
-      bucket: OTP_STATUS_LOOKUP_BUCKET,
-      key: normalized,
-      createdAt: now,
-    });
-
-    if (lookups.length >= OTP_STATUS_LOOKUP_MAX_PER_HOUR) {
+export const getPasswordResetSendCooldown = query({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized) {
       return NEUTRAL_OTP_STATUS;
     }
 
-    return lookupOtpSendStatus(ctx, normalized, now);
+    return lookupOtpSendStatus(ctx, normalized, Date.now(), PASSWORD_RESET_SEND_BUCKET);
   },
 });
 
@@ -72,11 +61,7 @@ export const clearOtpSendLimitsForEmail = internalMutation({
     const normalized = normalizeEmail(email);
     if (!normalized) return { deleted: 0 };
 
-    const rows = await ctx.db
-      .query("rateLimits")
-      .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
-      .filter((q) => q.eq(q.field("key"), normalized))
-      .collect();
+    const rows = await listRateLimitsForBucketKey(ctx, OTP_SEND_BUCKET, normalized);
 
     for (const row of rows) {
       await ctx.db.delete(row._id);
@@ -86,6 +71,7 @@ export const clearOtpSendLimitsForEmail = internalMutation({
   },
 });
 
+/** @deprecated Use consumeOtpSendRequest — kept for tests that seed limits directly. */
 export const assertOtpSendAllowed = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
@@ -104,6 +90,7 @@ export const assertOtpSendAllowed = internalMutation({
   },
 });
 
+/** @deprecated Use consumeOtpSendRequest — kept for tests that seed limits directly. */
 export const recordOtpSend = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
@@ -117,92 +104,78 @@ export const recordOtpSend = internalMutation({
       createdAt: now,
     });
 
-    const cutoff = now - OTP_SEND_WINDOW_MS;
-    const stale = await ctx.db
-      .query("rateLimits")
-      .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
-      .filter((q) => q.eq(q.field("key"), normalized))
-      .collect();
-
-    for (const entry of stale) {
-      if (entry.createdAt < cutoff) {
-        await ctx.db.delete(entry._id);
-      }
-    }
+    await pruneStaleRateLimits(ctx, OTP_SEND_BUCKET, normalized, now - OTP_SEND_WINDOW_MS);
   },
 });
 
-export const getPasswordResetSendCooldown = mutation({
-  args: { email: v.string() },
-  handler: async (ctx, { email }) => {
+// Check and record in one mutation to prevent concurrent requests bypassing limits.
+export const consumeOtpSendRequest = internalMutation({
+  args: {
+    email: v.string(),
+    clientAddress: v.optional(v.string()),
+  },
+  handler: async (ctx, { email, clientAddress }) => {
     const normalized = normalizeEmail(email);
     if (!normalized) {
-      return NEUTRAL_OTP_STATUS;
+      throw new Error("Invalid email.");
     }
 
-    const now = Date.now();
-    const lookupWindowStart = now - OTP_STATUS_LOOKUP_WINDOW_MS;
-    const lookups = await countRecentRateLimits(
-      ctx,
-      OTP_STATUS_LOOKUP_BUCKET,
-      normalized,
-      lookupWindowStart,
-    );
-
-    await ctx.db.insert("rateLimits", {
-      bucket: OTP_STATUS_LOOKUP_BUCKET,
-      key: normalized,
-      createdAt: now,
-    });
-
-    if (lookups.length >= OTP_STATUS_LOOKUP_MAX_PER_HOUR) {
-      return NEUTRAL_OTP_STATUS;
-    }
-
-    return lookupOtpSendStatus(ctx, normalized, now, PASSWORD_RESET_SEND_BUCKET);
+    await consumeOtpSendAllowance(ctx, normalized, clientAddress);
   },
 });
 
 // Count requests for all addresses, including missing accounts. Checking and
 // recording in one mutation also prevents concurrent requests bypassing limits.
 export const consumePasswordResetRequest = internalMutation({
-  args: { email: v.string() },
-  handler: async (ctx, { email }) => {
+  args: {
+    email: v.string(),
+    clientAddress: v.optional(v.string()),
+  },
+  handler: async (ctx, { email, clientAddress }) => {
     const normalized = normalizeEmail(email);
     if (!normalized) {
       throw new Error("Invalid email.");
     }
 
-    const now = Date.now();
-    const status = await lookupOtpSendStatus(
-      ctx,
-      normalized,
-      now,
-      PASSWORD_RESET_SEND_BUCKET,
-    );
-    if (status.hourlyLimitReached) {
-      throw new ConvexError("Too many reset requests. Please try again later.");
-    }
-    if (status.waitSeconds > 0) {
-      throw new ConvexError("Please wait before requesting another code.");
-    }
-    await ctx.db.insert("rateLimits", {
-      bucket: PASSWORD_RESET_SEND_BUCKET,
-      key: normalized,
-      createdAt: now,
-    });
+    await consumePasswordResetAllowance(ctx, normalized, clientAddress);
+  },
+});
 
-    const cutoff = now - OTP_SEND_WINDOW_MS;
+/** Deletes expired rate-limit rows in batches. Scheduled by cron. */
+export const pruneExpiredRateLimits = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - RATE_LIMIT_RETENTION_MS;
     const stale = await ctx.db
       .query("rateLimits")
-      .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", PASSWORD_RESET_SEND_BUCKET))
-      .filter((q) => q.eq(q.field("key"), normalized))
-      .collect();
+      .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff))
+      .take(PRUNE_BATCH_SIZE);
 
-    for (const entry of stale) {
-      if (entry.createdAt < cutoff) {
-        await ctx.db.delete(entry._id);
-      }
+    for (const row of stale) {
+      await ctx.db.delete(row._id);
     }
+
+    const rescheduled = stale.length === PRUNE_BATCH_SIZE;
+    if (rescheduled) {
+      await ctx.scheduler.runAfter(0, pruneExpiredRateLimitsRef, {});
+    }
+
+    return { ok: true as const, deleted: stale.length, rescheduled };
+  },
+});
+
+/** Per-user draft save throttle — checked and recorded atomically. */
+export const consumeDraftSaveRequest = internalMutation({
+  args: { authUserId: v.id("users") },
+  handler: async (ctx, { authUserId }) => {
+    await consumeDraftSaveAllowance(ctx, authUserId);
+  },
+});
+
+/** Per-user submission throttle — checked and recorded atomically. */
+export const consumeSubmitRequest = internalMutation({
+  args: { authUserId: v.id("users") },
+  handler: async (ctx, { authUserId }) => {
+    await consumeSubmitAllowance(ctx, authUserId);
   },
 });

@@ -5,6 +5,7 @@ import type { MutationCtx } from "./lib/dataModel";
 import { MAX_RESUME_BYTES } from "../shared/registration/resume";
 import { requireAuthUser } from "./lib/auth";
 import { findApplicationByResume } from "./lib/applications";
+import { countRecentRateLimits } from "./lib/rateLimitHelpers";
 import { RESUME_UPLOAD_BUCKET } from "./lib/rateLimitBuckets";
 import { RESUME_UPLOAD_EXPIRY_MS } from "./lib/resumeUpload";
 
@@ -17,23 +18,6 @@ const cleanupExpiredUploadSessionsRef = makeFunctionReference<"mutation">(
   "resumeUploads:cleanupExpiredUploadSessions",
 );
 
-async function countRecentUploadAttempts(
-  ctx: MutationCtx,
-  key: string,
-  windowStart: number,
-) {
-  return ctx.db
-    .query("rateLimits")
-    .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", RESUME_UPLOAD_BUCKET))
-    .filter((q) =>
-      q.and(
-        q.eq(q.field("key"), key),
-        q.gte(q.field("createdAt"), windowStart),
-      ),
-    )
-    .collect();
-}
-
 export const assertUploadRateLimit = internalMutation({
   args: {
     requestKey: v.string(),
@@ -45,8 +29,8 @@ export const assertUploadRateLimit = internalMutation({
     const userRateKey = `user:${authUserId}`;
     const [recentClientRequests, recentUserRequests, recentGlobalRequests] =
       await Promise.all([
-        countRecentUploadAttempts(ctx, requestKey, windowStart),
-        countRecentUploadAttempts(ctx, userRateKey, windowStart),
+        countRecentRateLimits(ctx, RESUME_UPLOAD_BUCKET, requestKey, windowStart),
+        countRecentRateLimits(ctx, RESUME_UPLOAD_BUCKET, userRateKey, windowStart),
         ctx.db
           .query("rateLimits")
           .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", RESUME_UPLOAD_BUCKET))
