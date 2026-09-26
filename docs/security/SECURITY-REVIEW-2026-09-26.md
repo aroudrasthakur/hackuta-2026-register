@@ -4,7 +4,7 @@
 | --- | --- |
 | Date | 2026-09-26 |
 | Reviewer | Cursor agent (static audit + remediation + unit tests) |
-| Commit | `1f1738d` (remediation; baseline pre-fix: `56b45d53e15f377a360790a32e4c087290635a96`) |
+| Commit | `25d118b` (remediation; baseline pre-fix: `56b45d53e15f377a360790a32e4c087290635a96`) |
 | Dev deployment | `standing-manatee-425` |
 | Prod deployment | `brilliant-ostrich-892` (read-only env review) |
 
