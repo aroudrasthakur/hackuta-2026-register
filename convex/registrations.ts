@@ -43,6 +43,8 @@ async function recordApplicationSubmission(ctx: MutationCtx, applicationId: Appl
   void _creationTime;
   await ctx.db.insert("applicationSubmissionLogs", {
     ...fields,
+    status: "submitted",
+    updatedAt: submitted.submittedAt ?? submitted.applicantUpdatedAt ?? submitted.createdAt,
     applicationId: _id,
   });
 }
@@ -125,10 +127,8 @@ async function upsertRegistration(
     ...fields,
     email: verifiedEmail,
     emailVerificationTime: authUser.emailVerificationTime,
-    status: "submitted",
     formSubmitted: true,
     submittedAt,
-    updatedAt: submittedAt,
     applicantUpdatedAt: submittedAt,
     resumeStorageId: resumeStorageId ?? undefined,
     resumeFilename: keepsDraftResume ? draftApplication.resumeFilename : undefined,

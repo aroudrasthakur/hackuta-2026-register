@@ -16,7 +16,6 @@ export async function replaceApplicationWithDraftPatch(
   meta: {
     email: string;
     emailVerificationTime?: number;
-    updatedAt: number;
     applicantUpdatedAt: number;
   },
 ) {
@@ -24,7 +23,7 @@ export async function replaceApplicationWithDraftPatch(
   const resumeCleanup = await prepareResumeDraftPatch(ctx, application, patch, authUser._id);
 
   const replacement = mergeDraftPatchIntoApplication(application, patch, meta);
-  applyAgreementTimestampUpdates(replacement, application, patch, meta.updatedAt);
+  applyAgreementTimestampUpdates(replacement, application, patch, meta.applicantUpdatedAt);
   await ctx.db.replace(application._id, replacement);
 
   if (resumeCleanup.deleteStorageId) {

@@ -68,6 +68,9 @@ const ref = {
   backfillApplicationReviews: makeFunctionReference<"mutation">(
     "migrations:backfillApplicationReviews",
   ),
+  stripApplicationReviewFields: makeFunctionReference<"mutation">(
+    "migrations:stripApplicationReviewFields",
+  ),
   migrateMergedOtherFields: makeFunctionReference<"mutation">(
     "migrations:migrateMergedOtherFieldsToSeparateColumns",
   ),
@@ -260,6 +263,29 @@ describe("profile lifecycle", () => {
     await client.mutation(ref.ensureApplicantApplication, {});
     const after = await t.run((ctx) => ctx.db.query("applications").first());
     expect(after?.updatedAt).toBe(before?.updatedAt);
+  });
+
+  it("stops rewriting old draft fields and keeps them absent after cleanup", async () => {
+    const t = createTest();
+    const userId = await seedUser(t);
+    const applicationId = await insertApplication(t, userId, { applicantUpdatedAt: 1 });
+    const client = asUser(t, userId);
+    await client.mutation(ref.saveDraft, { patch: formToDraftPatch(INITIAL_FORM) });
+    const beforeCleanup = await t.run((ctx) => ctx.db.get(applicationId));
+    expect(beforeCleanup?.updatedAt).toBe(1);
+    expect(beforeCleanup?.applicantUpdatedAt).toEqual(expect.any(Number));
+    await expect(t.mutation(ref.stripApplicationReviewFields, {})).resolves.toMatchObject({
+      removed: 1, blocked: 0,
+    });
+    await client.mutation(ref.saveDraft, { patch: formToDraftPatch(INITIAL_FORM) });
+    const afterCleanup = await t.run((ctx) => ctx.db.get(applicationId));
+    for (const key of ["status", "updatedAt", "reviewedAt", "reviewedBy"]) {
+      expect(afterCleanup).not.toHaveProperty(key);
+    }
+    await expect(client.query(ref.getDraft, {})).resolves.toMatchObject({ status: "draft" });
+    await expect(client.query(ref.dashboard, {})).resolves.toMatchObject({
+      registration: { status: "draft", updatedAt: afterCleanup?.applicantUpdatedAt },
+    });
   });
 
   it("syncs, updates, and clears the auth display name from draft names", async () => {
@@ -537,6 +563,95 @@ describe("event config", () => {
 });
 
 describe("maintenance and migrations", () => {
+  it("strips old review fields only after each application has been safely backfilled", async () => {
+    const t = createTest();
+    const draftUser = await seedUser(t, { email: "draft@example.com" });
+    const submittedUser = await seedUser(t, { email: "submitted@example.com" });
+    const draftId = await insertApplication(t, draftUser, {
+      email: "draft@example.com", applicantUpdatedAt: 1,
+    });
+    const submittedId = await insertApplication(t, submittedUser, {
+      email: "submitted@example.com", status: "accepted", formSubmitted: true,
+      submittedAt: 2, updatedAt: 3, applicantUpdatedAt: 3,
+      reviewedAt: 4, reviewedBy: "legacy-reviewer",
+    });
+
+    await expect(t.mutation(ref.stripApplicationReviewFields, { limit: 2 })).resolves.toMatchObject({
+      removed: 1, blocked: 1, isDone: true,
+    });
+    await t.run(async (ctx) => {
+      expect(await ctx.db.get(draftId)).not.toHaveProperty("status");
+      expect(await ctx.db.get(draftId)).not.toHaveProperty("updatedAt");
+      expect(await ctx.db.get(submittedId)).toMatchObject({ status: "accepted", reviewedAt: 4 });
+    });
+
+    await expect(t.mutation(ref.backfillApplicationReviews, {})).resolves.toMatchObject({
+      created: 1, isDone: true,
+    });
+    await expect(t.mutation(ref.stripApplicationReviewFields, {})).resolves.toMatchObject({
+      removed: 1, blocked: 0, isDone: true,
+    });
+    await expect(t.mutation(ref.stripApplicationReviewFields, {})).resolves.toMatchObject({
+      removed: 0, blocked: 0, isDone: true,
+    });
+    await t.run(async (ctx) => {
+      const submitted = await ctx.db.get(submittedId);
+      for (const key of ["status", "updatedAt", "reviewedAt", "reviewedBy"]) {
+        expect(submitted).not.toHaveProperty(key);
+      }
+      expect(submitted?.applicantUpdatedAt).toBe(3);
+      const review = await ctx.db.query("applicationReviews")
+        .withIndex("by_application", (q) => q.eq("applicationId", submittedId))
+        .unique();
+      expect(review).toMatchObject({
+        status: "accepted", reviewedAt: 4, legacyReviewedBy: "legacy-reviewer",
+      });
+    });
+  });
+
+  it("keeps legacy decisions when a review has not preserved them yet", async () => {
+    const t = createTest();
+    const userId = await seedUser(t);
+    const applicationId = await insertApplication(t, userId, {
+      status: "accepted", formSubmitted: true, submittedAt: 2,
+      updatedAt: 3, applicantUpdatedAt: 3,
+    });
+    const reviewId = await t.run((ctx) => ctx.db.insert("applicationReviews", {
+      applicationId, status: "under_review", createdAt: 2, updatedAt: 2,
+    }));
+
+    await expect(t.mutation(ref.stripApplicationReviewFields, {})).resolves.toMatchObject({
+      removed: 0, blocked: 1,
+    });
+    expect((await t.run((ctx) => ctx.db.get(applicationId)))?.status).toBe("accepted");
+    await t.run((ctx) => ctx.db.patch(reviewId, { updatedAt: 4 }));
+    await expect(t.mutation(ref.stripApplicationReviewFields, {})).resolves.toMatchObject({
+      removed: 0, blocked: 1,
+    });
+    await t.run((ctx) => ctx.db.patch(reviewId, { status: "accepted" }));
+    await expect(t.mutation(ref.stripApplicationReviewFields, {})).resolves.toMatchObject({
+      removed: 1, blocked: 0,
+    });
+  });
+
+  it("does not lose submitted routing when a legacy decision lacks submission markers", async () => {
+    const t = createTest();
+    const userId = await seedUser(t);
+    const applicationId = await insertApplication(t, userId, {
+      status: "accepted", updatedAt: 1, applicantUpdatedAt: 1,
+    });
+    await t.run((ctx) => ctx.db.insert("applicationReviews", {
+      applicationId, status: "accepted", createdAt: 1, updatedAt: 1,
+    }));
+    await expect(t.mutation(ref.stripApplicationReviewFields, {})).resolves.toMatchObject({
+      removed: 0, blocked: 1,
+    });
+    await t.run((ctx) => ctx.db.patch(applicationId, { formSubmitted: true }));
+    await expect(t.mutation(ref.stripApplicationReviewFields, {})).resolves.toMatchObject({
+      removed: 1, blocked: 0,
+    });
+  });
+
   it("backfills submitted reviews without losing legacy decisions or duplicating rows", async () => {
     const t = createTest();
     const draftUser = await seedUser(t, { email: "draft@example.com" });

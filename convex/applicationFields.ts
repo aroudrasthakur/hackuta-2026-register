@@ -107,8 +107,8 @@ const applicantRecordFields = {
  */
 export const applicationRecord = {
   ...applicantRecordFields,
-  status: applicationStatus,
-  updatedAt: v.number(),
+  status: v.optional(applicationStatus),
+  updatedAt: v.optional(v.number()),
   reviewedAt: v.optional(v.number()),
   reviewedBy: v.optional(v.string()),
 };
