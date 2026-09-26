@@ -20,6 +20,7 @@ export const TRIMMED_STRING_FIELDS = [
   "builtOrWantToBuild",
   "shortDeadlineLearning",
   "emergencyContactName",
+  "emergencyContactRelationship",
   "emergencyContactPhone",
 ] as const;
 

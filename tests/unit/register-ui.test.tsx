@@ -715,7 +715,7 @@ describe("ApplicationForm", { timeout: 15_000 }, () => {
       expect(submitRegistration).toHaveBeenCalled();
       expect(onSubmitted).toHaveBeenCalled();
     });
-  });
+  }, 15_000);
 
   it("renders optional profile URL fields including Devpost", () => {
     render(<ApplicationForm onSubmitted={vi.fn()} />);
@@ -842,4 +842,117 @@ describe("ApplicationForm", { timeout: 15_000 }, () => {
       expect(screen.getByText(message)).toBeInTheDocument();
     },
   );
+
+  describe("emergency contact", () => {
+    const nameLabel = /Emergency contact name/;
+    const relationshipLabel = /Emergency contact relationship/;
+    const phoneLabel = /Emergency contact phone/;
+    const allLabels = [nameLabel, relationshipLabel, phoneLabel];
+
+    function clearEmergencyContact() {
+      for (const label of allLabels) setInputValue(label, "");
+    }
+
+    it("is optional until the applicant starts filling it in", () => {
+      render(<ApplicationForm onSubmitted={vi.fn()} />);
+
+      expect(
+        screen.getByRole("heading", { name: /Emergency Contact \(optional\)/ }),
+      ).toBeInTheDocument();
+      for (const label of allLabels) {
+        expect(screen.getByLabelText(label)).not.toBeRequired();
+      }
+
+      setInputValue(relationshipLabel, "Sibling");
+      for (const label of allLabels) {
+        expect(screen.getByLabelText(label)).toBeRequired();
+      }
+
+      setInputValue(relationshipLabel, "   ");
+      for (const label of allLabels) {
+        expect(screen.getByLabelText(label)).not.toBeRequired();
+      }
+    });
+
+    it("submits without an emergency contact", async () => {
+      const onSubmitted = vi.fn();
+      const { submitRegistration } =
+        await import("../../src/pages/Register/registerApi");
+
+      render(<ApplicationForm onSubmitted={onSubmitted} />);
+      fillValidApplicationForm();
+      clearEmergencyContact();
+      fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
+      const payload = vi.mocked(submitRegistration).mock.calls.at(-1)?.[0];
+      expect(payload?.emergencyContactName).toBeUndefined();
+      expect(payload?.emergencyContactRelationship).toBeUndefined();
+      expect(payload?.emergencyContactPhone).toBeUndefined();
+    }, 15_000);
+
+    it("blocks submit on a partial contact, then submits once it is completed", async () => {
+      const onSubmitted = vi.fn();
+      const { submitRegistration } =
+        await import("../../src/pages/Register/registerApi");
+      vi.mocked(submitRegistration).mockClear();
+
+      render(<ApplicationForm onSubmitted={onSubmitted} />);
+      fillValidApplicationForm();
+      clearEmergencyContact();
+      setInputValue(nameLabel, "Jane Test");
+      fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+      expect(
+        screen.getByText("Please enter your emergency contact's relationship to you."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Please enter your emergency contact's phone number."),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText(relationshipLabel)).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
+      expect(submitRegistration).not.toHaveBeenCalled();
+
+      setInputValue(relationshipLabel, "Parent");
+      setInputValue(phoneLabel, "5559876543");
+      fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
+      expect(submitRegistration).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emergencyContactName: "Jane Test",
+          emergencyContactRelationship: "Parent",
+          emergencyContactPhone: "(555)-987-6543",
+        }),
+        null,
+      );
+    }, 15_000);
+
+    it("drops sibling errors when the partial contact is cleared", async () => {
+      const onSubmitted = vi.fn();
+
+      render(<ApplicationForm onSubmitted={onSubmitted} />);
+      fillValidApplicationForm();
+      clearEmergencyContact();
+      setInputValue(phoneLabel, "5559876543");
+      fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+
+      expect(
+        screen.getByText("Please enter your emergency contact's name."),
+      ).toBeInTheDocument();
+
+      setInputValue(phoneLabel, "");
+      expect(
+        screen.queryByText("Please enter your emergency contact's name."),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Please enter your emergency contact's relationship to you."),
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
+    }, 15_000);
+  });
 });

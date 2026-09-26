@@ -65,6 +65,7 @@ export type ApplicationFormData = {
   builtOrWantToBuild: string;
   shortDeadlineLearning: string;
   emergencyContactName: string;
+  emergencyContactRelationship: string;
   emergencyContactPhone: string;
   emergencyContactPhoneCountry: CountryCode | "";
   mlhCodeOfConductAgreed: boolean;
@@ -112,6 +113,7 @@ export const FIELD_ORDER: FieldName[] = [
   "portfolio",
   "devpost",
   "emergencyContactName",
+  "emergencyContactRelationship",
   "emergencyContactPhone",
   "mlhCodeOfConductAgreed",
   "mlhDataSharingConsent",

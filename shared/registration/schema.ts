@@ -26,6 +26,10 @@ import {
   TSHIRT_SIZES,
 } from "./constants";
 import { isValidEmailSyntax, normalizeEmail } from "../lib/normalizeEmail";
+import {
+  EMERGENCY_CONTACT_REQUIRED_MESSAGES,
+  missingEmergencyContactFields,
+} from "./emergencyContact";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
 import { isUsaCountry, US_STATE_OPTIONS } from "./residence";
 
@@ -386,15 +390,21 @@ export const registrationPayloadSchema = z
       message: `${APPLICATION_QUESTIONS.shortDeadlineLearning}.`,
       tooLongMessage: `Response is too long (maximum ${FIELD_LIMITS.shortDeadlineLearning.toLocaleString()} characters).`,
     }),
-    emergencyContactName: safePlainText({
+    emergencyContactName: safeOptionalPlainText({
       max: FIELD_LIMITS.name,
-      message: "Emergency contact name is required.",
+      tooLongMessage: "Emergency contact name is too long.",
     }),
-    emergencyContactPhone: safePlainText({
+    emergencyContactRelationship: safeOptionalPlainText({
+      max: FIELD_LIMITS.emergencyContactRelationship,
+      tooLongMessage: "Emergency contact relationship is too long.",
+    }),
+    emergencyContactPhone: safeOptionalPlainText({
       max: FIELD_LIMITS.phone,
-      message: "Emergency contact phone is required.",
-    })
-      .refine(isValidPhone, "Enter a valid phone number."),
+      tooLongMessage: "Emergency contact phone is too long.",
+    }).refine(
+      (value) => value === undefined || isValidPhone(value),
+      "Enter a valid phone number.",
+    ),
     emergencyContactPhoneCountry: z.enum(getCountries()).optional(),
     mlhCodeOfConductAgreed: z.literal(true, {
       message: "You must agree to the MLH Code of Conduct to continue.",
@@ -423,6 +433,13 @@ export const registrationPayloadSchema = z
         code: "custom",
         path: ["allergyDetails"],
         message: "Please describe your food allergies.",
+      });
+    }
+    for (const field of missingEmergencyContactFields(data)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [field],
+        message: EMERGENCY_CONTACT_REQUIRED_MESSAGES[field],
       });
     }
     if (data.raceEthnicity.includes("Other (Please Specify)") && !data.otherRaceEthnicity) {
@@ -468,7 +485,14 @@ export const registrationPayloadSchema = z
   .transform((data) => ({
     ...data,
     phone: normalizePhone(data.phone, data.phoneCountry),
-    emergencyContactPhone: normalizePhone(data.emergencyContactPhone, data.emergencyContactPhoneCountry),
+    emergencyContactPhone:
+      data.emergencyContactPhone === undefined
+        ? undefined
+        : normalizePhone(data.emergencyContactPhone, data.emergencyContactPhoneCountry),
+    // No emergency contact means no phone, so a lone calling-code selection is dropped too.
+    ...(data.emergencyContactPhone === undefined
+      ? { emergencyContactPhoneCountry: undefined }
+      : {}),
     stateOfResidence: isUsaCountry(data.countryOfResidence)
       ? data.stateOfResidence
       : undefined,

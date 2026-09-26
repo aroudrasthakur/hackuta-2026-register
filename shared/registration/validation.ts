@@ -5,6 +5,10 @@ import {
   MAJOR_OTHER_OPTION,
   SCHOOL_OTHER_OPTION,
 } from "./constants";
+import {
+  EMERGENCY_CONTACT_REQUIRED_MESSAGES,
+  missingEmergencyContactFields,
+} from "./emergencyContact";
 import { MLH_SCHOOLS_SET } from "./mlhSchools";
 import { requiresUsState, stateForRegistrationPayload } from "./residence";
 import { registrationPayloadSchema } from "./schema";
@@ -80,6 +84,7 @@ function buildRegistrationCandidate(form: ApplicationFormData) {
     builtOrWantToBuild: form.builtOrWantToBuild,
     shortDeadlineLearning: form.shortDeadlineLearning,
     emergencyContactName: form.emergencyContactName,
+    emergencyContactRelationship: form.emergencyContactRelationship,
     emergencyContactPhone: form.emergencyContactPhone,
     emergencyContactPhoneCountry: form.emergencyContactPhoneCountry || undefined,
     mlhCodeOfConductAgreed: form.mlhCodeOfConductAgreed ? true : undefined,
@@ -119,6 +124,11 @@ function collectClientFieldErrors(form: ApplicationFormData): FieldErrors {
 
   if (form.gender === GENDER_SELF_DESCRIBE_OPTION && !form.otherGender.trim()) {
     errors.otherGender = "Please describe your gender.";
+  }
+
+  // Mirrors the schema's superRefine, which Zod skips while other fields are invalid.
+  for (const field of missingEmergencyContactFields(form)) {
+    errors[field] = EMERGENCY_CONTACT_REQUIRED_MESSAGES[field];
   }
 
   return errors;

@@ -166,6 +166,7 @@ export const APPLICATION_QUESTIONS = {
 
 export const FIELD_LIMITS = {
   name: 100,
+  emergencyContactRelationship: 100,
   phone: 30,
   email: 254,
   school: 200,
