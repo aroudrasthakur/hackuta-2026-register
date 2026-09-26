@@ -43,7 +43,10 @@ function MockSessionBridge({ children }: { children: ReactNode }) {
       value={{
         isLoading: mock.isLoading,
         isAuthenticated: mock.isAuthenticated,
-        sessionKey: mock.verifiedEmail ?? "signed-out",
+        // Keep OTP verification on a stable key; verifiedEmail is set before auth completes.
+        sessionKey: mock.isAuthenticated
+          ? (mock.verifiedEmail ?? "authenticated")
+          : "signed-out",
         signOut: async () => {
           mock.signOut();
         },

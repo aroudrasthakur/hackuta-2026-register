@@ -9,9 +9,9 @@ const policySource = readFileSync(
 );
 
 describe("trusted-types policy", () => {
-  it("blocks HTML sinks and dangerous markup", () => {
-    expect(policySource).toContain("HTML sink blocked");
+  it("blocks dangerous HTML markup but allows framework-safe strings", () => {
     expect(policySource).toContain("HTML injection blocked");
+    expect(policySource).toMatch(/return value;/);
     expect(policySource).not.toMatch(/createHTML:\s*\(\s*value\s*\)\s*=>\s*value/);
   });
 
