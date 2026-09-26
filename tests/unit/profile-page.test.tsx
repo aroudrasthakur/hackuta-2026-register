@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
+import { formatCentralRegistrationTime, HACKATHON_SCHEDULE } from "../../shared/hackathon/schedule";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MockAuthProvider } from "../../src/components/MockAuthProvider";
@@ -119,7 +120,7 @@ describe("ProfilePage", () => {
     expect(screen.getByText("Decisions go out")).toBeInTheDocument();
     expect(screen.getAllByText("To be announced")).toHaveLength(2);
     expect(screen.queryByText("RSVP due")).not.toBeInTheDocument();
-    expect(screen.getByText("Friday, September 25, 2026")).toBeInTheDocument();
+    expect(screen.getByText(formatCentralRegistrationTime(HACKATHON_SCHEDULE.registrationOpensAt))).toBeInTheDocument();
     expect(screen.getByText("The hackathon begins")).toBeInTheDocument();
     expect(screen.queryByText("Country of residence")).not.toBeInTheDocument();
     expect(screen.queryByText("State of residence")).not.toBeInTheDocument();
@@ -260,6 +261,49 @@ describe("ProfilePage (Convex mode)", () => {
     expect(screen.getByRole("button", { name: "Sign out" }).className).toContain(
       "profile-sign-out-btn",
     );
+  });
+
+  it("shows the deadline and removes the draft CTA after applications close", () => {
+    const closesAt = Date.now() - 60_000;
+    dashboardQueryResult.current = {
+      profile: { displayName: "Draft User", verifiedEmail: "draft@example.com" },
+      registration: { status: "draft", submittedAt: null, answers: { firstName: "Draft" } },
+      hackathon: { ...HACKATHON_SCHEDULE, registrationClosesAt: closesAt },
+    };
+    renderConvexProfile();
+    expect(screen.getByText("Applications are closed.")).toBeInTheDocument();
+    expect(screen.getByText(formatCentralRegistrationTime(closesAt))).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue application" })).not.toBeInTheDocument();
+  });
+
+  it("shows a future opening time without allowing draft navigation", () => {
+    const opensAt = Date.now() + 60_000;
+    dashboardQueryResult.current = {
+      profile: { displayName: "Future User", verifiedEmail: "future@example.com" },
+      registration: { status: "draft", submittedAt: null, answers: { firstName: "Future" } },
+      hackathon: { ...HACKATHON_SCHEDULE, registrationOpensAt: opensAt },
+    };
+    renderConvexProfile();
+    expect(screen.getByText("Applications are not open yet.")).toBeInTheDocument();
+    expect(screen.getByText(formatCentralRegistrationTime(opensAt))).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue application" })).not.toBeInTheDocument();
+  });
+
+  it("keeps submitted applications visible after the deadline", () => {
+    const closesAt = Date.now() - 60_000;
+    dashboardQueryResult.current = {
+      profile: { displayName: "Submitted User", verifiedEmail: "submitted@example.com" },
+      registration: {
+        status: "submitted",
+        submittedAt: closesAt - 60_000,
+        answers: { firstName: "Submitted" },
+      },
+      hackathon: { ...HACKATHON_SCHEDULE, registrationClosesAt: closesAt },
+    };
+    renderConvexProfile();
+    expect(screen.getByText("Under review")).toBeInTheDocument();
+    expect(screen.getByText(formatCentralRegistrationTime(closesAt))).toBeInTheDocument();
+    expect(screen.queryByText("Applications are closed.")).not.toBeInTheDocument();
   });
 
   function renderConvexProfile() {

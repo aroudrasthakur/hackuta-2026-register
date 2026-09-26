@@ -65,7 +65,7 @@ Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Password re
 
 ### `applications:saveApplicationDraft`
 
-**Auth:** required · `{ patch: ApplicationDraftPatch }` — upserts draft application; only writable while status is `draft`.
+**Auth:** required · `{ patch: ApplicationDraftPatch }` — upserts a draft while applications are open; saved drafts remain readable after the close time.
 
 ### `applications:getMyApplicantDashboard`
 
@@ -73,7 +73,7 @@ Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Password re
 
 ### `eventConfig:getPublicEventConfig`
 
-**Auth:** none · no args — public hackathon display name for the registration UI.
+**Auth:** none · no args — returns the display name and resolved `registrationOpensAt`, `registrationClosesAt`, `decisionsReleasedAt`, `startsAt`, and `endsAt` timestamps. The date fields use UTC epoch milliseconds; `registrationClosesAt: null` means no close time, and `decisionsReleasedAt: null` means the decision date is unannounced. Applicant-facing times use `America/Chicago`.
 
 ### `applicant:getApplicantRoutingState`
 
@@ -110,7 +110,7 @@ Same response shape as `getOtpSendCooldown`. Tracks accepted requests for all ad
 }
 ```
 
-Validates payload (Zod + sanitization), binds resume via token, sets status `submitted`, sends confirmation email. **Email in `data` is ignored** — server uses verified auth email.
+Validates payload (Zod + sanitization), rejects submissions at or after the configured closing time, binds resume via token, sets status `submitted`, sends confirmation email. **Email in `data` is ignored** — server uses verified auth email.
 
 First submit creates the applicant record; sign-in alone does not write application data.
 
@@ -280,6 +280,14 @@ All three emails are queued with the HackUTA email service (`POST /send-email`) 
 | `recordEmailDelivery` | Store the service's queue ID, email kind, normalized recipient, and time (no content or codes) |
 | `listEmailDeliveriesForRecipient` | Support lookup — latest 20 deliveries for an address, newest first |
 
+### Event configuration
+
+| Function | Purpose |
+| --- | --- |
+| `eventConfig:setHackathonName` | Internal — update the displayed name without redeploying |
+| `eventConfig:setRegistrationClosesAt` | Internal — set UTC epoch milliseconds or `null` to reopen; no close time is configured by default |
+| `eventConfig:setTimelineDates` | Internal — atomically update optional opening, closing, decisions, start, and end dates with chronological validation |
+
 ### Maintenance
 
 | Function | Purpose |
@@ -344,7 +352,7 @@ Indexed by `applicationId` (`by_application`). Its validator is separate from th
 
 | Table | Purpose |
 | --- | --- |
-| `eventConfig` | Server-side hackathon display name (single row) |
+| `eventConfig` | Server-side name and operator-controlled schedule dates (single row) |
 | `rateLimits` | Throttle counters |
 | `resumeUploadSessions` | Upload capability tokens |
 | Auth tables | Managed by `@convex-dev/auth` |

@@ -94,6 +94,7 @@ import {
   resumeFileKey,
 } from "../../../shared/registration/resume";
 import {
+  APPLICATION_CLOSED_MESSAGE,
   DRAFT_SAVE_ERROR_MESSAGE,
   isResumeFieldMessage,
   mapConvexErrorToUserMessage,
@@ -175,7 +176,11 @@ function ApplicationFormContent({
       if (import.meta.env.DEV) {
         console.error("Draft save failed:", error);
       }
-      setDraftError(DRAFT_SAVE_ERROR_MESSAGE);
+      setDraftError(
+        mapConvexErrorToUserMessage(error) === APPLICATION_CLOSED_MESSAGE
+          ? APPLICATION_CLOSED_MESSAGE
+          : DRAFT_SAVE_ERROR_MESSAGE,
+      );
       throw error;
     }
   }, [form, routing.isAuthenticated, saveDraft]);
@@ -1240,13 +1245,15 @@ function ApplicationFormContent({
           className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-sm font-medium text-amber-800"
         >
           <span>{draftError}</span>{" "}
-          <button
-            type="button"
-            className="font-semibold underline underline-offset-2"
-            onClick={() => void saveDraftWithStatus().catch(() => undefined)}
-          >
-            Try saving again
-          </button>
+          {draftError !== APPLICATION_CLOSED_MESSAGE ? (
+            <button
+              type="button"
+              className="font-semibold underline underline-offset-2"
+              onClick={() => void saveDraftWithStatus().catch(() => undefined)}
+            >
+              Try saving again
+            </button>
+          ) : null}
         </div>
       )}
 

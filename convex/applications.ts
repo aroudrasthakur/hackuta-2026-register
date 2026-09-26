@@ -5,11 +5,9 @@
  * routing state live in applicant.ts.
  */
 import { mutation, query } from "./_generated/server";
-import {
-  HACKATHON_SCHEDULE,
-  resolveHackathonTimelineSource,
-} from "../shared/hackathon/schedule";
-import { getHackathonName } from "./lib/eventConfig";
+import { resolveHackathonTimelineSource } from "../shared/hackathon/schedule";
+import { DEFAULT_HACKATHON_NAME } from "../shared/hackathon/eventDefaults";
+import { assertRegistrationOpen, getEventConfigRow } from "./lib/eventConfig";
 import { buildHackathonTimeline } from "../shared/hackathon/timeline";
 import { applicationDraftPatch } from "./applicationFields";
 import { requireAuthIdentity } from "./lib/auth";
@@ -72,6 +70,7 @@ export const saveApplicationDraft = mutation({
   },
   handler: async (ctx, { patch }) => {
     const application = await ensureDraftApplication(ctx);
+    await assertRegistrationOpen(ctx);
     if (applicationFormWasSubmitted(application) ||
       (await getApplicationStatus(ctx, application)) !== "draft") {
       throw new Error("Your application has already been submitted.");
@@ -124,9 +123,10 @@ export const getMyApplicantDashboard = query({
 
     const resumeStatus: "none" | "attached" = application?.resumeStorageId ? "attached" : "none";
     const applicantAnswers = application ? projectApplicantAnswers(application) : null;
-    const timelineSource = resolveHackathonTimelineSource(null);
+    const eventConfig = await getEventConfigRow(ctx);
+    const timelineSource = resolveHackathonTimelineSource(eventConfig);
     const timeline = buildHackathonTimeline(timelineSource);
-    const hackathonName = await getHackathonName(ctx);
+    const hackathonName = eventConfig?.name ?? DEFAULT_HACKATHON_NAME;
 
     const displayName =
       (application ? formatApplicantFullName(application) : null) ??
@@ -153,7 +153,7 @@ export const getMyApplicantDashboard = query({
       hackathon: {
         name: hackathonName,
         startsAt: timelineSource.startsAt,
-        endsAt: HACKATHON_SCHEDULE.endsAt,
+        endsAt: timelineSource.endsAt,
         registrationOpensAt: timelineSource.registrationOpensAt,
         registrationClosesAt: timelineSource.registrationClosesAt,
         decisionsReleasedAt: timelineSource.decisionsReleasedAt ?? null,

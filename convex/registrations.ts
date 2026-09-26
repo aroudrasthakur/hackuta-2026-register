@@ -10,7 +10,7 @@ import {
 } from "../shared/registration/resume";
 import type { ApplicationDoc, MutationCtx } from "./lib/dataModel";
 import { deleteStorageIfExists } from "./lib/draftResume";
-import { getHackathonName } from "./lib/eventConfig";
+import { assertRegistrationOpen, getHackathonName } from "./lib/eventConfig";
 import { requireVerifiedAuthUser } from "./lib/auth";
 import {
   applicationFormWasSubmitted,
@@ -60,6 +60,7 @@ async function upsertRegistration(
   if (!verifiedEmail) {
     throw new Error("Authentication required.");
   }
+  await assertRegistrationOpen(ctx);
 
   const { resumeStorageId: rawStorageId, ...fields } = data;
 
