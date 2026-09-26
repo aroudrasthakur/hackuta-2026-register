@@ -8,7 +8,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 
 | Path | Summary |
 | --- | --- |
-| [schema.ts](schema.ts) | Tables: applications, applicationSubmissionLogs, eventConfig, rateLimits, resume uploads, emailDeliveries, auth |
+| [schema.ts](schema.ts) | Tables: applications, applicationReviews, applicationSubmissionLogs, eventConfig, rateLimits, resume uploads, emailDeliveries, auth |
 | [auth.ts](auth.ts) | Convex Auth — password, sign-up OTP, and password-reset OTP |
 | [passwordReset.ts](passwordReset.ts) | Post-reset session invalidation mutation |
 | [auth.config.ts](auth.config.ts) | Auth provider configuration |
@@ -16,7 +16,7 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | [applicant.ts](applicant.ts) | Application bootstrap and routing state |
 | [eventConfig.ts](eventConfig.ts) | Server-side hackathon display name |
 | [applications.ts](applications.ts) | Draft load/save and applicant dashboard |
-| [registrations.ts](registrations.ts) | Application submission |
+| [registrations.ts](registrations.ts) | Application submission and initial review creation |
 | [resumeUploads.ts](resumeUploads.ts) | Upload rate limits, sessions, discard, scheduled cleanup |
 | [rateLimits.ts](rateLimits.ts) | Sign-up and password-reset OTP cooldowns; internal rate-limit mutations |
 | [emailDeliveries.ts](emailDeliveries.ts) | Internal queue-ID tracking for sent emails and recipient lookup |

@@ -51,6 +51,18 @@ npx convex env set EMAIL_SERVICE_API_KEY <dev-only-key>
 
 Rotate the production email API key if it was ever copied into dev historically.
 
+### Application review rollout
+
+The first deployment is additive: it creates `applicationReviews` and writes a review when an application is submitted, but keeps the old `applications.status`, `updatedAt`, `reviewedAt`, and `reviewedBy` fields so existing rows and older code remain valid. Draft edits use `applicantUpdatedAt`; profile queries prefer the review row and fall back to legacy status until backfill is complete.
+
+1. Deploy to a personal or shared dev deployment; test draft save, submit, confirmation email, and `/profile` before backfilling. Do not deploy a schema that removes the legacy fields yet.
+2. Run `npx convex run migrations:backfillApplicationReviews '{}'`. Repeat with `'{"cursor":"<continueCursor>"}'` until `isDone` is true. The migration processes at most 50 applications per call, is safe to repeat, and preserves unrecognized historical reviewer strings as `legacyReviewedBy`.
+3. Compare counts and decisions between submitted applications and review rows; investigate any nonzero `unresolvedDraftReviews` before removing old fields, and check historical `applicationSubmissionLogs` still load. Test `/profile` for a backfilled application before considering production.
+4. After review and approval, repeat the additive deploy and backfill on production. Production currently runs backend code older than PR #88; coordinate that baseline upgrade separately.
+5. Deploy the transitional review version **after** the additive backfill. New application flows do not set the old `applications.status` or `updatedAt` fields; existing rows keep their old values until the guarded strip, and the schema accepts both row shapes.
+6. With explicit approval, run `npx convex run migrations:stripApplicationReviewFields '{}'` on dev. Repeat with `'{"cursor":"<continueCursor>"}'` until `isDone` is true; every page must report `blocked: 0`. Investigate blocked rows before continuing. Verify the old fields are gone, historical submission logs load, and draft/submission/profile flows still work. Only then repeat on production under a separately approved rollout.
+7. In a **final** deploy, after every target deployment has zero remaining legacy application fields, remove their validators and `applications.by_status`. The final code no longer exports either review migration; use the earlier deployed stages for steps 2 and 6. Never deploy the final strict schema directly onto unmigrated data.
+
 ## Scheduled maintenance
 
 | Job | Schedule | Function |

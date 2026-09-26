@@ -1,7 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
-import { applicationRecord } from "./applicationFields";
+import {
+  applicationRecord,
+  applicationReviewStatus,
+  applicationSubmissionLogRecord,
+} from "./applicationFields";
 import { emailDeliveryKind } from "./lib/emailDeliveries";
 
 export default defineSchema({
@@ -22,11 +26,23 @@ export default defineSchema({
   applications: defineTable(applicationRecord)
     .index("by_auth_user", ["authUserId"])
     .index("by_email", ["email"])
-    .index("by_status", ["status"])
     .index("by_resume", ["resumeStorageId"]),
 
+  applicationReviews: defineTable({
+    applicationId: v.id("applications"),
+    status: applicationReviewStatus,
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    legacyReviewedBy: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_application", ["applicationId"])
+    .index("by_reviewer", ["reviewedBy"])
+    .index("by_status", ["status"]),
+
   applicationSubmissionLogs: defineTable({
-    ...applicationRecord,
+    ...applicationSubmissionLogRecord,
     applicationId: v.id("applications"),
   }).index("by_application", ["applicationId"]),
 

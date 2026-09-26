@@ -4,7 +4,7 @@ import { internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./lib/dataModel";
 import type { GenericId } from "convex/values";
 import { normalizeEmail } from "./lib/normalizeEmail";
-import { getApplicationByUser } from "./lib/applications";
+import { getApplicationByUser, getApplicationReview } from "./lib/applications";
 import { invalidateAllSessionsForUser } from "./lib/invalidateAuthSessions";
 import { deleteRateLimitsForBucketKeys } from "./lib/rateLimitHelpers";
 import {
@@ -17,6 +17,7 @@ import { DRAFT_SAVE_BUCKET, SUBMIT_BUCKET } from "./lib/userRateLimits";
 type ResettableTable =
   | "applications"
   | "applicationSubmissionLogs"
+  | "applicationReviews"
   | "resumeUploadSessions"
   | "rateLimits"
   | "emailDeliveries"
@@ -84,6 +85,7 @@ export const resetAllData = internalMutation({
     await deleteAllStorage(ctx);
 
     await deleteAllFromTable(ctx, "applicationSubmissionLogs");
+    await deleteAllFromTable(ctx, "applicationReviews");
     await deleteAllFromTable(ctx, "applications");
     await deleteAllFromTable(ctx, "resumeUploadSessions");
     await deleteAllFromTable(ctx, "rateLimits");
@@ -168,6 +170,10 @@ export const deleteAccountByEmail = internalMutation({
         .collect();
       for (const log of logs) {
         await ctx.db.delete(log._id);
+      }
+      const review = await getApplicationReview(ctx, application._id);
+      if (review) {
+        await ctx.db.delete(review._id);
       }
       await ctx.db.delete(application._id);
     }

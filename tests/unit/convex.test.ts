@@ -80,6 +80,14 @@ function buildUploadHeaders(body: BodyInit, overrides: Record<string, string> = 
 const createTest = () => convexTest(schema, modules);
 type TestInstance = ReturnType<typeof createTest>;
 
+async function expectSubmittedReview(t: Pick<TestInstance, "run">) {
+  await t.run(async (ctx) => {
+    const application = await ctx.db.query("applications").first();
+    const review = await ctx.db.query("applicationReviews").first();
+    expect(review).toMatchObject({ applicationId: application?._id, status: "under_review" });
+  });
+}
+
 async function drainScheduledFunctions(client: ConvexTestClient) {
   await (client as unknown as TestInstance).finishInProgressScheduledFunctions();
 }
@@ -245,8 +253,9 @@ describe("convex registrations", () => {
     });
     expect(await t.run((ctx) => ctx.db.query("applications").first())).toMatchObject({
       ...phones,
-      status: "submitted",
+      formSubmitted: true,
     });
+    await expectSubmittedReview(t);
     await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
       registration: { answers: phones },
     });
@@ -286,8 +295,9 @@ describe("convex registrations", () => {
     });
     expect(await t.run((ctx) => ctx.db.query("applications").first())).toMatchObject({
       ...answers,
-      status: "submitted",
+      formSubmitted: true,
     });
+    await expectSubmittedReview(t);
     const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
       registration: { answers: Record<string, unknown> };
     };
@@ -334,8 +344,9 @@ describe("convex registrations", () => {
       shortDeadlineLearning: answers.shortDeadlineLearning,
       hackathonsAttended: 2,
       experienceLevel: answers.experienceLevel,
-      status: "submitted",
+      formSubmitted: true,
     });
+    await expectSubmittedReview(t);
 
     const dashboard = await t.query("applications:getMyApplicantDashboard", {}) as {
       registration: { answers: Record<string, unknown> };
@@ -400,6 +411,112 @@ describe("convex registrations", () => {
       data: validRegistrationPayload(),
     })).rejects.toThrow("already submitted");
   }, 15_000);
+
+  it("separates submitted review decisions from applicant-owned drafts and timestamps", async () => {
+    const t = await authTest();
+    await t.mutation("applicant:ensureApplicantApplication", {});
+    expect(await t.run((ctx) => ctx.db.query("applicationReviews").collect())).toEqual([]);
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm()),
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      status: "draft",
+      draft: expect.any(Object),
+    });
+    const draft = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(draft?.applicantUpdatedAt).toEqual(expect.any(Number));
+    expect(await t.run((ctx) => ctx.db.query("applicationReviews").collect())).toEqual([]);
+
+    await t.mutation("registrations:submitRegistration", { data: validRegistrationPayload() });
+    const submitted = await t.run((ctx) => ctx.db.query("applications").first());
+    const review = await t.run((ctx) => ctx.db.query("applicationReviews").first());
+    expect(review).toMatchObject({
+      applicationId: submitted?._id,
+      status: "under_review",
+      createdAt: submitted?.submittedAt,
+      updatedAt: submitted?.submittedAt,
+    });
+    expect(await t.run((ctx) => ctx.db.query("applicationReviews").collect())).toHaveLength(1);
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { status: "submitted", updatedAt: submitted?.applicantUpdatedAt },
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(review!._id, {
+        status: "accepted",
+        reviewedAt: Date.now(),
+        reviewedBy: submitted!.authUserId,
+        updatedAt: Date.now(),
+      });
+    });
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { status: "accepted", updatedAt: submitted?.applicantUpdatedAt },
+    });
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      status: "accepted", draft: null,
+    });
+    await expect(t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm()),
+    })).rejects.toThrow("already been submitted");
+    expect(await t.run((ctx) => ctx.db.query("applicationSubmissionLogs").collect())).toEqual([
+      expect.objectContaining({ applicationId: submitted?._id, status: "submitted" }),
+    ]);
+    await drainScheduledFunctions(t);
+  });
+
+  it("rejects legacy review columns on application rows after cleanup", async () => {
+    const t = await authTest();
+    await t.mutation("applicant:ensureApplicantApplication", {});
+    const application = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(application).toBeTruthy();
+
+    for (const patch of [
+      { status: "draft" },
+      { updatedAt: 1 },
+      { reviewedAt: 1 },
+      { reviewedBy: "legacy-reviewer" },
+    ]) {
+      await expect(t.run((ctx) => ctx.db.patch(application!._id, patch as never))).rejects.toThrow();
+    }
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      status: "draft", draft: expect.any(Object),
+    });
+  });
+
+  it("does not write legacy review fields but still snapshots submission metadata", async () => {
+    const t = await authTest();
+    await t.mutation("applicant:ensureApplicantApplication", {});
+    const draft = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(draft).not.toHaveProperty("status");
+    expect(draft).not.toHaveProperty("updatedAt");
+    expect(draft?.applicantUpdatedAt).toEqual(expect.any(Number));
+
+    await t.mutation("applications:saveApplicationDraft", {
+      patch: formToDraftPatch(validRegistrationForm()),
+    });
+    const saved = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(saved).not.toHaveProperty("status");
+    expect(saved).not.toHaveProperty("updatedAt");
+    await expect(t.query("applications:getMyApplicationDraft", {})).resolves.toMatchObject({
+      status: "draft", updatedAt: saved?.applicantUpdatedAt,
+    });
+
+    await t.mutation("registrations:submitRegistration", { data: validRegistrationPayload() });
+    const submitted = await t.run((ctx) => ctx.db.query("applications").first());
+    expect(submitted).not.toHaveProperty("status");
+    expect(submitted).not.toHaveProperty("updatedAt");
+    expect(submitted).not.toHaveProperty("reviewedAt");
+    expect(submitted).not.toHaveProperty("reviewedBy");
+    await expect(t.query("applications:getMyApplicantDashboard", {})).resolves.toMatchObject({
+      registration: { status: "submitted", updatedAt: submitted?.applicantUpdatedAt },
+    });
+    expect(await t.run((ctx) => ctx.db.query("applicationSubmissionLogs").first())).toMatchObject({
+      applicationId: submitted?._id,
+      status: "submitted",
+      updatedAt: submitted?.submittedAt,
+    });
+    await drainScheduledFunctions(t);
+  });
 
   it("records one full application snapshot on submit and ignores a rejected resubmit", async () => {
     const t = await authTest();
@@ -571,9 +688,8 @@ describe("convex registrations", () => {
       await ctx.db.insert("applications", {
         authUserId: user._id,
         email: "legacy-consent@example.com",
-        status: "draft",
         createdAt: 1,
-        updatedAt: 1,
+        applicantUpdatedAt: 1,
         mlhCodeOfConductAgreed: true,
         mlhDataSharingConsent: true,
       });
@@ -1459,10 +1575,11 @@ describe("convex applicant auth flows", () => {
 
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
     expect(stored).toMatchObject({
-      status: "submitted",
+      formSubmitted: true,
       resumeStorageId: upload.storageId,
       resumeFilename: "saved.pdf",
     });
+    await expectSubmittedReview(t);
     expect(await t.run((ctx) => ctx.db.system.get("_storage", upload.storageId))).not.toBeNull();
   });
 
@@ -1520,10 +1637,11 @@ describe("convex applicant auth flows", () => {
     });
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
     expect(stored).toMatchObject({
-      status: "submitted",
+      formSubmitted: true,
       resumeStorageId: upload.storageId,
       resumeFilename: "flow.pdf",
     });
+    await expectSubmittedReview(t);
     await drainScheduledFunctions(t);
   });
 
@@ -1647,7 +1765,8 @@ describe("convex applicant auth flows", () => {
     });
     await t.mutation("registrations:submitRegistration", { data: validRegistrationPayload() });
     const stored = await t.run((ctx) => ctx.db.query("applications").first());
-    expect(stored?.status).toBe("submitted");
+    expect(stored?.formSubmitted).toBe(true);
+    await expectSubmittedReview(t);
     expect(stored).not.toHaveProperty("resumeStorageId");
     expect(stored).not.toHaveProperty("resumeFilename");
     await drainScheduledFunctions(t);
@@ -1732,8 +1851,9 @@ describe("convex applicant auth flows", () => {
       hearAbout: HEAR_ABOUT_OTHER_OPTION,
       otherHearAbout: OTHER_OPTION_FIXTURES.hearAbout,
       mlhCodeOfConductAgreed: true,
-      status: "submitted",
+      formSubmitted: true,
     });
+    await expectSubmittedReview(t);
     expect(stored).not.toHaveProperty("codeOfConductAgreed");
     expect(stored).not.toHaveProperty("MLHcodeOfConductAgreed");
 

@@ -19,6 +19,14 @@ export const applicationStatus = v.union(
   v.literal("withdrawn"),
 );
 
+export const applicationReviewStatus = v.union(
+  v.literal("under_review"),
+  v.literal("accepted"),
+  v.literal("waitlisted"),
+  v.literal("rejected"),
+  v.literal("withdrawn"),
+);
+
 const draftNullableString = v.union(v.string(), v.null());
 const draftNullableNumber = v.union(v.number(), v.null());
 const draftNullableBoolean = v.union(v.boolean(), v.null());
@@ -74,17 +82,12 @@ const applicantDraftPatchFields = {
   ...fieldsFromKeys(REQUIRED_BOOLEAN_FIELDS, () => v.boolean()),
 };
 
-/**
- * Applicant application — one row per auth user.
- * Passwords and auth secrets live in Convex Auth tables only.
- */
-export const applicationRecord = {
+const applicantRecordFields = {
   authUserId: v.id("users"),
   email: v.string(),
   emailVerificationTime: v.optional(v.number()),
-  status: applicationStatus,
   createdAt: v.number(),
-  updatedAt: v.number(),
+  applicantUpdatedAt: v.optional(v.number()),
   /** Set to true when the registration form is successfully submitted; never cleared. */
   formSubmitted: v.optional(v.boolean()),
   submittedAt: v.optional(v.number()),
@@ -93,11 +96,23 @@ export const applicationRecord = {
   mlhCommunicationsConsentAt: v.optional(v.number()),
   sponsorSharingConsentAt: v.optional(v.number()),
   foodAllergyWaiverAgreedAt: v.optional(v.number()),
-  reviewedAt: v.optional(v.number()),
-  reviewedBy: v.optional(v.string()),
   resumeStorageId: v.optional(v.id("_storage")),
   resumeFilename: v.optional(v.string()),
   ...applicantAnswerFields,
+};
+
+/**
+ * Applicant application — one row per auth user.
+ * Passwords and auth secrets live in Convex Auth tables only.
+ */
+export const applicationRecord = applicantRecordFields;
+
+export const applicationSubmissionLogRecord = {
+  ...applicantRecordFields,
+  status: applicationStatus,
+  updatedAt: v.number(),
+  reviewedAt: v.optional(v.number()),
+  reviewedBy: v.optional(v.string()),
 };
 
 /** Writable draft fields (autosave + pre-submit edits). Null/""/[] clears stored values. */

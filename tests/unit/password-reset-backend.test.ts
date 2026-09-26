@@ -21,6 +21,9 @@ const invalidateSessionsAfterPasswordReset = makeFunctionReference<"mutation">(
 const invalidateResetSession = makeFunctionReference<"mutation">(
   "passwordReset:invalidateResetSession",
 );
+const assertResetCodeAvailable = makeFunctionReference<"mutation">(
+  "passwordReset:assertResetCodeAvailable",
+);
 
 describe("password reset backend", () => {
   it("removes every session and refresh token for the target user", async () => {
@@ -137,18 +140,21 @@ describe("password reset backend", () => {
 describe("password reset with the real auth provider", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  async function setupReset() {
+  async function setupReset({ requestReset = true } = {}) {
     vi.stubEnv("SITE_URL", "http://127.0.0.1:5273");
     vi.stubEnv("CONVEX_SITE_URL", "http://127.0.0.1:3211");
     const keys = await generateKeyPair("RS256", { extractable: true });
     vi.stubEnv("JWT_PRIVATE_KEY", (await exportPKCS8(keys.privateKey)).trimEnd().replace(/\n/g, " "));
     let deliveredCode = "";
+    let signupCode = "";
     vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
       if (String(url) !== `${process.env.EMAIL_SERVICE_URL}/send-email`) {
         throw new Error("Unexpected network request");
       }
       const { body } = JSON.parse(String(init?.body)) as { body: string };
-      deliveredCode = body.split("\n").find((line) => /^\d{6}$/.test(line)) ?? "";
+      const nextCode = body.split("\n").find((line) => /^\d{6}$/.test(line)) ?? "";
+      if (!signupCode) signupCode = nextCode;
+      deliveredCode = nextCode;
       return new Response(JSON.stringify({ id: "test-email-id" }), { status: 201 });
     });
 
@@ -157,11 +163,15 @@ describe("password reset with the real auth provider", () => {
     await test.action(signIn, {
       provider: "password", params: { flow: "signUp", email, password: "OldPass1" },
     });
+    if (!requestReset) {
+      expect(signupCode).toMatch(/^\d{6}$/);
+      return { test, email, code: deliveredCode, signupCode, resetResult: undefined };
+    }
     const resetResult = await test.action(signIn, {
       provider: "password", params: { flow: "reset", email: " Real-Reset@EXAMPLE.COM " },
     });
     expect(deliveredCode).toMatch(/^\d{6}$/);
-    return { test, email, code: deliveredCode, resetResult };
+    return { test, email, code: deliveredCode, signupCode, resetResult };
   }
 
   it("returns the same response without creating auth state or sending email for an unregistered address", async () => {
@@ -310,4 +320,80 @@ describe("password reset with the real auth provider", () => {
     },
     30_000,
   );
+
+  it("accepts an unused reset code without consuming it", async () => {
+    const { test, email, code } = await setupReset();
+    await expect(test.mutation(assertResetCodeAvailable, { email, code })).resolves.toEqual({
+      ok: true,
+    });
+    await test.run(async (ctx) => {
+      expect(await ctx.db.query("authVerificationCodes").collect()).toHaveLength(1);
+    });
+    await expect(test.action(signIn, {
+      provider: "password",
+      params: { flow: "reset-verification", email, code, newPassword: "NewPass1" },
+    })).resolves.toMatchObject({ tokens: expect.anything() });
+  });
+
+  it("rejects a consumed reset code after a successful reset", async () => {
+    const { test, email, code } = await setupReset();
+    await test.action(signIn, {
+      provider: "password",
+      params: { flow: "reset-verification", email, code, newPassword: "NewPass1" },
+    });
+    await expect(test.mutation(assertResetCodeAvailable, { email, code })).resolves.toEqual({
+      ok: false,
+    });
+  });
+
+  it("rejects a consumed reset code after password reuse", async () => {
+    const { test, email, code } = await setupReset();
+    await expect(test.action(signIn, {
+      provider: "password",
+      params: { flow: "reset-verification", email, code, newPassword: "OldPass1" },
+    })).rejects.toThrow(PASSWORD_REUSE_MESSAGE);
+    await expect(test.mutation(assertResetCodeAvailable, { email, code })).resolves.toEqual({
+      ok: false,
+    });
+  });
+
+  it("rejects a wrong code and a sign-up OTP", async () => {
+    const { test, email, signupCode } = await setupReset({ requestReset: false });
+    await expect(test.mutation(assertResetCodeAvailable, { email, code: signupCode }))
+      .resolves.toEqual({ ok: false });
+    await test.run(async (ctx) => {
+      expect((await ctx.db.query("authVerificationCodes").collect()).map((entry) => entry.provider))
+        .toEqual(["email-verification"]);
+    });
+
+    const { test: resetTest, email: resetEmail, code } = await setupReset();
+    const wrongCode = code === "000000" ? "999999" : "000000";
+    await expect(resetTest.mutation(assertResetCodeAvailable, { email: resetEmail, code: wrongCode }))
+      .resolves.toEqual({ ok: false });
+  });
+
+  it("counts failed peeks against Convex Auth's email rate limit", async () => {
+    const { test, email, code } = await setupReset();
+    const wrongCode = code === "000000" ? "999999" : "000000";
+    await expect(test.mutation(assertResetCodeAvailable, { email, code: wrongCode }))
+      .resolves.toEqual({ ok: false });
+    const limitsAfterMiss = await test.run(async (ctx) => ctx.db.query("authRateLimits").collect());
+    expect(limitsAfterMiss).toEqual([
+      expect.objectContaining({ identifier: email, attemptsLeft: 4 }),
+    ]);
+    await expect(test.mutation(assertResetCodeAvailable, { email, code })).resolves.toEqual({
+      ok: true,
+    });
+
+    for (let i = 0; i < 4; i += 1) {
+      await expect(test.mutation(assertResetCodeAvailable, { email, code: wrongCode }))
+        .resolves.toEqual({ ok: false });
+    }
+    await expect(test.mutation(assertResetCodeAvailable, { email, code })).resolves.toEqual({
+      ok: false,
+    });
+    await test.run(async (ctx) => {
+      expect(await ctx.db.query("authVerificationCodes").collect()).toHaveLength(1);
+    });
+  });
 });

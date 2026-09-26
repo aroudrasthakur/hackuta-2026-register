@@ -52,3 +52,9 @@ export const invalidateSessionsAfterPasswordResetRef = makeFunctionReference<
   "mutation",
   Record<string, never>
 >("passwordReset:invalidateSessionsAfterPasswordReset");
+
+export const assertResetCodeAvailableRef = makeFunctionReference<
+  "mutation",
+  { email: string; code: string },
+  { ok: boolean }
+>("passwordReset:assertResetCodeAvailable");
