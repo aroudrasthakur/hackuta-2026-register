@@ -1,5 +1,5 @@
 export const PASSWORD_RESET_REQUESTED_MESSAGE =
-  "If an account exists for this email, we've sent a reset code.";
+  "If an account exists for this email, we'll send a reset code. If you don't receive one, check the email address and try again.";
 
 export const PASSWORD_RESET_SUCCESS_MESSAGE =
   "Your password has been reset. Sign in with your new password.";
