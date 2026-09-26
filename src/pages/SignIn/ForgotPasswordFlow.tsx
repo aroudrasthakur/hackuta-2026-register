@@ -5,6 +5,7 @@ import {
   validatePasswordRequirements,
 } from "../../../shared/auth/password";
 import {
+  PASSWORD_RESET_FAILED_MESSAGE,
   PASSWORD_RESET_HOURLY_LIMIT_MESSAGE,
   PASSWORD_RESET_REQUESTED_MESSAGE,
   PASSWORD_RESET_SUCCESS_MESSAGE,
@@ -23,7 +24,10 @@ import { OtpCodeInput } from "../../components/OtpCodeInput";
 import { SignInPasswordInput } from "../../components/SignInPasswordInput";
 import { SignInShell } from "../../components/SignInShell";
 import { MOCK_OTP } from "../../constants/mockAuth";
-import { getPasswordResetSendCooldownRef } from "../../convex/api";
+import {
+  assertResetCodeAvailableRef,
+  getPasswordResetSendCooldownRef,
+} from "../../convex/api";
 import { getConvexClient } from "../../convex/client";
 import { useMockAuth } from "../../hooks/useMockAuth";
 
@@ -163,10 +167,25 @@ export function ForgotPasswordFlow({
     setError(null);
 
     try {
+      if (!mockAuth.enabled) {
+        const normalized = normalizeEmail(email);
+        if (!client || !normalized) {
+          throw new Error(PASSWORD_RESET_FAILED_MESSAGE);
+        }
+        const result = await client.mutation(assertResetCodeAvailableRef, {
+          email: normalized,
+          code: trimmedCode,
+        });
+        if (!result.ok) {
+          throw new Error("Invalid code");
+        }
+      }
       setStep("password");
       setNewPassword("");
       setConfirmPassword("");
       setInfoMessage(null);
+    } catch (err) {
+      setError(mapPasswordResetError(err));
     } finally {
       setPending(false);
     }
