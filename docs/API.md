@@ -319,7 +319,6 @@ One row per auth user. All application form fields are top-level columns.
 | `authUserId` | FK to `users` |
 | `email` | Copied from verified auth email |
 | `status` | `draft` \| `submitted` \| `accepted` \| `waitlisted` \| `rejected` \| `withdrawn` |
-| `eligibilityStatus` | `unreviewed` \| `eligible` \| `ineligible` |
 | `resumeStorageId` | PDF in `_storage` |
 | Applicant fields | See `shared/registration/schema.ts` and `convex/applicationFields.ts` |
 | `builtOrWantToBuild`, `shortDeadlineLearning` | Required multiline answers (max 2,000 chars each) |

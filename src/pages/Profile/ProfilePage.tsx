@@ -114,7 +114,6 @@ export default function ProfilePage() {
         registration: mockAuth.hasSubmittedRegistration
           ? {
               status: "submitted",
-              eligibilityStatus: "unreviewed",
               submittedAt: mockTimestamp,
               updatedAt: mockTimestamp,
               resumeStatus: "none" as const,

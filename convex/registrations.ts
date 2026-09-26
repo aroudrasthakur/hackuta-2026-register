@@ -110,7 +110,6 @@ async function upsertRegistration(
     emailVerificationTime: authUser.emailVerificationTime,
     status: "submitted",
     formSubmitted: true,
-    confirmationStatus: "unconfirmed",
     submittedAt,
     updatedAt: submittedAt,
     resumeStorageId: resumeStorageId ?? undefined,
