@@ -16,7 +16,6 @@ async function validPdfBytes() {
 }
 
 function buildMinimalPdf(objects: string[]): Uint8Array {
-
   let body = "%PDF-1.4\n";
   const offsets: number[] = [0];
   for (const object of objects) {
@@ -83,7 +82,7 @@ describe("validateResumePdfBytes", () => {
     );
   });
 
-  it.each(["/JavaScript", "/OpenAction", "/EmbeddedFile"] as const)(
+  it.each(["/JavaScript", "/EmbeddedFile"] as const)(
     "rejects PDFs containing %s markers",
     async (marker) => {
       const bytes = await validPdfBytes();
@@ -95,6 +94,15 @@ describe("validateResumePdfBytes", () => {
       );
     },
   );
+
+  it("does not reject benign /OpenAction name tokens in raw bytes", async () => {
+    const bytes = await validPdfBytes();
+    const marker = "/OpenAction";
+    const injected = new Uint8Array(bytes.length + marker.length + 16);
+    injected.set(bytes);
+    injected.set(new TextEncoder().encode(`\n${marker}\n`), bytes.length);
+    await expect(validateResumePdfBytes(injected)).resolves.toBeUndefined();
+  });
 
   it("normalizes hex-escaped PDF names before scanning", () => {
     expect(normalizePdfHexEscapes("/J#61vaScript")).toBe("/JavaScript");
@@ -121,6 +129,54 @@ describe("validateResumePdfBytes", () => {
     await expect(validateResumePdfBytes(bytes)).resolves.toBeUndefined();
   });
 
+  it("accepts a catalog /Names dictionary with only /Dests", async () => {
+    const bytes = buildMinimalPdf([
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R /Names << /Dests 4 0 R >> >>\nendobj",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj",
+      "4 0 obj\n<< /Names [(section) 5 0 R] >>\nendobj",
+      "5 0 obj\n<< /D [3 0 R /XYZ 0 792 0] >>\nendobj",
+    ]);
+    await expect(validateResumePdfBytes(bytes)).resolves.toBeUndefined();
+  });
+
+  it("accepts an empty /AcroForm dictionary", async () => {
+    const bytes = buildMinimalPdf([
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [] >> >>\nendobj",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj",
+    ]);
+    await expect(validateResumePdfBytes(bytes)).resolves.toBeUndefined();
+  });
+
+  it("accepts a benign catalog /OpenAction", async () => {
+    const bytes = buildMinimalPdf([
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R /OpenAction << /S /GoTo /D [3 0 R /Fit] >> >>\nendobj",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj",
+    ]);
+    await expect(validateResumePdfBytes(bytes)).resolves.toBeUndefined();
+  });
+
+  it("accepts a bare /AA dictionary without active actions", async () => {
+    const bytes = buildMinimalPdf([
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R /AA << >> >>\nendobj",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj",
+    ]);
+    await expect(validateResumePdfBytes(bytes)).resolves.toBeUndefined();
+  });
+
+  it("accepts a URI hyperlink annotation", async () => {
+    const bytes = buildMinimalPdf([
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Annots [4 0 R] >>\nendobj",
+      "4 0 obj\n<< /Type /Annot /Subtype /Link /Rect [0 0 0 0] /A << /S /URI /URI (https://example.com) >> >>\nendobj",
+    ]);
+    await expect(validateResumePdfBytes(bytes)).resolves.toBeUndefined();
+  });
+
   it("rejects a page annotation whose /A action is JavaScript", async () => {
     const bytes = buildMinimalPdf([
       "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj",
@@ -133,7 +189,7 @@ describe("validateResumePdfBytes", () => {
     );
   });
 
-  it("rejects a catalog /AA additional-actions dictionary", async () => {
+  it("rejects a catalog /AA additional-actions dictionary with JavaScript", async () => {
     const bytes = buildMinimalPdf([
       "1 0 obj\n<< /Type /Catalog /Pages 2 0 R /AA << /O << /S /JavaScript /JS (x) >> >> >>\nendobj",
       "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",

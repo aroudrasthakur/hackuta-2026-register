@@ -8,7 +8,6 @@ import {
 import {
   hasPdfMagicBytes,
   MAX_RESUME_PAGES,
-  RESUME_TOO_MANY_PAGES_MESSAGE,
 } from "../shared/registration/resume";
 
 const PDF_PARSE_BUDGET_MS = 5_000;
@@ -18,24 +17,18 @@ const MAX_PDF_INSPECTION_DEPTH = 8;
 const ACTIVE_CONTENT_NAME_TOKENS = new Set([
   "/JavaScript",
   "/JS",
-  "/OpenAction",
   "/Launch",
   "/EmbeddedFile",
   "/RichMedia",
 ]);
 
-const ACTIVE_DICT_KEYS = [
+/** Keys whose mere presence in a dict indicates active/dangerous content. */
+const PRESENCE_FLAG_DICT_KEYS = [
   "JS",
   "JavaScript",
   "Launch",
   "EmbeddedFile",
   "RichMedia",
-  "OpenAction",
-  "AA",
-  "Names",
-  "EmbeddedFiles",
-  "EF",
-  "AcroForm",
   "XFA",
 ] as const;
 
@@ -100,15 +93,88 @@ function isPdfStreamLike(value: unknown): value is { dict: PDFDict } {
   );
 }
 
-function dictionaryContainsActiveContent(dict: PDFDict): boolean {
-  for (const key of ACTIVE_DICT_KEYS) {
+function isActiveActionType(actionType: string | null): boolean {
+  return actionType !== null && (ACTIVE_ACTION_TYPES as readonly string[]).includes(actionType);
+}
+
+function inspectNamesValue(pdf: PDFDocument, value: unknown): boolean {
+  const resolved = resolvePdfObject(pdf, value);
+  if (!(resolved instanceof PDFDict)) {
+    return false;
+  }
+  return (
+    resolved.has(PDFName.of("JavaScript")) || resolved.has(PDFName.of("EmbeddedFiles"))
+  );
+}
+
+function inspectAcroFormValue(pdf: PDFDocument, value: unknown): boolean {
+  const resolved = resolvePdfObject(pdf, value);
+  if (!(resolved instanceof PDFDict)) {
+    return false;
+  }
+  if (resolved.has(PDFName.of("XFA"))) {
+    return true;
+  }
+
+  const fields = resolvePdfObject(pdf, resolved.lookup(PDFName.of("Fields")));
+  if (!(fields instanceof PDFArray)) {
+    return false;
+  }
+
+  for (let index = 0; index < fields.size(); index += 1) {
+    const field = resolvePdfObject(pdf, fields.lookup(index));
+    if (!(field instanceof PDFDict)) {
+      continue;
+    }
+    for (const actionKey of ["AA", "A"] as const) {
+      const action = resolvePdfObject(pdf, field.lookup(PDFName.of(actionKey)));
+      if (action instanceof PDFDict) {
+        const actionType = pdfNameValue(action.lookup(PDFName.of("S")));
+        if (isActiveActionType(actionType)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function inspectOpenActionValue(pdf: PDFDocument, value: unknown): boolean {
+  const resolved = resolvePdfObject(pdf, value);
+  if (!(resolved instanceof PDFDict)) {
+    return false;
+  }
+  return isActiveActionType(pdfNameValue(resolved.lookup(PDFName.of("S"))));
+}
+
+function dictionaryContainsActiveContent(pdf: PDFDocument, dict: PDFDict): boolean {
+  for (const key of PRESENCE_FLAG_DICT_KEYS) {
     if (dict.has(PDFName.of(key))) {
       return true;
     }
   }
 
+  if (dict.has(PDFName.of("Names"))) {
+    if (inspectNamesValue(pdf, dict.lookup(PDFName.of("Names")))) {
+      return true;
+    }
+  }
+
+  if (dict.has(PDFName.of("AcroForm"))) {
+    if (inspectAcroFormValue(pdf, dict.lookup(PDFName.of("AcroForm")))) {
+      return true;
+    }
+  }
+
+  if (dict.has(PDFName.of("OpenAction"))) {
+    if (inspectOpenActionValue(pdf, dict.lookup(PDFName.of("OpenAction")))) {
+      return true;
+    }
+  }
+
   const actionType = pdfNameValue(dict.lookup(PDFName.of("S")));
-  if (actionType && (ACTIVE_ACTION_TYPES as readonly string[]).includes(actionType)) {
+  if (isActiveActionType(actionType)) {
     return true;
   }
 
@@ -116,7 +182,7 @@ function dictionaryContainsActiveContent(dict: PDFDict): boolean {
 }
 
 function inspectPdfDict(pdf: PDFDocument, dict: PDFDict, depth: number): boolean {
-  if (dictionaryContainsActiveContent(dict)) {
+  if (dictionaryContainsActiveContent(pdf, dict)) {
     return true;
   }
   if (depth >= MAX_PDF_INSPECTION_DEPTH) {
@@ -218,6 +284,6 @@ export async function validateResumePdfBytes(bytes: Uint8Array): Promise<void> {
     throw new Error("A resume must have at least one page.");
   }
   if (pageCount > MAX_RESUME_PAGES) {
-    throw new Error(RESUME_TOO_MANY_PAGES_MESSAGE);
+    throw new Error("The PDF has too many pages.");
   }
 }
