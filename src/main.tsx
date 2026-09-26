@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { ConvexProvider } from 'convex/react'
 import { AuthBootstrap } from './components/AuthBootstrap'
+import { E2eRouterBridge } from './components/E2eRouterBridge'
 import { isMockApiEnabled } from './constants/mockAuth'
 import { MockAuthProvider } from './components/MockAuthProvider'
 import { SessionAuthProvider } from './hooks/useSessionAuth'
@@ -23,6 +24,7 @@ const useMockApi = isMockApiEnabled()
 const app = (
   <React.StrictMode>
     <BrowserRouter>
+      <E2eRouterBridge />
       <AuthBootstrap>
         <Routes>
           <Route path="/" element={<HomeRedirect />} />

@@ -16,6 +16,7 @@ export type HackutaMockAuthWindow = {
 declare global {
   interface Window {
     __hackutaMockAuth?: HackutaMockAuthWindow;
+    __hackutaTestNavigate?: (path: string) => void;
   }
 }
 
