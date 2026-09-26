@@ -22,10 +22,10 @@ Generated Convex types and the server entry stub live in [_generated/](_generate
 | [emailDeliveries.ts](emailDeliveries.ts) | Internal queue-ID tracking for sent emails and recipient lookup |
 | [applicationFields.ts](applicationFields.ts) | Convex validators built from shared field registry |
 | [resumeUploadSecurity.ts](resumeUploadSecurity.ts) | Resume upload origin allowlist |
-| [pdfValidation.ts](pdfValidation.ts) | PDF magic-byte validation for uploads |
+| [pdfValidation.ts](pdfValidation.ts) | Resume PDF validation — magic bytes, active-content scan, object graph walk, page limits |
 | [maintenance.ts](maintenance.ts) | Internal resetAllData (**destructive**) |
 | [migrations.ts](migrations.ts) | One-time data migrations (including `migrateFirstHackathonToHackathonsAttended`, `migrateOtherDietaryToAllergyDetails`, `migrateMergedOtherFieldsToSeparateColumns`, `migrateLegacyCodeOfConductFields`, `migrateLegacyAgreementSubmittedAtFields`, `stripInternalNotesFromApplications`, `stripEligibilityStatusFromApplications`, `stripConfirmationStatusFromApplications`) |
-| [crons.ts](crons.ts) | Scheduled resume-session cleanup |
+| [crons.ts](crons.ts) | Scheduled resume-session cleanup, rate-limit prune, and email-delivery retention |
 | [lib/](lib/README.md) | Shared server helpers |
 | [email/](email/README.md) | HackUTA email service client + transactional email actions |
 

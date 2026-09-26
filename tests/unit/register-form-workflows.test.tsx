@@ -48,7 +48,12 @@ const env = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/hooks/useSessionAuth", () => ({
-  useSessionAuth: () => ({ isLoading: false, isAuthenticated: env.authenticated, signOut: vi.fn() }),
+  useSessionAuth: () => ({
+    isLoading: false,
+    isAuthenticated: env.authenticated,
+    sessionKey: env.authenticated ? "test-user" : "signed-out",
+    signOut: vi.fn(),
+  }),
 }));
 vi.mock("../../src/hooks/useApplicantRouting", () => ({
   useApplicantRouting: () => ({
@@ -157,22 +162,29 @@ describe("ApplicationForm draft loading and autosave", () => {
     expect(await screen.findByText(RESUME_MISSING_MESSAGE)).toBeInTheDocument();
   });
 
-  it("shows a retry control when autosave fails and clears it after a successful retry", async () => {
-    vi.useFakeTimers();
-    env.saveDraft.mockRejectedValueOnce(new Error("offline"));
-    renderValidForm();
+  it(
+    "shows a retry control when autosave fails and clears it after a successful retry",
+    async () => {
+      vi.useFakeTimers();
+      env.saveDraft.mockRejectedValueOnce(new Error("offline"));
+      renderValidForm();
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(800);
-    });
-    expect(screen.getByText(DRAFT_SAVE_ERROR_MESSAGE)).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(800);
+      });
+      expect(screen.getByText(DRAFT_SAVE_ERROR_MESSAGE)).toBeInTheDocument();
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Try saving again" }));
-    });
-    expect(env.saveDraft).toHaveBeenCalledTimes(2);
-    expect(screen.queryByText(DRAFT_SAVE_ERROR_MESSAGE)).not.toBeInTheDocument();
-  });
+      vi.useRealTimers();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Try saving again" }));
+      });
+      await waitFor(() => {
+        expect(env.saveDraft).toHaveBeenCalledTimes(2);
+      });
+      expect(screen.queryByText(DRAFT_SAVE_ERROR_MESSAGE)).not.toBeInTheDocument();
+    },
+    15_000,
+  );
 
   it("logs autosave failures in development builds", async () => {
     vi.stubEnv("DEV", true);

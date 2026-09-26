@@ -29,11 +29,13 @@ import {
   isClearedDraftValue,
   type DraftPatchPayload,
 } from "../shared/registration/draftPatch";
+import { validateDraftPatchLimits } from "../shared/registration/draftLimits";
 import { stripAgreementTimestamps } from "../shared/registration/consentTimestamps";
 import {
   applicationToDraftForm,
   savedResumeFromStoredApplication,
 } from "../shared/registration/draftMapping";
+import { consumeDraftSaveAllowance } from "./lib/userRateLimits";
 
 export const getMyApplicationDraft = query({
   args: {},
@@ -78,8 +80,12 @@ export const saveApplicationDraft = mutation({
     }
 
     const normalizedPatch = stripAgreementTimestamps(patch);
+    validateDraftPatchLimits(normalizedPatch as Record<string, unknown>);
 
     const authUser = await getAuthUser(ctx);
+    if (authUser) {
+      await consumeDraftSaveAllowance(ctx, authUser._id);
+    }
     const email = normalizeEmail(authUser?.email) ?? application.email;
     const updatedAt = Date.now();
 

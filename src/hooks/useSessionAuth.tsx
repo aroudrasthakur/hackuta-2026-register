@@ -1,10 +1,12 @@
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { convexClient } from "../convex/client";
 import { useMockAuth } from "./useMockAuth";
 
 type SessionAuthValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
+  sessionKey: string;
   signOut: () => Promise<void>;
 };
 
@@ -12,13 +14,19 @@ const SessionAuthContext = createContext<SessionAuthValue | null>(null);
 
 function ConvexSessionBridge({ children }: { children: ReactNode }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
-  const { signOut } = useAuthActions();
+  const { signOut: convexSignOut } = useAuthActions();
+
+  const signOut = useCallback(async () => {
+    await convexSignOut();
+    convexClient?.clearAuth();
+  }, [convexSignOut]);
 
   return (
     <SessionAuthContext.Provider
       value={{
         isLoading,
         isAuthenticated,
+        sessionKey: isAuthenticated ? "authenticated" : "signed-out",
         signOut,
       }}
     >
@@ -35,6 +43,10 @@ function MockSessionBridge({ children }: { children: ReactNode }) {
       value={{
         isLoading: mock.isLoading,
         isAuthenticated: mock.isAuthenticated,
+        // Keep OTP verification on a stable key; verifiedEmail is set before auth completes.
+        sessionKey: mock.isAuthenticated
+          ? (mock.verifiedEmail ?? "authenticated")
+          : "signed-out",
         signOut: async () => {
           mock.signOut();
         },

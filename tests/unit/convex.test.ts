@@ -1025,6 +1025,30 @@ describe("resume HTTP validation and lifecycle", () => {
     );
   });
 
+  it("rejects unverified users with 403", async () => {
+    const email = "unverified-upload@example.com";
+    const t = createTest();
+    let userId: string;
+    await t.run(async (ctx) => {
+      userId = await ctx.db.insert("users", { email });
+    });
+    const authed = t.withIdentity({
+      subject: userId!,
+      email,
+      tokenIdentifier: `email|${email}`,
+    }) as unknown as ConvexTestClient;
+    const body = new Uint8Array(await pdfBytes());
+    const result = await authed.fetch("/resume-upload", {
+      method: "POST",
+      headers: buildUploadHeaders(body),
+      body,
+    });
+    expect(result.status).toBe(403);
+    expect((await result.json() as { error: string }).error).toBe(
+      "Verify your email before uploading a resume.",
+    );
+  });
+
   it("rejects uploads without an allowed browser origin", async () => {
     const t = await authTest();
     const result = await t.fetch("/resume-upload", {
@@ -1706,15 +1730,15 @@ describe("convex applicant auth flows", () => {
   });
 
   it.each([
-    ["a non-PDF name", "resume.exe"],
-    ["a path", "../resume.pdf"],
-    ["an overly long name", `${"a".repeat(260)}.pdf`],
-  ])("rejects a draft resume with %s", async (_label, filename) => {
+    ["a non-PDF name", "resume.exe", "Please select a PDF file."],
+    ["a path", "../resume.pdf", "Please select a PDF file."],
+    ["an overly long name", `${"a".repeat(260)}.pdf`, "One or more fields exceed the allowed length."],
+  ])("rejects a draft resume with %s", async (_label, filename, message) => {
     const t = await authTest();
     const upload = await verifiedUpload(t);
     await expect(t.mutation("applications:saveApplicationDraft", {
       patch: formToDraftPatch(validRegistrationForm(), { storageId: upload.storageId, filename }),
-    })).rejects.toThrow("Please select a PDF file.");
+    })).rejects.toThrow(message);
   });
 
   it("reports a saved resume whose file is missing and still allows removal and submit", async () => {

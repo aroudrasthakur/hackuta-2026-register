@@ -50,7 +50,10 @@ export default defineSchema({
     bucket: v.string(),
     key: v.string(),
     createdAt: v.number(),
-  }).index("by_bucket_createdAt", ["bucket", "createdAt"]),
+  })
+    .index("by_bucket_createdAt", ["bucket", "createdAt"])
+    .index("by_bucket_key_createdAt", ["bucket", "key", "createdAt"])
+    .index("by_createdAt", ["createdAt"]),
 
   resumeUploadSessions: defineTable({
     token: v.string(),
@@ -70,7 +73,9 @@ export default defineSchema({
     kind: emailDeliveryKind,
     recipient: v.string(),
     createdAt: v.number(),
-  }).index("by_recipient", ["recipient"]),
+  })
+    .index("by_recipient", ["recipient"])
+    .index("by_createdAt", ["createdAt"]),
 
   /** Queued emails whose emailDeliveries row could not be written (support lookup). */
   emailDeliveryRecordingFailures: defineTable({
@@ -81,5 +86,6 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_serviceId", ["serviceId"])
-    .index("by_recipient", ["recipient"]),
+    .index("by_recipient", ["recipient"])
+    .index("by_createdAt", ["createdAt"]),
 });

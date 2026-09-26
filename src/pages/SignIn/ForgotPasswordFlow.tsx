@@ -81,7 +81,7 @@ export function ForgotPasswordFlow({
       return { waitSeconds: 0, hourlyLimitReached: false };
     }
     try {
-      return await client.mutation(getPasswordResetSendCooldownRef, { email: normalized });
+      return await client.query(getPasswordResetSendCooldownRef, { email: normalized });
     } catch {
       return { waitSeconds: 0, hourlyLimitReached: false };
     }

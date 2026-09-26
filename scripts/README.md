@@ -11,7 +11,7 @@ Node scripts invoked from npm lifecycle hooks, local setup, or CI. Not imported 
 | [verify-production-env.mjs](verify-production-env.mjs) | prebuild | Blocks production Vercel builds when VITE_USE_MOCK_API=true |
 | [verify-convex-deployment.mjs](verify-convex-deployment.mjs) | npm run convex:verify | Smoke-test deployed Convex: hackathon query + authenticated routing |
 | [generateAuthKeys.mjs](generateAuthKeys.mjs) | Local / new deployment setup | Generate RS256 JWT keys and set JWT_PRIVATE_KEY / JWKS on linked Convex deployment |
-| [sync-dev-convex-env.mjs](sync-dev-convex-env.mjs) | Dev deployment setup | Copy email service vars (`EMAIL_SERVICE_URL`, `EMAIL_SERVICE_API_KEY`) from prod; set localhost SITE_URL and resume upload origins |
+| [sync-dev-convex-env.mjs](sync-dev-convex-env.mjs) | Dev deployment setup | Copy `EMAIL_SERVICE_URL` from prod; set localhost SITE_URL and resume upload origins. Dev-only `EMAIL_SERVICE_API_KEY` must be set separately. |
 | [check-coverage.mjs](check-coverage.mjs) | npm run test:coverage:check | Enforce the coverage policy on unit (+ optional Playwright) coverage; prints a per-area table and writes the CI step summary |
 | [coverage-policy.mjs](coverage-policy.mjs) | (imported) | Single source of truth for coverage scope, documented exclusions, and 85% per-area thresholds |
 | [generate-countries.mjs](generate-countries.mjs) | Manual maintenance | Regenerate [shared/registration/countries.ts](../shared/registration/countries.ts) from ISO 3166 JSON |

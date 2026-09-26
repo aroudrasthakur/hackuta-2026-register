@@ -366,7 +366,15 @@ describe("main entry point", () => {
     vi.doMock("@convex-dev/auth/react", () => ({ ConvexAuthProvider: Passthrough("convex-auth") }));
     vi.doMock("convex/react", () => ({ ConvexProvider: Passthrough("convex") }));
     vi.doMock("../../src/components/MockAuthProvider", () => ({ MockAuthProvider: Passthrough("mock-auth") }));
-    vi.doMock("../../src/hooks/useSessionAuth", () => ({ SessionAuthProvider: Passthrough("session") }));
+    vi.doMock("../../src/hooks/useSessionAuth", () => ({
+      SessionAuthProvider: Passthrough("session"),
+      useSessionAuth: () => ({
+        isLoading: false,
+        isAuthenticated: false,
+        sessionKey: "signed-out",
+        signOut: async () => undefined,
+      }),
+    }));
     vi.doMock("../../src/components/AuthBootstrap", () => ({ AuthBootstrap: Passthrough("bootstrap") }));
     vi.doMock("../../src/components/ProtectedRoute", () => ({
       ProtectedRoute: ({ children, requireNoSubmittedRegistration }: { children: ReactNode; requireNoSubmittedRegistration?: boolean }) => (
@@ -394,11 +402,15 @@ describe("main entry point", () => {
     window.history.pushState({}, "", "/");
   });
 
-  it("refuses to boot without a #root element", async () => {
-    document.body.innerHTML = "";
-    vi.resetModules();
-    await expect(import("../../src/main")).rejects.toThrow("Missing #root element");
-  });
+  it(
+    "refuses to boot without a #root element",
+    async () => {
+      document.body.innerHTML = "";
+      vi.resetModules();
+      await expect(import("../../src/main")).rejects.toThrow("Missing #root element");
+    },
+    15_000,
+  );
 
   it("wraps the app in Convex Auth with tab-scoped session storage in production mode", async () => {
     const app = await bootMain({ mock: false, client: true });

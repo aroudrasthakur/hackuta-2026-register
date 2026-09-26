@@ -13,6 +13,7 @@ import {
 import { makeFunctionReference, type GenericDataModel } from "convex/server";
 import { Scrypt } from "lucia";
 import { assertPasswordNotReused } from "./assertPasswordNotReused";
+import { getClientAddressFromMeta } from "./clientAddress";
 
 const invalidateResetSessionRef = makeFunctionReference<"mutation">(
   "passwordReset:invalidateResetSession",
@@ -105,7 +106,8 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
           throw new Error(`Password reset is not enabled for ${provider}`);
         }
         // Apply the same limits before lookup so cooldowns cannot reveal accounts.
-        await ctx.runMutation(consumePasswordResetRequestRef, { email });
+        const clientAddress = await getClientAddressFromMeta(ctx);
+        await ctx.runMutation(consumePasswordResetRequestRef, { email, clientAddress });
         const retrieved = await retrieveAccount(ctx, {
           provider,
           account: { id: email },

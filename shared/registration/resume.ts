@@ -11,6 +11,8 @@ export const RESUME_SIZE_ERROR_MESSAGE =
 export const RESUME_EMPTY_ERROR_MESSAGE =
   "Your PDF is empty. Please select another file.";
 
+export const RESUME_TOO_MANY_PAGES_MESSAGE = "The PDF has too many pages.";
+
 export const RESUME_UPLOAD_EXPIRED_MESSAGE =
   "Your resume upload expired. Please upload your resume again.";
 
@@ -18,6 +20,16 @@ export const RESUME_MISSING_MESSAGE =
   "We couldn't find your saved resume. Please upload it again.";
 
 export const MAX_RESUME_FILENAME_LENGTH = 255;
+
+function containsAsciiControlCharacters(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Resumes are stored in Convex file storage (_storage), not on the web server
@@ -31,7 +43,7 @@ export function isAllowedResumeFilename(filename: string | null | undefined): bo
   if (
     normalized.includes("/") ||
     normalized.includes("\\") ||
-    normalized.includes("\0")
+    containsAsciiControlCharacters(normalized)
   ) {
     return false;
   }

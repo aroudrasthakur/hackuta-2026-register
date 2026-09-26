@@ -25,11 +25,23 @@ const assertUploadRateLimitRef = makeFunctionReference<"mutation">(
 const createVerifiedUploadSessionRef = makeFunctionReference<"mutation">(
   "resumeUploads:createVerifiedUploadSession",
 );
+const isUserEmailVerifiedRef = makeFunctionReference<"query">(
+  "lib/userVerification:isUserEmailVerified",
+);
 
 const CONVEX_TEST_ORIGIN = "https://hackuta.test";
 
 function requestOrigin(request: Request) {
-  return request.headers.get("origin") ?? request.headers.get("x-test-origin");
+  const origin = request.headers.get("origin");
+  if (origin) {
+    return origin;
+  }
+  const isTestMode =
+    process.env.CONVEX_TEST_MODE === "true" || process.env.VITEST === "true";
+  if (isTestMode) {
+    return request.headers.get("x-test-origin");
+  }
+  return null;
 }
 
 function allowedOrigin(request: Request): string | undefined {
@@ -79,6 +91,35 @@ async function clientAddress(
   return null;
 }
 
+async function readBodyWithLimit(request: Request, maxBytes: number): Promise<Uint8Array> {
+  const reader = request.body?.getReader();
+  if (!reader) {
+    throw new Error("Missing request body.");
+  }
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error(RESUME_SIZE_ERROR_MESSAGE);
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 const uploadResume = httpAction(async (ctx, request) => {
   const origin = allowedOrigin(request);
   if (!origin) {
@@ -97,6 +138,16 @@ const uploadResume = httpAction(async (ctx, request) => {
     );
   }
 
+  const verified = await ctx.runQuery(isUserEmailVerifiedRef, { authUserId });
+  if (!verified) {
+    return response(
+      request,
+      { error: "Verify your email before uploading a resume." },
+      403,
+      origin,
+    );
+  }
+
   if (
     request.headers.get("content-type")?.split(";", 1)[0]?.trim() !==
     ALLOWED_RESUME_CONTENT_TYPE
@@ -104,11 +155,14 @@ const uploadResume = httpAction(async (ctx, request) => {
     return response(request, { error: "Please upload a PDF." }, 415, origin);
   }
 
+  const isTestRequest =
+    (process.env.CONVEX_TEST_MODE === "true" || process.env.VITEST === "true") &&
+    request.headers.get("x-test-origin") === CONVEX_TEST_ORIGIN;
   let contentLength = parseResumeContentLength(request.headers.get("content-length"));
   if (
     !contentLength.ok &&
     contentLength.reason === "missing" &&
-    request.headers.get("x-test-origin") === CONVEX_TEST_ORIGIN
+    isTestRequest
   ) {
     contentLength = parseResumeContentLength(
       request.headers.get(RESUME_TEST_CONTENT_LENGTH_HEADER),
@@ -146,7 +200,14 @@ const uploadResume = httpAction(async (ctx, request) => {
     return response(request, { error: "Too many uploads. Please try again later." }, 429, origin);
   }
 
-  const bytes = new Uint8Array(await request.arrayBuffer());
+  let bytes: Uint8Array;
+  try {
+    bytes = await readBodyWithLimit(request, MAX_RESUME_BYTES);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : RESUME_SIZE_ERROR_MESSAGE;
+    return response(request, { error: message }, 413, origin);
+  }
+
   if (bytes.length !== contentLength.length || bytes.length > MAX_RESUME_BYTES) {
     return response(request, { error: RESUME_SIZE_ERROR_MESSAGE }, 413, origin);
   }
@@ -158,13 +219,17 @@ const uploadResume = httpAction(async (ctx, request) => {
     const message =
       detail === "The PDF has too many pages."
         ? detail
-        : "The file is not a valid PDF.";
+        : detail === "This PDF contains content that is not allowed."
+          ? detail
+          : "The file is not a valid PDF.";
     return response(request, { error: message }, 422, origin);
   }
 
   let storageId;
   try {
-    storageId = await ctx.storage.store(new Blob([bytes], { type: "application/pdf" }));
+    storageId = await ctx.storage.store(
+      new Blob([Uint8Array.from(bytes)], { type: "application/pdf" }),
+    );
     const uploadToken = createCapabilityToken();
     await ctx.runMutation(createVerifiedUploadSessionRef, {
       uploadToken,

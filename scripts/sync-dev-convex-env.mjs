@@ -14,8 +14,8 @@ const convexCli = path.join(
   "main.js",
 );
 
-/** Copied from prod so dev can send OTP, password reset, and confirmation email. */
-const COPY_FROM_PROD = ["EMAIL_SERVICE_URL", "EMAIL_SERVICE_API_KEY"];
+/** Non-secret shared config copied from prod. Secrets must use dev-only keys. */
+export const COPY_FROM_PROD = ["EMAIL_SERVICE_URL"];
 
 /** Dev-only values — never copied from prod. */
 const DEV_ONLY = {
@@ -47,6 +47,14 @@ function getProdEnv(name) {
   }
 }
 
+function getDevEnv(name) {
+  try {
+    return runConvex(["env", "get", name]);
+  } catch {
+    return "";
+  }
+}
+
 for (const name of COPY_FROM_PROD) {
   const value = getProdEnv(name);
   if (!value) {
@@ -60,6 +68,17 @@ for (const name of COPY_FROM_PROD) {
 for (const [name, value] of Object.entries(DEV_ONLY)) {
   setDevEnv(name, value);
   console.log(`✔ ${name} (dev)`);
+}
+
+const devEmailKey = getDevEnv("EMAIL_SERVICE_API_KEY");
+if (!devEmailKey) {
+  console.log(
+    "\nEMAIL_SERVICE_API_KEY is not set on dev. Set a dev-only key before sending email:\n" +
+      "  npx convex env set EMAIL_SERVICE_API_KEY <dev-key>\n" +
+      "Never copy the production email API key into dev.",
+  );
+} else {
+  console.log("✔ EMAIL_SERVICE_API_KEY (dev — not copied from prod)");
 }
 
 console.log("\nDev JWT keys are unchanged. If missing, run: node scripts/generateAuthKeys.mjs");

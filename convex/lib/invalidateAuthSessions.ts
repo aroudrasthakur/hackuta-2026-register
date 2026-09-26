@@ -12,13 +12,13 @@ export async function invalidateAllSessionsForUser(
 ) {
   const sessions = await ctx.db
     .query("authSessions")
-    .filter((q) => q.eq(q.field("userId"), userId))
+    .withIndex("userId", (q) => q.eq("userId", userId))
     .collect();
 
   for (const session of sessions) {
     const refreshTokens = await ctx.db
       .query("authRefreshTokens")
-      .filter((q) => q.eq(q.field("sessionId"), session._id))
+      .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
       .collect();
 
     for (const token of refreshTokens) {
