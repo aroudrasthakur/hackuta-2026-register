@@ -98,6 +98,7 @@ export const FIELD_ORDER: FieldName[] = [
   "graduationYear",
   "gender",
   "otherGender",
+  "raceEthnicity",
   "otherRaceEthnicity",
   "allergyDetails",
   "otherDietaryRestrictions",
@@ -131,6 +132,7 @@ export const INITIAL_FORM: ApplicationFormData = {
 export const FIELD_FOCUS_IDS: Partial<Record<FieldName, string>> = {
   studentEmail: "studentEmail",
   internationalStudent: "internationalStudent-yes",
+  raceEthnicity: "race-asian-indian",
   hackathonsAttended: "hackathonsAttended",
   allergyDetails: "allergyDetails",
   resume: "resume-upload",

@@ -727,10 +727,16 @@ function ApplicationFormContent({
         />
 
         <fieldset
-          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(!!errors.otherRaceEthnicity)}`}
+          className={`${checkboxFieldsetClass} ${fieldsetErrorClass(
+            !!errors.raceEthnicity || !!errors.otherRaceEthnicity,
+          )}`}
+          aria-describedby={
+            errors.raceEthnicity ? "raceEthnicity-error" : undefined
+          }
         >
           <legend className={fieldsetLegendClass}>
             Race / ethnicity (select all that apply)
+            <span aria-hidden="true"> *</span>
           </legend>
           <div className={checkboxGridClass}>
             {RACE_ETHNICITY_OPTIONS.map((option) => (
@@ -748,6 +754,10 @@ function ApplicationFormContent({
               />
             ))}
           </div>
+          <FieldError
+            id="raceEthnicity-error"
+            message={errors.raceEthnicity}
+          />
           {form.raceEthnicity.includes("Other (Please Specify)") ? (
             <OtherSpecifyInput
               id="otherRaceEthnicity"

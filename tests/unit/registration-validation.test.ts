@@ -474,6 +474,36 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("requires a race/ethnicity selection", () => {
+    const form = validRegistrationForm();
+    form.raceEthnicity = [];
+
+    const result = validateApplicationForm(form);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.raceEthnicity).toBe(
+        "Please select your race or ethnicity.",
+      );
+    }
+  });
+
+  it("requires a race/ethnicity description even when other answers are still incomplete", () => {
+    const result = validateApplicationForm({
+      ...INITIAL_FORM,
+      raceEthnicity: ["Other (Please Specify)"],
+      otherRaceEthnicity: "   ",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.otherRaceEthnicity).toBe(
+        "Please specify your race or ethnicity.",
+      );
+      expect(result.errors.firstName).toBe("First name is required.");
+    }
+  });
+
   it("accepts a custom race/ethnicity when Other (Please Specify) is selected", () => {
     const form = validRegistrationForm();
     form.raceEthnicity = ["Other (Please Specify)"];
@@ -499,6 +529,20 @@ describe("validateApplicationForm", () => {
       expect(result.errors.otherRaceEthnicity).toBe(
         "Please specify your race or ethnicity.",
       );
+    }
+  });
+
+  it("requires an allergy description even when other answers are still incomplete", () => {
+    const result = validateApplicationForm({
+      ...INITIAL_FORM,
+      dietaryRestrictions: ["Allergies"],
+      allergyDetails: "   ",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.allergyDetails).toBe("Please describe your food allergies.");
+      expect(result.errors.firstName).toBe("First name is required.");
     }
   });
 
