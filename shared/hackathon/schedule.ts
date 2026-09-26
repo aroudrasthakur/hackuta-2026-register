@@ -11,15 +11,19 @@ export type HackathonTimelineSource = {
   registrationClosesAt: number | null;
   decisionsReleasedAt?: number | null;
   startsAt: number;
+  endsAt: number;
 };
 
 export function resolveHackathonTimelineSource(
-  hackathon: HackathonTimelineSource | null | undefined,
+  hackathon: Partial<Record<keyof HackathonTimelineSource, number | null>> | null | undefined,
 ): HackathonTimelineSource {
   return {
     ...HACKATHON_SCHEDULE,
+    registrationOpensAt: hackathon?.registrationOpensAt ?? HACKATHON_SCHEDULE.registrationOpensAt,
     registrationClosesAt: hackathon?.registrationClosesAt ?? null,
     decisionsReleasedAt: hackathon?.decisionsReleasedAt ?? null,
+    startsAt: hackathon?.startsAt ?? HACKATHON_SCHEDULE.startsAt,
+    endsAt: hackathon?.endsAt ?? HACKATHON_SCHEDULE.endsAt,
   };
 }
 
@@ -27,7 +31,15 @@ export function isRegistrationClosed(closesAt: number | null, now = Date.now()) 
   return closesAt !== null && now >= closesAt;
 }
 
-export function formatCentralDeadline(timestamp: number) {
+export function getRegistrationPhase(
+  schedule: Pick<HackathonTimelineSource, "registrationOpensAt" | "registrationClosesAt">,
+  now = Date.now(),
+) {
+  if (now < schedule.registrationOpensAt) return "upcoming" as const;
+  return isRegistrationClosed(schedule.registrationClosesAt, now) ? "closed" as const : "open" as const;
+}
+
+export function formatCentralRegistrationTime(timestamp: number) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",

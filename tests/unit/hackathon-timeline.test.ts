@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  formatCentralDeadline,
+  formatCentralRegistrationTime,
   HACKATHON_SCHEDULE,
   resolveHackathonTimelineSource,
 } from "../../shared/hackathon/schedule";
@@ -64,8 +64,23 @@ describe("buildHackathonTimeline", () => {
       timestamp: closesAt,
       complete: true,
     });
-    expect(formatCentralDeadline(closesAt)).toContain("12:00 PM CST");
-    expect(formatCentralDeadline(Date.parse("2026-09-15T18:00:00Z"))).toContain("1:00 PM CDT");
+    expect(formatCentralRegistrationTime(closesAt)).toContain("12:00 PM CST");
+    expect(formatCentralRegistrationTime(Date.parse("2026-09-15T18:00:00Z"))).toContain("1:00 PM CDT");
+  });
+
+  it("resolves opening and event dates from configured overrides", () => {
+    const opensAt = HACKATHON_SCHEDULE.registrationOpensAt + 60_000;
+    const startsAt = HACKATHON_SCHEDULE.startsAt + 60_000;
+    const endsAt = HACKATHON_SCHEDULE.endsAt + 60_000;
+    const source = resolveHackathonTimelineSource({
+      ...HACKATHON_SCHEDULE,
+      registrationOpensAt: opensAt,
+      startsAt,
+      endsAt,
+    });
+    expect(source).toMatchObject({ registrationOpensAt: opensAt, startsAt, endsAt });
+    expect(buildHackathonTimeline(source)[0]).toMatchObject({ timestamp: opensAt });
+    expect(buildHackathonTimeline(source)[3]).toMatchObject({ timestamp: startsAt });
   });
 
   it("uses the canonical schedule constants", () => {

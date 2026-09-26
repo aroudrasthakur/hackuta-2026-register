@@ -8,6 +8,7 @@ import {
 export const SUBMIT_ERROR_MESSAGE =
   "We couldn't submit your application. Please try again.";
 export const APPLICATION_CLOSED_MESSAGE = "Applications are closed.";
+export const APPLICATION_NOT_OPEN_MESSAGE = "Applications are not open yet.";
 
 export const DRAFT_SAVE_ERROR_MESSAGE =
   "We couldn't save your latest changes. Please try again.";
@@ -27,6 +28,7 @@ export const RESUME_REMOVE_ERROR_MESSAGE =
 /** Server messages safe to show applicants in production. */
 const USER_FACING_SERVER_MESSAGES = new Set([
   APPLICATION_CLOSED_MESSAGE,
+  APPLICATION_NOT_OPEN_MESSAGE,
   SIGN_IN_REQUIRED_MESSAGE,
   RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE,
   "You have already submitted an application.",
@@ -120,6 +122,9 @@ export function mapConvexErrorToUserMessage(error: unknown): string {
   const normalized = detail.toLowerCase();
   if (normalized.includes("applications are closed")) {
     return APPLICATION_CLOSED_MESSAGE;
+  }
+  if (normalized.includes("applications are not open yet")) {
+    return APPLICATION_NOT_OPEN_MESSAGE;
   }
   if (normalized.includes("authentication required")) {
     return SIGN_IN_REQUIRED_MESSAGE;

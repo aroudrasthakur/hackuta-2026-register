@@ -20,7 +20,11 @@ export default defineSchema({
   eventConfig: defineTable({
     key: v.literal("current"),
     name: v.string(),
+    registrationOpensAt: v.optional(v.union(v.number(), v.null())),
     registrationClosesAt: v.optional(v.union(v.number(), v.null())),
+    decisionsReleasedAt: v.optional(v.union(v.number(), v.null())),
+    startsAt: v.optional(v.union(v.number(), v.null())),
+    endsAt: v.optional(v.union(v.number(), v.null())),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 

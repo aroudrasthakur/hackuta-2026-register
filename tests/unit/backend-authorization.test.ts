@@ -553,7 +553,7 @@ describe("event config", () => {
       name: "HackUTA 8",
     });
     await expect(t.query(ref.hackathonNameInternal, {})).resolves.toBe("HackUTA 8");
-    await expect(t.query(ref.publicEventConfig, {})).resolves.toEqual({
+    await expect(t.query(ref.publicEventConfig, {})).resolves.toMatchObject({
       name: "HackUTA 8", registrationClosesAt: null,
     });
   });
