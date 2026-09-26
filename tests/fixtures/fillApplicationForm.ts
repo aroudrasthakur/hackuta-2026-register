@@ -42,6 +42,11 @@ export function fillValidApplicationForm() {
   selectListboxOption(/Major \/ field of study/, VALID_MAJOR);
   setInputValue(/Expected graduation year/, String(MIN_GRADUATION_YEAR));
   selectListboxOption(/^Gender/, VALID_GENDER);
+  fireEvent.click(
+    within(screen.getByRole("group", { name: /Race \/ ethnicity/ })).getByLabelText(
+      "Prefer Not to Answer",
+    ),
+  );
   selectListboxOption(/T-shirt size/, "M");
   fireEvent.click(
     within(screen.getByRole("group", { name: /Dietary restrictions/ })).getByLabelText("No Beef"),

@@ -26,6 +26,7 @@ export function validRegistrationForm(): ApplicationFormData {
     major: VALID_MAJOR,
     graduationYear: String(MIN_GRADUATION_YEAR),
     gender: VALID_GENDER,
+    raceEthnicity: ["Prefer Not to Answer"],
     tshirtSize: "M",
     experienceLevel: "Intermediate",
     hackathonsAttended: "1",

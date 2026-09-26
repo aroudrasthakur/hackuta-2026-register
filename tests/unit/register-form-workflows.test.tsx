@@ -583,6 +583,35 @@ describe("ApplicationForm conditional answers", () => {
     expect(screen.queryByText("First name is required.")).not.toBeInTheDocument();
     expect(screen.queryByText(/One or more of your answers is invalid/)).not.toBeInTheDocument();
   });
+
+  it("requires a race/ethnicity answer, focuses the first option, then submits once answered", async () => {
+    env.draft = { status: "draft", draft: { ...validRegistrationForm(), raceEthnicity: [] } };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    await submit();
+
+    const group = screen.getByRole("group", { name: /Race \/ ethnicity/ });
+    expect(within(group).getByText("Please select your race or ethnicity.")).toBeInTheDocument();
+    expect(group).toHaveAttribute("aria-describedby", "raceEthnicity-error");
+    expect(within(group).getAllByRole("checkbox")[0]).toHaveFocus();
+    expect(submitRegistration).not.toHaveBeenCalled();
+
+    fireEvent.click(within(group).getByLabelText("Prefer Not to Answer"));
+    await submit();
+    expect(submitRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({ raceEthnicity: ["Prefer Not to Answer"] }),
+      null,
+    );
+  });
+
+  it("shows the missing allergy description alongside other incomplete answers", async () => {
+    env.draft = { status: "draft", draft: { dietaryRestrictions: ["Allergies"], allergyDetails: "" } };
+    render(<ApplicationForm onSubmitted={vi.fn()} />);
+    await submit();
+
+    expect(screen.getByText("First name is required.")).toBeInTheDocument();
+    expect(screen.getByText("Please describe your food allergies.")).toBeInTheDocument();
+    expect(submitRegistration).not.toHaveBeenCalled();
+  });
 });
 
 describe("ApplicationForm application questions and hackathon count", () => {
