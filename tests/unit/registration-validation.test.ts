@@ -502,6 +502,20 @@ describe("validateApplicationForm", () => {
     }
   });
 
+  it("requires an allergy description even when other answers are still incomplete", () => {
+    const result = validateApplicationForm({
+      ...INITIAL_FORM,
+      dietaryRestrictions: ["Allergies"],
+      allergyDetails: "   ",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.allergyDetails).toBe("Please describe your food allergies.");
+      expect(result.errors.firstName).toBe("First name is required.");
+    }
+  });
+
   it("requires a description when dietary Allergies is selected", () => {
     const form = validRegistrationForm();
     form.dietaryRestrictions = ["Allergies"];

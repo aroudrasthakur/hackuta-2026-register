@@ -139,6 +139,13 @@ function collectClientFieldErrors(form: ApplicationFormData): FieldErrors {
   }
 
   // Mirrors the schema's superRefine, which Zod skips while other fields are invalid.
+  if (
+    form.dietaryRestrictions.includes("Allergies") &&
+    !form.allergyDetails.trim()
+  ) {
+    errors.allergyDetails = "Please describe your food allergies.";
+  }
+
   for (const field of missingEmergencyContactFields(form)) {
     errors[field] = EMERGENCY_CONTACT_REQUIRED_MESSAGES[field];
   }
