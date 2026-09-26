@@ -66,6 +66,8 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 | Rename legacy agreement `*SubmittedAt` columns to `*At` | `npx convex run migrations:migrateLegacyAgreementSubmittedAtFields` (add `--prod` for production). |
 | Strip legacy check-in / confirmed timestamps | Convex dashboard → internal `migrations:stripLegacyApplicationCheckInAndConfirmedAt` |
 | Strip removed `internalNotes` field | `npx convex run migrations:stripInternalNotesFromApplications` (add `--prod` for production) |
+| Strip removed `eligibilityStatus` field | `npx convex run migrations:stripEligibilityStatusFromApplications` (add `--prod` for production) |
+| Strip removed `confirmationStatus` field | `npx convex run migrations:stripConfirmationStatusFromApplications` (add `--prod` for production) |
 | Remove an orphaned table (not in schema) | Convex dashboard → **Data** → table → **⋮** → **Delete table** |
 | Reset all data (**destructive**) | Convex dashboard → internal `maintenance:resetAllData` |
 | Clear sign-up OTP rate limit for email | Convex dashboard → internal `rateLimits:clearOtpSendLimitsForEmail` |

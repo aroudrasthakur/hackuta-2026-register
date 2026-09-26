@@ -19,20 +19,6 @@ export const applicationStatus = v.union(
   v.literal("withdrawn"),
 );
 
-/** Organizer eligibility review (separate from accept/waitlist/reject). */
-export const eligibilityStatus = v.union(
-  v.literal("unreviewed"),
-  v.literal("eligible"),
-  v.literal("ineligible"),
-);
-
-/** Attendance confirmation after acceptance (set by organizers or applicant). */
-export const confirmationStatus = v.union(
-  v.literal("unconfirmed"),
-  v.literal("confirmed"),
-  v.literal("declined"),
-);
-
 const draftNullableString = v.union(v.string(), v.null());
 const draftNullableNumber = v.union(v.number(), v.null());
 const draftNullableBoolean = v.union(v.boolean(), v.null());
@@ -95,7 +81,6 @@ export const applicationRecord = {
   email: v.string(),
   emailVerificationTime: v.optional(v.number()),
   status: applicationStatus,
-  eligibilityStatus,
   createdAt: v.number(),
   updatedAt: v.number(),
   /** Set to true when the registration form is successfully submitted; never cleared. */
@@ -108,7 +93,6 @@ export const applicationRecord = {
   foodAllergyWaiverAgreedAt: v.optional(v.number()),
   reviewedAt: v.optional(v.number()),
   reviewedBy: v.optional(v.string()),
-  confirmationStatus: v.optional(confirmationStatus),
   resumeStorageId: v.optional(v.id("_storage")),
   resumeFilename: v.optional(v.string()),
   ...applicantAnswerFields,

@@ -53,8 +53,6 @@ export async function ensureDraftApplication(ctx: MutationCtx) {
       ? { emailVerificationTime: authUser.emailVerificationTime }
       : {}),
     status: "draft",
-    eligibilityStatus: "unreviewed",
-    confirmationStatus: "unconfirmed",
     createdAt: now,
     updatedAt: now,
   });

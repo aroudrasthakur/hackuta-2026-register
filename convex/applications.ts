@@ -139,7 +139,6 @@ export const getMyApplicantDashboard = query({
         ? {
             id: application._id,
             status: application.status,
-            eligibilityStatus: application.eligibilityStatus,
             submittedAt: application.submittedAt ?? null,
             updatedAt: application.updatedAt,
             answers: applicantAnswers,

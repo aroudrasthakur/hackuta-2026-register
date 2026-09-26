@@ -294,8 +294,6 @@ describe("mergeDraftPatchIntoApplication", () => {
       authUserId: "user1",
       email: "test@example.com",
       status: "draft" as const,
-      eligibilityStatus: "unreviewed" as const,
-      confirmationStatus: "unconfirmed" as const,
       createdAt: 1,
       updatedAt: 1,
       firstName: "Old",

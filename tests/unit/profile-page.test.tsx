@@ -228,7 +228,6 @@ describe("ProfilePage (Convex mode)", () => {
       },
       registration: {
         status: "draft",
-        eligibilityStatus: "unreviewed",
         submittedAt: null,
         answers: {
           firstName: "Draft",
@@ -287,7 +286,7 @@ describe("ProfilePage (Convex mode)", () => {
   ])("falls back to form answers %j for the name when no display name exists", (answers, expected) => {
     dashboardQueryResult.current = {
       profile: { displayName: "  ", verifiedEmail: "a@example.com" },
-      registration: { status: "draft", eligibilityStatus: "unreviewed", submittedAt: null, answers },
+      registration: { status: "draft", submittedAt: null, answers },
       hackathon: null,
     };
     renderConvexProfile();
@@ -299,7 +298,6 @@ describe("ProfilePage (Convex mode)", () => {
       profile: { displayName: null, verifiedEmail: "a@example.com" },
       registration: {
         status: "draft",
-        eligibilityStatus: "unreviewed",
         submittedAt: null,
         answers: {
           levelOfStudy: "Other",
@@ -317,7 +315,6 @@ describe("ProfilePage (Convex mode)", () => {
       profile: { displayName: null, verifiedEmail: "a@example.com" },
       registration: {
         status: "draft",
-        eligibilityStatus: "unreviewed",
         submittedAt: null,
         answers: { levelOfStudy: " Graduate University (Masters, Professional, Doctoral, etc) ", school: " " },
       },

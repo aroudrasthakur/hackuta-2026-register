@@ -59,6 +59,12 @@ const ref = {
   stripInternalNotes: makeFunctionReference<"mutation">(
     "migrations:stripInternalNotesFromApplications",
   ),
+  stripEligibilityStatus: makeFunctionReference<"mutation">(
+    "migrations:stripEligibilityStatusFromApplications",
+  ),
+  stripConfirmationStatus: makeFunctionReference<"mutation">(
+    "migrations:stripConfirmationStatusFromApplications",
+  ),
   migrateMergedOtherFields: makeFunctionReference<"mutation">(
     "migrations:migrateMergedOtherFieldsToSeparateColumns",
   ),
@@ -112,7 +118,6 @@ async function insertApplication(
       authUserId,
       email: "applicant@example.com",
       status: "draft",
-      eligibilityStatus: "unreviewed",
       createdAt: 1,
       updatedAt: 1,
       ...fields,
@@ -548,6 +553,88 @@ describe("maintenance and migrations", () => {
     });
   }, 30_000);
 
+  it("strips eligibilityStatus from applications", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "legacy-eligibility@example.com",
+        status: "submitted",
+        createdAt: 1,
+        updatedAt: 1,
+        eligibilityStatus: "eligible",
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "clean@example.com",
+        status: "submitted",
+        createdAt: 2,
+        updatedAt: 2,
+      });
+    });
+
+    await expect(t.mutation(ref.stripEligibilityStatus, {})).resolves.toEqual({
+      ok: true,
+      updated: 1,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications.some((application) => "eligibilityStatus" in application)).toBe(false);
+    expect(applications.find((application) => application.email === "clean@example.com")?.status).toBe(
+      "submitted",
+    );
+
+    await expect(t.mutation(ref.stripEligibilityStatus, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
+    });
+  }, 30_000);
+
+  it("strips confirmationStatus from applications", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "legacy-confirmation@example.com",
+        status: "submitted",
+        createdAt: 1,
+        updatedAt: 1,
+        confirmationStatus: "unconfirmed",
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "clean@example.com",
+        status: "submitted",
+        createdAt: 2,
+        updatedAt: 2,
+      });
+    });
+
+    await expect(t.mutation(ref.stripConfirmationStatus, {})).resolves.toEqual({
+      ok: true,
+      updated: 1,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications.some((application) => "confirmationStatus" in application)).toBe(false);
+    expect(applications.find((application) => application.email === "clean@example.com")?.status).toBe(
+      "submitted",
+    );
+
+    await expect(t.mutation(ref.stripConfirmationStatus, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
+    });
+  }, 30_000);
+
   it("strips internalNotes from applications", async () => {
     const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
       schemaValidation: false,
@@ -559,7 +646,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "notes@example.com",
         status: "accepted",
-        eligibilityStatus: "eligible",
         createdAt: 1,
         updatedAt: 1,
         internalNotes: "Needs follow-up",
@@ -568,7 +654,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "clean@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 2,
         updatedAt: 2,
       });
@@ -602,7 +687,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "legacy-checkin@example.com",
         status: "accepted",
-        eligibilityStatus: "eligible",
         createdAt: 1,
         updatedAt: 1,
         checkedInAt: 2,
@@ -612,7 +696,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "clean@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 4,
         updatedAt: 4,
       });
@@ -647,7 +730,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "first-timer@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 1,
         updatedAt: 1,
         firstHackathon: true,
@@ -656,7 +738,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "returning@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 2,
         updatedAt: 2,
         firstHackathon: false,
@@ -665,7 +746,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "already-migrated@example.com",
         status: "draft",
-        eligibilityStatus: "unreviewed",
         createdAt: 3,
         updatedAt: 3,
         hackathonsAttended: 5,
@@ -709,7 +789,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "legacy-only@example.com",
         status: "draft",
-        eligibilityStatus: "unreviewed",
         createdAt: 1,
         updatedAt: 1,
         otherDietary: "Shellfish",
@@ -718,7 +797,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "both-columns@example.com",
         status: "draft",
-        eligibilityStatus: "unreviewed",
         createdAt: 2,
         updatedAt: 2,
         allergyDetails: "Peanuts",
@@ -728,7 +806,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "already-migrated@example.com",
         status: "draft",
-        eligibilityStatus: "unreviewed",
         createdAt: 3,
         updatedAt: 3,
         allergyDetails: "Tree nuts",
@@ -773,7 +850,6 @@ describe("maintenance and migrations", () => {
           authUserId: userId,
           email: `p${i}@example.com`,
           status: "draft",
-          eligibilityStatus: "unreviewed",
           createdAt: i,
           updatedAt: i,
           ...(i % 50 === 0 ? { hackathonId: "hackuta-2025" } : {}),
@@ -798,7 +874,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "merged-other@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 1,
         updatedAt: 1,
         school: "Mars Academy",
@@ -810,7 +885,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "legacy-sentinel@example.com",
         status: "draft",
-        eligibilityStatus: "unreviewed",
         createdAt: 2,
         updatedAt: 2,
         school: LEGACY_SCHOOL_OTHER_OPTION,
@@ -820,7 +894,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "already-split@example.com",
         status: "draft",
-        eligibilityStatus: "unreviewed",
         createdAt: 3,
         updatedAt: 3,
         school: SCHOOL_OTHER_OPTION,
@@ -873,7 +946,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "legacy-sponsor@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 1,
         updatedAt: 1,
         sponsorSharingConsentSubmittedAt: 100,
@@ -882,7 +954,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "legacy-waiver@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 2,
         updatedAt: 2,
         foodAllergyWaiverSubmittedAt: 200,
@@ -891,7 +962,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "already-migrated@example.com",
         status: "draft",
-        eligibilityStatus: "unreviewed",
         createdAt: 3,
         updatedAt: 3,
         sponsorSharingConsentAt: 300,
@@ -945,7 +1015,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "legacy-code@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 1,
         updatedAt: 1,
         codeOfConductAgreed: true,
@@ -954,7 +1023,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "interim-code@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 2,
         updatedAt: 2,
         MLHcodeOfConductAgreed: false,
@@ -963,7 +1031,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "prefers-canonical@example.com",
         status: "submitted",
-        eligibilityStatus: "unreviewed",
         createdAt: 3,
         updatedAt: 3,
         mlhCodeOfConductAgreed: true,
@@ -974,7 +1041,6 @@ describe("maintenance and migrations", () => {
         authUserId: userId,
         email: "already-migrated@example.com",
         status: "draft",
-        eligibilityStatus: "unreviewed",
         createdAt: 4,
         updatedAt: 4,
         mlhCodeOfConductAgreed: true,
