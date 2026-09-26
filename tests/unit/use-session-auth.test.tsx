@@ -69,6 +69,19 @@ describe("useSessionAuth", () => {
     expect(result.current.signOut).toBeInstanceOf(Function);
   });
 
+  it("keeps sessionKey stable while OTP verification is pending", () => {
+    const { result } = renderHook(
+      () => ({ session: useSessionAuth(), mock: useMockAuth() }),
+      { wrapper: createWrapper(true) },
+    );
+
+    expect(result.current.session.sessionKey).toBe("signed-out");
+
+    act(() => result.current.mock.requestOtp("pending@example.com"));
+    expect(result.current.mock.verifiedEmail).toBe("pending@example.com");
+    expect(result.current.session.sessionKey).toBe("signed-out");
+  });
+
   it("signs the mock session out through the mock provider", async () => {
     vi.stubEnv("VITE_USE_MOCK_API", "true");
     const { result } = renderHook(

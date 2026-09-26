@@ -154,7 +154,7 @@ function SignInPageContent({
       return { waitSeconds: 0, hourlyLimitReached: false };
     }
     try {
-      return await client.mutation(getOtpSendCooldownRef, { email: normalized });
+      return await client.query(getOtpSendCooldownRef, { email: normalized });
     } catch {
       return { waitSeconds: 0, hourlyLimitReached: false };
     }
@@ -326,7 +326,8 @@ function SignInPageContent({
     ) : (
       <>
         We sent a 6-digit code to{" "}
-        <span className="sign-in-card__subtitle-email">{email}</span>.
+        <span className="sign-in-card__subtitle-email">{email}</span>. The code
+        expires 10 minutes after you request it.
       </>
     );
 

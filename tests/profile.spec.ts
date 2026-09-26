@@ -20,7 +20,6 @@ test.describe("profile layout", () => {
     await signUpAsNewApplicant(page);
     await navigateToProfile(page);
 
-    await expect(page.getByRole("heading", { name: "Your Journey" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Your application" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Start application" })).toBeVisible();
     await expectSignOutAfterOverviewGrid(page);

@@ -37,13 +37,13 @@ export const ensureApplicantApplicationRef = makeFunctionReference<
 >("applicant:ensureApplicantApplication");
 
 export const getOtpSendCooldownRef = makeFunctionReference<
-  "mutation",
+  "query",
   { email: string },
   { waitSeconds: number; hourlyLimitReached: boolean }
 >("rateLimits:getOtpSendCooldown");
 
 export const getPasswordResetSendCooldownRef = makeFunctionReference<
-  "mutation",
+  "query",
   { email: string },
   { waitSeconds: number; hourlyLimitReached: boolean }
 >("rateLimits:getPasswordResetSendCooldown");

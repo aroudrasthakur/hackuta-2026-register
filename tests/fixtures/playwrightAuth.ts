@@ -40,9 +40,10 @@ export async function openProfileAsReturningApplicant(page: Page) {
 
 /** Preserves in-memory mock auth; a full reload would reset the mock session. */
 export async function navigateToProfile(page: Page) {
+  await page.waitForFunction(() => window.__hackutaTestNavigate);
   await page.evaluate(() => {
-    window.history.pushState({}, "", "/profile");
-    window.dispatchEvent(new PopStateEvent("popstate"));
+    window.__hackutaTestNavigate!("/profile");
   });
   await page.waitForURL("**/profile");
+  await expect(page.getByRole("heading", { name: "Your Journey" })).toBeVisible();
 }
