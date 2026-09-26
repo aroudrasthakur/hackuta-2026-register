@@ -158,6 +158,22 @@ describe("password reset with the real auth provider", () => {
     return { test, email, code: deliveredCode };
   }
 
+  it("does not create reset state or send email for an unregistered address", async () => {
+    const { test } = await setupReset();
+    const codesBefore = await test.run((ctx) => ctx.db.query("authVerificationCodes").collect());
+    const emailCallsBefore = vi.mocked(globalThis.fetch).mock.calls.length;
+
+    await expect(test.action(signIn, {
+      provider: "password",
+      params: { flow: "reset", email: "missing-reset@example.com" },
+    })).rejects.toThrow();
+
+    expect(vi.mocked(globalThis.fetch).mock.calls).toHaveLength(emailCallsBefore);
+    await test.run(async (ctx) => {
+      expect(await ctx.db.query("authVerificationCodes").collect()).toHaveLength(codesBefore.length);
+    });
+  });
+
   it("changes a different password without counting a failed sign-in", async () => {
     const { test, email, code } = await setupReset();
     await test.action(signIn, {

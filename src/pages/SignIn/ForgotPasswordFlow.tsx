@@ -101,15 +101,9 @@ export function ForgotPasswordFlow({
         throw new Error(PASSWORD_RESET_REQUESTED_MESSAGE);
       }
 
-      try {
-        await convexSignIn("password", formData);
-      } catch (err) {
-        const message = mapPasswordResetError(err);
-        if (message.includes("Please wait") || message.includes("Too many reset")) {
-          throw err;
-        }
-        // Do not reveal whether the account exists.
-      }
+      // Email-code requests resolve without starting a session, so only a thrown
+      // error indicates that the reset request failed.
+      await convexSignIn("password", formData);
 
       const status = await fetchResetCooldown(normalized);
       setHourlyLimitReached(status.hourlyLimitReached);

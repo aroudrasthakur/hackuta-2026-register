@@ -403,14 +403,15 @@ describe("ForgotPasswordFlow with Convex auth", () => {
     expect(screen.getByText("reset@example.com")).toBeInTheDocument();
   });
 
-  it("does not reveal whether the account exists when the server errors", async () => {
+  it("stays on the email step after a reset request fails without revealing why", async () => {
     state.signIn.mockRejectedValueOnce(new Error("Account not found"));
     const user = userEvent.setup();
     await openForgotPassword(user);
     await requestCode(user, "missing@example.com");
 
-    expect(await screen.findByRole("heading", { name: "Enter your reset code" })).toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(PASSWORD_RESET_FAILED_MESSAGE);
+    expect(screen.getByRole("heading", { name: "Reset your password" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Enter your reset code" })).not.toBeInTheDocument();
   });
 
   it("surfaces reset rate limits and stays on the email step", async () => {

@@ -101,12 +101,15 @@ export function HackutaPassword<DataModel extends GenericDataModel>(
         if (!config.reset) {
           throw new Error(`Password reset is not enabled for ${provider}`);
         }
-        const { account } = await retrieveAccount(ctx, {
+        const retrieved = await retrieveAccount(ctx, {
           provider,
           account: { id: email },
         });
+        if (!retrieved?.account) {
+          throw new Error("Invalid credentials");
+        }
         return await signInViaProvider(ctx, config.reset, {
-          accountId: account._id,
+          accountId: retrieved.account._id,
           params,
         });
       }

@@ -216,6 +216,15 @@ describe("HackutaPassword reset", () => {
     expect(signInViaProvider).toHaveBeenCalledWith(ctx, reset, { accountId: "account1", params });
   });
 
+  it("does not create reset state when no account is found", async () => {
+    vi.mocked(retrieveAccount).mockResolvedValue(null as never);
+
+    await expect(
+      provider({ reset: reset as never }).authorize({ flow: "reset", email: "a@b.co" }, ctx),
+    ).rejects.toThrow("Invalid credentials");
+    expect(signInViaProvider).not.toHaveBeenCalled();
+  });
+
   it.each(["reset", "reset-verification"])("fails closed when reset is disabled (%s)", async (flow) => {
     await expect(
       provider().authorize({ flow, email: "a@b.co", newPassword: "NewPass12" }, ctx),
