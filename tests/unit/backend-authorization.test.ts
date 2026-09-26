@@ -56,6 +56,9 @@ const ref = {
   stripCheckInAndConfirmedAt: makeFunctionReference<"mutation">(
     "migrations:stripLegacyApplicationCheckInAndConfirmedAt",
   ),
+  stripInternalNotes: makeFunctionReference<"mutation">(
+    "migrations:stripInternalNotesFromApplications",
+  ),
   migrateMergedOtherFields: makeFunctionReference<"mutation">(
     "migrations:migrateMergedOtherFieldsToSeparateColumns",
   ),
@@ -542,6 +545,49 @@ describe("maintenance and migrations", () => {
         expect(await ctx.db.query(table).collect()).toHaveLength(0);
       }
       expect(await ctx.db.system.query("_storage").collect()).toHaveLength(0);
+    });
+  }, 30_000);
+
+  it("strips internalNotes from applications", async () => {
+    const looseSchema = Object.assign(Object.create(Object.getPrototypeOf(schema)), schema, {
+      schemaValidation: false,
+    }) as typeof schema;
+    const t = convexTest(looseSchema, modules);
+    const userId = await seedUser(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "notes@example.com",
+        status: "accepted",
+        eligibilityStatus: "eligible",
+        createdAt: 1,
+        updatedAt: 1,
+        internalNotes: "Needs follow-up",
+      } as never);
+      await ctx.db.insert("applications", {
+        authUserId: userId,
+        email: "clean@example.com",
+        status: "submitted",
+        eligibilityStatus: "unreviewed",
+        createdAt: 2,
+        updatedAt: 2,
+      });
+    });
+
+    await expect(t.mutation(ref.stripInternalNotes, {})).resolves.toEqual({
+      ok: true,
+      updated: 1,
+    });
+
+    const applications = await t.run((ctx) => ctx.db.query("applications").collect());
+    expect(applications.some((application) => "internalNotes" in application)).toBe(false);
+    expect(applications.find((application) => application.email === "clean@example.com")?.status).toBe(
+      "submitted",
+    );
+
+    await expect(t.mutation(ref.stripInternalNotes, {})).resolves.toEqual({
+      ok: true,
+      updated: 0,
     });
   }, 30_000);
 

@@ -1,12 +1,4 @@
-import {
-
-  getCountries,
-
-  getCountryCallingCode,
-
-  type CountryCode,
-
-} from "libphonenumber-js/max";
+import { type CountryCode } from "libphonenumber-js/max";
 
 import { useState } from "react";
 
@@ -28,31 +20,11 @@ import {
 
 } from "./formFieldStyles";
 
-
-
-const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
-
-
-
-/** ISO country codes for phone calling codes — United States first. */
-
-const phoneCountries = [...getCountries()].sort((a, b) => {
-
-  if (a === "US") return -1;
-
-  if (b === "US") return 1;
-
-  return a.localeCompare(b);
-
-});
-
-
-
-function formatPhoneCountryOption(country: CountryCode) {
-
-  return `+${getCountryCallingCode(country)} ${country}`;
-
-}
+import {
+  countryDisplayName,
+  formatPhoneCountryOption,
+  phoneCountries,
+} from "./phoneCountryOptions";
 
 
 
@@ -152,7 +124,7 @@ export function PhoneField({
 
                 value={option}
 
-                title={countryNames.of(option) ?? option}
+                title={countryDisplayName(option)}
 
               >
 
