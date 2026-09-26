@@ -48,7 +48,7 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | rate-limits.test.ts | Sign-up and password-reset OTP rate-limit mutations |
 | email-actions.test.ts | Email actions: plain-text sends, delivery tracking, recipient lookup, status check |
 | email-service.test.ts | Email service client (config, errors, timeouts, tracking) and templates |
-| backend-authorization.test.ts | Auth boundaries, profile lifecycle, review backfill/legacy reads, upload sessions, upload failure recovery, maintenance and migrations |
+| backend-authorization.test.ts | Auth boundaries, profile lifecycle, review backfill and guarded legacy-field removal, upload sessions, upload failure recovery, maintenance and migrations |
 | hackuta-password.test.ts | Password provider flows: sign-up, sign-in, reset, reset verification, email verification |
 | convex-auth-config.test.ts | Auth provider wiring, OTP generation, rate-limited email delivery |
 
