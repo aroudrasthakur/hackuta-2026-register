@@ -5,7 +5,7 @@
 | Date | 2026-09-26 |
 | Reviewer | Cursor agent (re-audit + follow-up fixes) |
 | Baseline remediation | `25d118b` / `edecd21` |
-| Follow-up commit | (this commit) |
+| Follow-up commit | `cc17a20` on `feat/8-security-update` |
 | Dev deployment | `standing-manatee-425` |
 | Prod deployment | `brilliant-ostrich-892` (read-only) |
 
