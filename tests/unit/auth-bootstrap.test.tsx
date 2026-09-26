@@ -16,6 +16,7 @@ describe("AuthBootstrap", () => {
     mockUseSessionAuth.mockReturnValue({
       isLoading: true,
       isAuthenticated: false,
+      sessionKey: "signed-out",
       signOut,
     });
 
@@ -30,6 +31,7 @@ describe("AuthBootstrap", () => {
     mockUseSessionAuth.mockReturnValue({
       isLoading: false,
       isAuthenticated: false,
+      sessionKey: "signed-out",
       signOut,
     });
     rerender(
@@ -43,6 +45,7 @@ describe("AuthBootstrap", () => {
     mockUseSessionAuth.mockReturnValue({
       isLoading: true,
       isAuthenticated: false,
+      sessionKey: "signed-out",
       signOut,
     });
     rerender(
@@ -62,6 +65,7 @@ describe("AuthBootstrap", () => {
     vi.mocked(useSessionAuth).mockReturnValue({
       isLoading: false,
       isAuthenticated: true,
+      sessionKey: "applicant@example.com",
       signOut: noSignOut,
     });
 
@@ -80,6 +84,7 @@ describe("AuthBootstrap", () => {
     vi.mocked(useSessionAuth).mockReturnValue({
       isLoading: false,
       isAuthenticated: false,
+      sessionKey: "signed-out",
       signOut: noSignOut,
     });
 

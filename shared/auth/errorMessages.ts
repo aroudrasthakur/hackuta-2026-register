@@ -50,7 +50,7 @@ export function mapAuthError(
     normalized.includes("already registered") ||
     normalized.includes("email is already")
   ) {
-    return "An account with this email already exists. Sign in instead.";
+    return "If this email can be used, check your inbox or sign in.";
   }
   if (
     normalized.includes("invalid code") ||

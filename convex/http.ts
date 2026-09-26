@@ -25,6 +25,9 @@ const assertUploadRateLimitRef = makeFunctionReference<"mutation">(
 const createVerifiedUploadSessionRef = makeFunctionReference<"mutation">(
   "resumeUploads:createVerifiedUploadSession",
 );
+const isUserEmailVerifiedRef = makeFunctionReference<"query">(
+  "lib/userVerification:isUserEmailVerified",
+);
 
 const CONVEX_TEST_ORIGIN = "https://hackuta.test";
 
@@ -93,6 +96,16 @@ const uploadResume = httpAction(async (ctx, request) => {
       request,
       { error: RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE },
       401,
+      origin,
+    );
+  }
+
+  const verified = await ctx.runQuery(isUserEmailVerifiedRef, { authUserId });
+  if (!verified) {
+    return response(
+      request,
+      { error: "Verify your email before uploading a resume." },
+      403,
       origin,
     );
   }

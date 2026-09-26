@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { useSessionAuth } from "../hooks/useSessionAuth";
 
 function AuthLoadingScreen() {
@@ -13,7 +13,7 @@ function AuthLoadingScreen() {
 
 /** Waits for the initial Convex Auth read before rendering routed pages. */
 export function AuthBootstrap({ children }: { children: ReactNode }) {
-  const { isLoading } = useSessionAuth();
+  const { isLoading, sessionKey } = useSessionAuth();
   const [sessionReady, setSessionReady] = useState(false);
 
   // Latch after the first completed auth read. Do not unmount the tree when
@@ -26,5 +26,5 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     return <AuthLoadingScreen />;
   }
 
-  return children;
+  return <Fragment key={sessionKey}>{children}</Fragment>;
 }

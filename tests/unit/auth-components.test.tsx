@@ -20,7 +20,12 @@ vi.mock("../../src/hooks/useApplicantRouting", () => ({
   useApplicantRouting: () => routing.value,
 }));
 vi.mock("../../src/hooks/useSessionAuth", () => ({
-  useSessionAuth: () => ({ isLoading: false, isAuthenticated: true, signOut: session.signOut }),
+  useSessionAuth: () => ({
+    isLoading: false,
+    isAuthenticated: true,
+    sessionKey: "test-user",
+    signOut: session.signOut,
+  }),
 }));
 
 beforeEach(() => {
