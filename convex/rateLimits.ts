@@ -1,3 +1,4 @@
+import { makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { OTP_SEND_MAX_PER_HOUR } from "../shared/auth/otpRateLimit";
 import { internalMutation, query } from "./_generated/server";
@@ -7,7 +8,7 @@ import {
   consumePasswordResetAllowance,
 } from "./lib/authSendRateLimits";
 import { lookupOtpSendStatus, OTP_SEND_WINDOW_MS } from "./lib/otpSendStatus";
-import { pruneStaleRateLimits } from "./lib/rateLimitHelpers";
+import { listRateLimitsForBucketKey, pruneStaleRateLimits } from "./lib/rateLimitHelpers";
 import {
   consumeDraftSaveAllowance,
   consumeSubmitAllowance,
@@ -25,6 +26,10 @@ const NEUTRAL_OTP_STATUS = { waitSeconds: 0, hourlyLimitReached: false } as cons
 const PRUNE_BATCH_SIZE = 100;
 /** Keep rows for one hour after their bucket window so lookups stay accurate. */
 export const RATE_LIMIT_RETENTION_MS = OTP_SEND_WINDOW_MS + 60 * 60 * 1000;
+
+const pruneExpiredRateLimitsRef = makeFunctionReference<"mutation">(
+  "rateLimits:pruneExpiredRateLimits",
+);
 
 export const getOtpSendCooldown = query({
   args: { email: v.string() },
@@ -56,11 +61,7 @@ export const clearOtpSendLimitsForEmail = internalMutation({
     const normalized = normalizeEmail(email);
     if (!normalized) return { deleted: 0 };
 
-    const rows = await ctx.db
-      .query("rateLimits")
-      .withIndex("by_bucket_key_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
-      .filter((q) => q.eq(q.field("key"), normalized))
-      .collect();
+    const rows = await listRateLimitsForBucketKey(ctx, OTP_SEND_BUCKET, normalized);
 
     for (const row of rows) {
       await ctx.db.delete(row._id);
@@ -147,19 +148,19 @@ export const pruneExpiredRateLimits = internalMutation({
     const cutoff = Date.now() - RATE_LIMIT_RETENTION_MS;
     const stale = await ctx.db
       .query("rateLimits")
-      .withIndex("by_bucket_createdAt", (q) => q.eq("bucket", OTP_SEND_BUCKET))
-      .filter((q) => q.lt(q.field("createdAt"), cutoff))
+      .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff))
       .take(PRUNE_BATCH_SIZE);
 
     for (const row of stale) {
       await ctx.db.delete(row._id);
     }
 
-    if (stale.length === PRUNE_BATCH_SIZE) {
-      return { ok: true as const, deleted: stale.length, rescheduled: true };
+    const rescheduled = stale.length === PRUNE_BATCH_SIZE;
+    if (rescheduled) {
+      await ctx.scheduler.runAfter(0, pruneExpiredRateLimitsRef, {});
     }
 
-    return { ok: true as const, deleted: stale.length, rescheduled: false };
+    return { ok: true as const, deleted: stale.length, rescheduled };
   },
 });
 

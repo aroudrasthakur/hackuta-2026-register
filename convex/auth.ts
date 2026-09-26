@@ -1,6 +1,7 @@
 import { Email } from "@convex-dev/auth/providers/Email";
 import { convexAuth } from "@convex-dev/auth/server";
 import { HackutaPassword } from "./lib/hackutaPassword";
+import { getClientAddressFromMeta } from "./lib/clientAddress";
 import type { GenericActionCtx } from "convex/server";
 import { makeFunctionReference } from "convex/server";
 import { ConvexError } from "convex/values";
@@ -17,21 +18,16 @@ const consumeOtpSendRequestRef = makeFunctionReference<"mutation">(
 
 const OTP_MAX_AGE_SECONDS = 10 * 60;
 
-async function actionClientAddress(
-  ctx: GenericActionCtx<Record<string, never>>,
-): Promise<string | undefined> {
-  try {
-    const { ip } = await ctx.meta.getRequestMetadata();
-    return ip ?? undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function generateSixDigitOtp(): string {
-  const bytes = new Uint32Array(1);
-  crypto.getRandomValues(bytes);
-  return (bytes[0]! % 1_000_000).toString().padStart(6, "0");
+  const max = 1_000_000;
+  const unbiasedLimit = Math.floor(0x1_0000_0000 / max) * max;
+  let value: number;
+  do {
+    const bytes = new Uint32Array(1);
+    crypto.getRandomValues(bytes);
+    value = bytes[0]!;
+  } while (value >= unbiasedLimit);
+  return (value % max).toString().padStart(6, "0");
 }
 
 const EmailVerification = Email({
@@ -45,7 +41,7 @@ const EmailVerification = Email({
     const { identifier, token, expires } = params;
     await ctx.runMutation(consumeOtpSendRequestRef, {
       email: identifier,
-      clientAddress: await actionClientAddress(ctx),
+      clientAddress: await getClientAddressFromMeta(ctx),
     });
     await ctx.runAction(sendOtpEmailRef, {
       email: identifier,

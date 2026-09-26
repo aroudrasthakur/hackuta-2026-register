@@ -3,7 +3,7 @@ import type { GenericId } from "convex/values";
 import type { MutationCtx } from "./dataModel";
 import { countRecentRateLimits, pruneStaleRateLimits } from "./rateLimitHelpers";
 
-const DRAFT_SAVE_BUCKET = "draft_save";
+export const DRAFT_SAVE_BUCKET = "draft_save";
 const SUBMIT_BUCKET = "registration_submit";
 
 export async function consumeDraftSaveAllowance(

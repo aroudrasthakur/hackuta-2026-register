@@ -3,7 +3,7 @@
     return;
   }
 
-  function isSameOriginScriptUrl(value) {
+  function isAllowedScriptUrl(value) {
     if (typeof value !== "string" || !value) {
       return false;
     }
@@ -12,7 +12,11 @@
     }
     try {
       const url = new URL(value, window.location.origin);
-      return url.origin === window.location.origin;
+      if (url.origin === window.location.origin) {
+        return true;
+      }
+      // Vercel preview toolbar (allowed in CSP script-src).
+      return url.hostname === "vercel.live";
     } catch {
       return false;
     }
@@ -32,7 +36,7 @@
       throw new TypeError("Script sink blocked.");
     },
     createScriptURL(value) {
-      if (!isSameOriginScriptUrl(value)) {
+      if (!isAllowedScriptUrl(value)) {
         throw new TypeError("Script URL blocked.");
       }
       return value;

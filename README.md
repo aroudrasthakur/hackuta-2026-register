@@ -90,7 +90,7 @@ node scripts/generateAuthKeys.mjs   # JWT keys (dev-only; do not copy from prod)
 node scripts/sync-dev-convex-env.mjs # email service settings from prod + localhost origin allowlist
 ```
 
-`sync-dev-convex-env.mjs` sets dev-specific `SITE_URL`, localhost CORS, and copies the email service settings (`EMAIL_SERVICE_URL`, `EMAIL_SERVICE_API_KEY`) from production. Localhost origins are ignored on production unless `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` is set — keep that unset on prod.
+`sync-dev-convex-env.mjs` sets dev-specific `SITE_URL`, localhost CORS, and copies only the non-secret `EMAIL_SERVICE_URL` from production. Set a **dev-only** `EMAIL_SERVICE_API_KEY` on the dev deployment separately — never copy production API keys into dev. Localhost origins are ignored on production unless `REGISTRATION_ALLOW_LOCAL_DEV_ORIGINS` is set — keep that unset on prod.
 
 ### Production deploy
 

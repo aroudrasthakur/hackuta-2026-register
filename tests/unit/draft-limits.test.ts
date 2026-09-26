@@ -3,6 +3,7 @@ import { FIELD_LIMITS } from "../../shared/registration/constants";
 import {
   DRAFT_ARRAY_TOO_LONG_MESSAGE,
   DRAFT_FIELD_TOO_LONG_MESSAGE,
+  DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE,
   validateDraftPatchLimits,
 } from "../../shared/registration/draftLimits";
 
@@ -21,6 +22,13 @@ describe("validateDraftPatchLimits", () => {
         raceEthnicity: Array.from({ length: 10_000 }, (_, index) => `option-${index}`),
       }),
     ).toThrow(DRAFT_ARRAY_TOO_LONG_MESSAGE);
+  });
+
+  it("rejects out-of-range numeric draft fields", () => {
+    expect(() => validateDraftPatchLimits({ age: 12 })).toThrow(DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE);
+    expect(() => validateDraftPatchLimits({ hackathonsAttended: 999 })).toThrow(
+      DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE,
+    );
   });
 
   it("accepts values within limits", () => {

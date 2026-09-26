@@ -134,7 +134,7 @@ Convex Cloud holds authoritative data. There is no self-managed DB backup in thi
 | Data | Retention |
 | --- | --- |
 | `emailDeliveries`, `emailDeliveryRecordingFailures` | 90 days (daily cron) |
-| `rateLimits` | ~2 hours rolling window + prune cron |
+| `rateLimits` | ~2 hours rolling window; `rateLimits:pruneExpiredRateLimits` prunes all buckets via `by_createdAt` and reschedules until empty |
 | `applicationSubmissionLogs` | Until `maintenance:resetAllData` or account delete |
 | Resume PDFs (`_storage`) | Until replaced, session cleanup, account delete, or full reset |
 

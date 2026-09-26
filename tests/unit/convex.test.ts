@@ -909,6 +909,30 @@ describe("resume HTTP validation and lifecycle", () => {
     );
   });
 
+  it("rejects unverified users with 403", async () => {
+    const email = "unverified-upload@example.com";
+    const t = createTest();
+    let userId: string;
+    await t.run(async (ctx) => {
+      userId = await ctx.db.insert("users", { email });
+    });
+    const authed = t.withIdentity({
+      subject: userId!,
+      email,
+      tokenIdentifier: `email|${email}`,
+    }) as unknown as ConvexTestClient;
+    const body = new Uint8Array(await pdfBytes());
+    const result = await authed.fetch("/resume-upload", {
+      method: "POST",
+      headers: buildUploadHeaders(body),
+      body,
+    });
+    expect(result.status).toBe(403);
+    expect((await result.json() as { error: string }).error).toBe(
+      "Verify your email before uploading a resume.",
+    );
+  });
+
   it("rejects uploads without an allowed browser origin", async () => {
     const t = await authTest();
     const result = await t.fetch("/resume-upload", {

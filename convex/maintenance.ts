@@ -1,8 +1,10 @@
+import { makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./lib/dataModel";
 import { normalizeEmail } from "./lib/normalizeEmail";
 import { getApplicationByUser } from "./lib/applications";
+import { invalidateAllSessionsForUser } from "./lib/invalidateAuthSessions";
 
 type ResettableTable =
   | "applications"
@@ -21,6 +23,10 @@ type ResettableTable =
 
 const CLEANUP_PAGE_SIZE = 100;
 export const EMAIL_DELIVERY_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+
+const pruneOldEmailDeliveriesRef = makeFunctionReference<"mutation">(
+  "maintenance:pruneOldEmailDeliveries",
+);
 
 async function deleteAllFromTable(ctx: MutationCtx, table: ResettableTable) {
   let deleted = CLEANUP_PAGE_SIZE;
@@ -81,8 +87,7 @@ export const pruneOldEmailDeliveries = internalMutation({
     const cutoff = Date.now() - EMAIL_DELIVERY_RETENTION_MS;
     const stale = await ctx.db
       .query("emailDeliveries")
-      .withIndex("by_recipient")
-      .filter((q) => q.lt(q.field("createdAt"), cutoff))
+      .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff))
       .take(CLEANUP_PAGE_SIZE);
 
     for (const row of stale) {
@@ -91,19 +96,24 @@ export const pruneOldEmailDeliveries = internalMutation({
 
     const failureStale = await ctx.db
       .query("emailDeliveryRecordingFailures")
-      .withIndex("by_recipient")
-      .filter((q) => q.lt(q.field("createdAt"), cutoff))
+      .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff))
       .take(CLEANUP_PAGE_SIZE);
 
     for (const row of failureStale) {
       await ctx.db.delete(row._id);
     }
 
+    const shouldReschedule =
+      stale.length === CLEANUP_PAGE_SIZE || failureStale.length === CLEANUP_PAGE_SIZE;
+    if (shouldReschedule) {
+      await ctx.scheduler.runAfter(0, pruneOldEmailDeliveriesRef, {});
+    }
+
     return {
       ok: true as const,
       deletedDeliveries: stale.length,
       deletedFailures: failureStale.length,
-      rescheduled: stale.length + failureStale.length === CLEANUP_PAGE_SIZE * 2,
+      rescheduled: shouldReschedule,
     };
   },
 });
@@ -159,20 +169,79 @@ export const deleteAccountByEmail = internalMutation({
       await ctx.db.delete(row._id);
     }
 
-    const sessions = await ctx.db
-      .query("authSessions")
-      .filter((q) => q.eq(q.field("userId"), user._id))
+    const deliveryFailures = await ctx.db
+      .query("emailDeliveryRecordingFailures")
+      .withIndex("by_recipient", (q) => q.eq("recipient", normalized))
       .collect();
-    for (const session of sessions) {
-      await ctx.db.delete(session._id);
+    for (const row of deliveryFailures) {
+      await ctx.db.delete(row._id);
     }
 
     const accounts = await ctx.db
       .query("authAccounts")
       .filter((q) => q.eq(q.field("userId"), user._id))
       .collect();
+
+    for (const account of accounts) {
+      const codes = await ctx.db
+        .query("authVerificationCodes")
+        .filter((q) => q.eq(q.field("accountId"), account._id))
+        .collect();
+      for (const code of codes) {
+        await ctx.db.delete(code._id);
+      }
+    }
+
+    const sessions = await ctx.db
+      .query("authSessions")
+      .filter((q) => q.eq(q.field("userId"), user._id))
+      .collect();
+    for (const session of sessions) {
+      const verifiers = await ctx.db
+        .query("authVerifiers")
+        .filter((q) => q.eq(q.field("sessionId"), session._id))
+        .collect();
+      for (const verifier of verifiers) {
+        await ctx.db.delete(verifier._id);
+      }
+    }
+
+    await invalidateAllSessionsForUser(ctx, user._id);
+
     for (const account of accounts) {
       await ctx.db.delete(account._id);
+    }
+
+    for (const account of accounts) {
+      const limitsForAccount = await ctx.db
+        .query("authRateLimits")
+        .withIndex("identifier", (q) => q.eq("identifier", account._id))
+        .collect();
+      for (const row of limitsForAccount) {
+        await ctx.db.delete(row._id);
+      }
+    }
+
+    const limitsForEmail = await ctx.db
+      .query("authRateLimits")
+      .filter((q) => q.eq(q.field("identifier"), normalized))
+      .collect();
+    for (const row of limitsForEmail) {
+      await ctx.db.delete(row._id);
+    }
+
+    let deletedRateLimits = CLEANUP_PAGE_SIZE;
+    while (deletedRateLimits === CLEANUP_PAGE_SIZE) {
+      const rows = await ctx.db
+        .query("rateLimits")
+        .filter((q) =>
+          q.or(q.eq(q.field("key"), normalized), q.eq(q.field("key"), user._id)),
+        )
+        .take(CLEANUP_PAGE_SIZE);
+      deletedRateLimits = rows.length;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+      }
     }
 
     await ctx.db.delete(user._id);

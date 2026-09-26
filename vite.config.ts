@@ -30,5 +30,5 @@ export default defineConfig({
       'Referrer-Policy': referrerPolicy,
     },
   },
-  build: { target: 'es2022' },
+  build: { target: 'es2022', sourcemap: false },
 })

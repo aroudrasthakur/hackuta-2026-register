@@ -7,6 +7,12 @@ import {
 import {
   DIETARY_OPTIONS,
   FIELD_LIMITS,
+  MAX_AGE,
+  MAX_GRADUATION_YEAR,
+  MAX_HACKATHONS_ATTENDED,
+  MIN_AGE,
+  MIN_GRADUATION_YEAR,
+  MIN_HACKATHONS_ATTENDED,
   RACE_ETHNICITY_OPTIONS,
 } from "./constants";
 
@@ -70,9 +76,27 @@ const ARRAY_MAX_LENGTHS: Record<(typeof STRING_ARRAY_FIELDS)[number], number> = 
 
 export const DRAFT_FIELD_TOO_LONG_MESSAGE = "One or more fields exceed the allowed length.";
 export const DRAFT_ARRAY_TOO_LONG_MESSAGE = "Too many selections in a multi-select field.";
+export const DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE = "One or more numeric fields are out of range.";
+
+const INTEGER_FIELD_RANGES: Record<string, { min: number; max: number }> = {
+  age: { min: MIN_AGE, max: MAX_AGE },
+  graduationYear: { min: MIN_GRADUATION_YEAR, max: MAX_GRADUATION_YEAR },
+  hackathonsAttended: { min: MIN_HACKATHONS_ATTENDED, max: MAX_HACKATHONS_ATTENDED },
+};
+
+function validateDraftNumberField(key: string, value: unknown): void {
+  const range = INTEGER_FIELD_RANGES[key];
+  if (!range || typeof value !== "number" || Number.isNaN(value)) {
+    return;
+  }
+  if (!Number.isInteger(value) || value < range.min || value > range.max) {
+    throw new Error(DRAFT_NUMBER_OUT_OF_RANGE_MESSAGE);
+  }
+}
 
 export function validateDraftPatchLimits(patch: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(patch)) {
+    validateDraftNumberField(key, value);
     if (typeof value === "string") {
       const max = STRING_FIELD_MAX[key];
       if (max !== undefined && value.length > max) {

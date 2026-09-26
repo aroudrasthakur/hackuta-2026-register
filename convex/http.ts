@@ -146,7 +146,9 @@ const uploadResume = httpAction(async (ctx, request) => {
     return response(request, { error: "Please upload a PDF." }, 415, origin);
   }
 
-  const isTestRequest = request.headers.get("x-test-origin") === CONVEX_TEST_ORIGIN;
+  const isTestRequest =
+    (process.env.CONVEX_TEST_MODE === "true" || process.env.VITEST === "true") &&
+    request.headers.get("x-test-origin") === CONVEX_TEST_ORIGIN;
   let contentLength = parseResumeContentLength(request.headers.get("content-length"));
   if (
     !contentLength.ok &&

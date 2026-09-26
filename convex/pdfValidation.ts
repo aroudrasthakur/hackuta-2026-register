@@ -1,12 +1,20 @@
-import { PDFDocument, PDFName } from "pdf-lib";
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFRef,
+} from "pdf-lib";
 import {
   hasPdfMagicBytes,
   MAX_RESUME_PAGES,
+  RESUME_TOO_MANY_PAGES_MESSAGE,
 } from "../shared/registration/resume";
 
 const PDF_PARSE_BUDGET_MS = 5_000;
+export const MAX_PDF_OBJECT_COUNT = 5_000;
 
-const ACTIVE_CONTENT_MARKERS = [
+const ACTIVE_CONTENT_NAME_MARKERS = [
   "/JavaScript",
   "/JS",
   "/OpenAction",
@@ -15,9 +23,27 @@ const ACTIVE_CONTENT_MARKERS = [
   "/RichMedia",
 ] as const;
 
+const ACTIVE_DICT_KEYS = [
+  "JS",
+  "JavaScript",
+  "Launch",
+  "EmbeddedFile",
+  "RichMedia",
+  "OpenAction",
+] as const;
+
+const ACTIVE_ACTION_TYPES = ["/JavaScript", "/Launch"] as const;
+
+/** Decode PDF name hex escapes such as `/J#61vaScript` → `/JavaScript`. */
+export function normalizePdfHexEscapes(text: string): string {
+  return text.replace(/#([0-9A-Fa-f]{2})/g, (_, hex: string) =>
+    String.fromCharCode(parseInt(hex, 16)),
+  );
+}
+
 function scanRawPdfForActiveContent(bytes: Uint8Array): string | null {
-  const text = new TextDecoder("latin1").decode(bytes);
-  for (const marker of ACTIVE_CONTENT_MARKERS) {
+  const text = normalizePdfHexEscapes(new TextDecoder("latin1").decode(bytes));
+  for (const marker of ACTIVE_CONTENT_NAME_MARKERS) {
     if (text.includes(marker)) {
       return marker;
     }
@@ -25,17 +51,74 @@ function scanRawPdfForActiveContent(bytes: Uint8Array): string | null {
   return null;
 }
 
-function catalogContainsActiveContent(catalog: PDFDocument["catalog"]): boolean {
-  const namesToCheck = [
-    PDFName.of("OpenAction"),
-    PDFName.of("Names"),
-    PDFName.of("AA"),
-  ];
-  for (const name of namesToCheck) {
-    if (catalog.get(name)) {
+/** Count `obj` declarations to reject pathological PDFs before parsing. */
+export function countPdfObjectDeclarations(bytes: Uint8Array): number {
+  const text = new TextDecoder("latin1").decode(bytes);
+  const matches = text.match(/\b\d+\s+\d+\s+obj\b/g);
+  return matches?.length ?? 0;
+}
+
+function resolvePdfObject(pdf: PDFDocument, value: unknown): unknown {
+  if (value instanceof PDFRef) {
+    return pdf.context.lookup(value);
+  }
+  return value;
+}
+
+function pdfNameValue(value: unknown): string | null {
+  if (value instanceof PDFName) {
+    return value.asString();
+  }
+  return null;
+}
+
+function dictionaryContainsActiveContent(dict: PDFDict): boolean {
+  for (const key of ACTIVE_DICT_KEYS) {
+    if (dict.has(PDFName.of(key))) {
       return true;
     }
   }
+
+  const actionType = pdfNameValue(dict.lookup(PDFName.of("S")));
+  if (actionType && (ACTIVE_ACTION_TYPES as readonly string[]).includes(actionType)) {
+    return true;
+  }
+
+  return false;
+}
+
+function inspectPdfValue(pdf: PDFDocument, value: unknown): boolean {
+  const resolved = resolvePdfObject(pdf, value);
+  if (resolved instanceof PDFDict) {
+    return dictionaryContainsActiveContent(resolved);
+  }
+  if (resolved instanceof PDFArray) {
+    for (let index = 0; index < resolved.size(); index += 1) {
+      if (inspectPdfValue(pdf, resolved.lookup(index))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function pdfGraphContainsActiveContent(pdf: PDFDocument): boolean {
+  for (const [, obj] of pdf.context.enumerateIndirectObjects()) {
+    if (obj instanceof PDFDict && dictionaryContainsActiveContent(obj)) {
+      return true;
+    }
+  }
+
+  for (const page of pdf.getPages()) {
+    const node = page.node;
+    if (inspectPdfValue(pdf, node.lookup(PDFName.of("AA")))) {
+      return true;
+    }
+    if (inspectPdfValue(pdf, node.lookup(PDFName.of("Annots")))) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -45,6 +128,7 @@ async function loadPdfWithinBudget(bytes: Uint8Array): Promise<PDFDocument> {
     ignoreEncryption: false,
     throwOnInvalidObject: true,
     updateMetadata: false,
+    parseSpeed: 50,
   });
   if (Date.now() - started > PDF_PARSE_BUDGET_MS) {
     throw new Error("The file is not a valid PDF.");
@@ -58,13 +142,17 @@ export async function validateResumePdfBytes(bytes: Uint8Array): Promise<void> {
     throw new Error("The file is not a valid PDF.");
   }
 
+  if (countPdfObjectDeclarations(bytes) > MAX_PDF_OBJECT_COUNT) {
+    throw new Error("The file is not a valid PDF.");
+  }
+
   const activeMarker = scanRawPdfForActiveContent(bytes);
   if (activeMarker) {
     throw new Error("This PDF contains content that is not allowed.");
   }
 
   const pdf = await loadPdfWithinBudget(bytes);
-  if (catalogContainsActiveContent(pdf.catalog)) {
+  if (pdfGraphContainsActiveContent(pdf)) {
     throw new Error("This PDF contains content that is not allowed.");
   }
 
@@ -73,8 +161,6 @@ export async function validateResumePdfBytes(bytes: Uint8Array): Promise<void> {
     throw new Error("A resume must have at least one page.");
   }
   if (pageCount > MAX_RESUME_PAGES) {
-    throw new Error("The PDF has too many pages.");
+    throw new Error(RESUME_TOO_MANY_PAGES_MESSAGE);
   }
 }
-
-export { ACTIVE_CONTENT_MARKERS, PDF_PARSE_BUDGET_MS };

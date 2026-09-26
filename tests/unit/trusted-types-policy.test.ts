@@ -15,8 +15,9 @@ describe("trusted-types policy", () => {
     expect(policySource).not.toMatch(/createHTML:\s*\(\s*value\s*\)\s*=>\s*value/);
   });
 
-  it("allows same-origin script URLs only", () => {
-    expect(policySource).toContain("isSameOriginScriptUrl");
+  it("allows same-origin and Vercel preview script URLs", () => {
+    expect(policySource).toContain("isAllowedScriptUrl");
+    expect(policySource).toContain("vercel.live");
     expect(policySource).toContain("Script URL blocked");
   });
 });

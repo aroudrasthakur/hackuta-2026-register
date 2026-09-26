@@ -39,7 +39,7 @@ Logo paths and widths are centralized in [src/constants/images.ts](../src/consta
 
 ## Security
 
-[trusted-types.js](trusted-types.js) registers a permissive default Trusted Types policy so React can run under the strict CSP in [security/csp.ts](../security/csp.ts). It must load synchronously in index.html before the module entry.
+[trusted-types.js](trusted-types.js) registers a restrictive default Trusted Types policy (blocks HTML/script sinks; allows same-origin and Vercel preview script URLs) so React can run under the strict CSP in [security/csp.ts](../security/csp.ts). It must load synchronously in index.html before the module entry.
 
 ## Related
 

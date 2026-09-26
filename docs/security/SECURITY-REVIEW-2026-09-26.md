@@ -12,6 +12,8 @@
 
 Static review across 13 checkpoint areas found **6 dangerous** issues (F1–F6, F9). All were remediated in code with regression tests. **1121 unit tests pass** after remediation (including new security tests). Dev deployment updated with schema index `rateLimits.by_bucket_key_createdAt`. Unused direct `@auth/core` dependency removed (still provided transitively by `@convex-dev/auth`).
 
+**Follow-up:** [SECURITY-REVIEW-2026-09-26-followup.md](./SECURITY-REVIEW-2026-09-26-followup.md) closes R1–R16 incomplete fixes; **1133 tests pass** after follow-up.
+
 **Operational follow-up (human):** rotate production `EMAIL_SERVICE_API_KEY` — it was historically copied into dev by `sync-dev-convex-env.mjs`.
 
 ## Endpoint & function inventory
@@ -66,16 +68,16 @@ Static review across 13 checkpoint areas found **6 dangerous** issues (F1–F6, 
 | 4.1–4.3 | Field limits | **Pass** | High | `draftLimits.ts` + Zod `.max()` |
 | 4.8 | Concurrent submit | **Pass** | — | Existing backend tests |
 | 5.1 | Verified upload | **Pass** | High | `http.ts` + `userVerification` query |
-| 5.2–5.3 | Upload size / PDF | **Pass** | Med | Streaming cap + active-content scan |
+| 5.2–5.3 | Upload size / PDF | **Partial→Pass** | Med | Streaming cap + scan; **R3/R4 in follow-up** |
 | 5.14 | Filename CRLF | **Pass** | Low | Control char rejection |
 | 6.6 | Email XSS | **Pass** | — | `email-template-escape.test.ts` |
-| 7.1–7.3 | Rate limits | **Pass** | High | Index + IP/global + draft/submit limits |
+| 7.1–7.3 | Rate limits | **Partial→Pass** | High | Index prefix + IP/global + draft/submit; **R1/R2/R6 in follow-up** |
 | 8.5–8.7 | Trusted Types / headers | **Pass** | High | Real TT policy; nosniff, CORP, no-store |
 | 8.12 | CSP | **Pass** | Med | Wildcard documented for preview deploys |
 | 9.5–9.7 | Dev/prod key separation | **Pass** | High | `sync-dev-convex-env.mjs`; **rotate prod key** |
-| 10.4–10.5 | Retention / wipe | **Pass** | High | Full reset + 90-day email cron |
+| 10.4–10.5 | Retention / wipe | **Partial→Pass** | High | Full reset + 90-day cron; **R5/R6 in follow-up** |
 | 11.3 | Prod console.error | **Pass** | Med | DEV-only submit log |
-| 12.2–12.8 | CI / deps | **Pass** | Med | Dependabot, CodeQL; npm audit 0 high |
+| 12.2–12.8 | CI / deps | **Partial** | Med | Dependabot, CodeQL; actions were tag-based at first report — **Fixed in follow-up (R7)** |
 | E Live verify | Manual probes | **Blocked** | — | Email service probes need operator key; audit account cleanup optional |
 
 ## Reproduction notes (pre-fix)

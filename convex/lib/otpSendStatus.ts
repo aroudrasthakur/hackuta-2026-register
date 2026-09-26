@@ -4,6 +4,7 @@ import {
   OTP_SEND_MAX_PER_HOUR,
 } from "../../shared/auth/otpRateLimit";
 import { normalizeEmail } from "./normalizeEmail";
+import { countRecentRateLimits } from "./rateLimitHelpers";
 import { OTP_SEND_BUCKET } from "./rateLimitBuckets";
 
 /** Wide ctx type — full schema auth tables break GenericDataModel in CI/deploy tsc. */
@@ -31,12 +32,7 @@ export async function lookupOtpSendStatus(
   }
 
   const windowStart = now - OTP_SEND_WINDOW_MS;
-  const recent = await ctx.db
-    .query("rateLimits")
-    .withIndex("by_bucket_key_createdAt", (q) => q.eq("bucket", bucket))
-    .filter((q) => q.eq(q.field("key"), normalized))
-    .filter((q) => q.gte(q.field("createdAt"), windowStart))
-    .collect();
+  const recent = await countRecentRateLimits(ctx, bucket, normalized, windowStart);
 
   if (recent.length >= OTP_SEND_MAX_PER_HOUR) {
     return { waitSeconds: 0, hourlyLimitReached: true };

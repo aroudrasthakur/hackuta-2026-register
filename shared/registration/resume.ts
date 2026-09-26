@@ -11,6 +11,8 @@ export const RESUME_SIZE_ERROR_MESSAGE =
 export const RESUME_EMPTY_ERROR_MESSAGE =
   "Your PDF is empty. Please select another file.";
 
+export const RESUME_TOO_MANY_PAGES_MESSAGE = "The PDF has too many pages.";
+
 export const RESUME_UPLOAD_EXPIRED_MESSAGE =
   "Your resume upload expired. Please upload your resume again.";
 
