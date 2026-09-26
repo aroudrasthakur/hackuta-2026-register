@@ -6,9 +6,19 @@ Deploy, configure, monitor, and maintain the registration app in production.
 
 | Environment | Frontend | Convex deployment |
 | --- | --- | --- |
-| Production | `register.hackuta.com` (Vercel) | `brilliant-ostrich-892` |
+| Production | `register.hackuta.com` (Vercel) | — (not stored in repo; set in Vercel / Convex dashboard) |
 | Shared dev | — | `standing-manatee-425` |
 | Personal local | `127.0.0.1:5273` | `npx convex dev` |
+
+### Deploy to shared dev
+
+Push schema and backend functions to the shared dev deployment (`standing-manatee-425`) without starting a watch process:
+
+```bash
+npx convex dev --once --env-file .env.local
+```
+
+Requires `.env.local` with `CONVEX_DEPLOYMENT=dev:standing-manatee-425` (see [.env.example](../.env.example)). Personal Convex deployments use `npx convex dev` instead.
 
 ### Release checklist
 
@@ -25,8 +35,8 @@ Set in project settings (Production + Preview as appropriate):
 
 | Variable | Production value |
 | --- | --- |
-| `VITE_CONVEX_URL` | `https://brilliant-ostrich-892.convex.cloud` |
-| `VITE_CONVEX_SITE_URL` | `https://brilliant-ostrich-892.convex.site` |
+| `VITE_CONVEX_URL` | Set in Vercel — `https://<prod-deployment>.convex.cloud` (not stored in repo) |
+| `VITE_CONVEX_SITE_URL` | Set in Vercel — `https://<prod-deployment>.convex.site` (not stored in repo) |
 | `VITE_LANDING_URL` | `https://hackuta.com` |
 | `VITE_USE_MOCK_API` | unset or `false` |
 
@@ -69,9 +79,13 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 
 | Task | Command |
 | --- | --- |
-| Update hackathon display name | `npx convex run eventConfig:setHackathonName '{ "name": "HackUTA 2026" }'` |
-| Set or clear application closing time | Internal `eventConfig:setRegistrationClosesAt` accepts `{"closesAt": <UTC epoch milliseconds>}` or `{"closesAt": null}`; confirm the target deployment before running |
-| Update schedule dates | Internal `eventConfig:setTimelineDates` updates opening, closing, decisions, event start, or end using UTC epoch milliseconds; changes are checked for chronological order |
+| Deploy schema/functions to shared dev | `npx convex dev --once --env-file .env.local` |
+| Update hackathon display name | `npx convex run eventConfig:setHackathonName '{"name":"HackUTA 2026"}'` |
+| Set application opening time | `npx convex run eventConfig:setTimelineDates '{"registrationOpensAt":<ms>}'` |
+| Set or clear application closing time | `npx convex run eventConfig:setRegistrationClosesAt '{"closesAt":<ms>}'` or `'{"closesAt":null}'` |
+| Set or clear decisions date | `npx convex run eventConfig:setTimelineDates '{"decisionsReleasedAt":<ms>}'` or `'{"decisionsReleasedAt":null}'` |
+| Update hackathon start/end | `npx convex run eventConfig:setTimelineDates '{"startsAt":<ms>,"endsAt":<ms>}'` |
+| Verify resolved schedule | `npx convex run eventConfig:getPublicEventConfig '{}'` |
 | Migrate legacy beef/pork answers to dietary restrictions | Convex dashboard → internal `migrations:migrateEatsBeefAndPorkToDietaryRestrictions` (one-time; maps `"No"` only) |
 | Migrate legacy `otherDietary` to `allergyDetails` | `npx convex run migrations:migrateOtherDietaryToAllergyDetails` (add `--prod` for production). Legacy schema field removed; run before deploy if old rows remain. |
 | Migrate legacy `firstHackathon` yes/no to `hackathonsAttended` | `npx convex run migrations:migrateFirstHackathonToHackathonsAttended` (add `--prod` for production). |
@@ -91,17 +105,99 @@ Defined in `convex/crons.ts`. Removes expired upload sessions and orphaned stora
 
 ### Event timeline and registration window
 
-The single `eventConfig` row stores optional overrides for registration opening/closing, decisions, and hackathon start/end. Existing rows without these fields use the default schedule; new rows store those defaults. **No closing or decisions date is configured by this change.** Once the backend is deployed, an operator with Convex deployment access can update dates with `eventConfig:setTimelineDates` or set/clear the close time with `eventConfig:setRegistrationClosesAt`, without redeploying. Applicants cannot call these internal mutations. Supplying `null` for opening/start/end resets those dates to their defaults; `null` for closing/decisions clears the date. Dates must remain in chronological order. Changing the decisions date only changes its timeline label; it does not send decision emails.
+The `eventConfig` table holds **one row** with `key: "current"`. Operators update it at runtime via internal Convex mutations — no frontend redeploy required. Applicants cannot call these mutations.
 
-Supply UTC epoch millisecond timestamps calculated from the chosen local time in `America/Chicago`. Central time uses **CDT (UTC−05:00)** in daylight-saving months and **CST (UTC−06:00)** otherwise; do not assume a fixed UTC−06:00 offset. With `CLOSES_AT_MS`, `STARTS_AT_MS`, and `ENDS_AT_MS` set to verified timestamps for the correct deployment:
+#### Schema fields
+
+| Column | Stored as | Notes |
+| --- | --- | --- |
+| `name` | string | Display name (e.g. `HackUTA 2026`) |
+| `registrationOpensAt` | integer (UTC ms) or omitted | When draft save/submit becomes allowed |
+| `registrationClosesAt` | integer or `null` | `null` = no close date (applications stay open) |
+| `decisionsReleasedAt` | integer or `null` | `null` = timeline shows “To be announced” |
+| `startsAt` | integer (UTC ms) or omitted | Hackathon start |
+| `endsAt` | integer (UTC ms) or omitted | Hackathon end |
+| `updatedAt` | integer (UTC ms) | Set automatically by mutations |
+
+**Date format:** store **UTC epoch milliseconds** (a plain integer like `1790460000000`). Do **not** use ISO strings (`"2026-11-14"`) or human-readable dates in the dashboard or CLI — validation rejects invalid values.
+
+Applicant-facing labels format these timestamps in **`America/Chicago`** (CDT or CST depending on the date).
+
+#### Code defaults and read-time fallback
+
+Even when the `eventConfig` table is **empty**, `eventConfig:getPublicEventConfig` still returns dates. It merges any DB row with hardcoded defaults in `shared/hackathon/schedule.ts` (`HACKATHON_SCHEDULE`) and the name from `DEFAULT_HACKATHON_NAME`:
+
+| Field | Code default (Central) | Default ms |
+| --- | --- | --- |
+| `name` | HackUTA 2026 | (not a timestamp) |
+| `registrationOpensAt` | Sep 25, 2026 12:00 AM | `1790312400000` |
+| `registrationClosesAt` | none | `null` |
+| `decisionsReleasedAt` | none | `null` |
+| `startsAt` | Nov 14, 2026 9:00 AM | `1794668400000` |
+| `endsAt` | Nov 15, 2026 6:00 PM | `1794787200000` |
+
+The first mutation that needs config (`ensureEventConfig`) seeds a row with these defaults. Supplying `null` via `setTimelineDates` for **close/decisions** clears the override; `null` for **open/start/end** resets to the code defaults above.
+
+#### Compute timestamps
+
+Pick the exact local time in Central, then convert to ms:
 
 ```bash
-npx convex run eventConfig:setRegistrationClosesAt "{\"closesAt\":${CLOSES_AT_MS}}"
-npx convex run eventConfig:setTimelineDates "{\"startsAt\":${STARTS_AT_MS},\"endsAt\":${ENDS_AT_MS}}"
+node -e "console.log(Date.parse('2026-09-26T17:00:00-05:00'))"
+```
+
+Use **CDT (`-05:00`)** during daylight saving and **CST (`-06:00`)** otherwise — do not assume a fixed offset year-round.
+
+PowerShell:
+
+```powershell
+[DateTimeOffset]::Parse("2026-09-26T17:00:00-05:00").ToUnixTimeMilliseconds()
+```
+
+Sanity-check before applying:
+
+```bash
+node -e "console.log(new Date(<ms>).toLocaleString('en-US',{timeZone:'America/Chicago'}))"
+```
+
+#### Chronological validation
+
+`setTimelineDates` validates the **merged** schedule atomically. After applying your patch, all of the following must hold:
+
+1. `registrationOpensAt` < `startsAt` < `endsAt`
+2. If `registrationClosesAt` is set: `registrationOpensAt` < `registrationClosesAt` ≤ `startsAt`
+3. If `decisionsReleasedAt` is set: it must be ≥ `registrationOpensAt`, ≥ `registrationClosesAt` (when set), and **≤ `startsAt`** (decisions must fall before hackathon start)
+
+A date after hackathon start (e.g. December 3) will fail with `Event dates must be in chronological order.`
+
+Changing `decisionsReleasedAt` only updates the profile timeline label — it does **not** send decision emails.
+
+#### Example commands
+
+Add `--prod` only after separately confirming the production deployment target.
+
+```bash
+# Applications open Sep 26, 2026 5:00 PM CDT
+npx convex run eventConfig:setTimelineDates '{"registrationOpensAt":1790460000000}'
+
+# Decisions Nov 12, 2026 12:00 PM CST
+npx convex run eventConfig:setTimelineDates '{"decisionsReleasedAt":1794506400000}'
+
+# Clear decisions (back to “To be announced”)
+npx convex run eventConfig:setTimelineDates '{"decisionsReleasedAt":null}'
+
+# Set application close time, or reopen
+npx convex run eventConfig:setRegistrationClosesAt '{"closesAt":1792000000000}'
+npx convex run eventConfig:setRegistrationClosesAt '{"closesAt":null}'
+
+# Hackathon start/end (defaults shown above)
+npx convex run eventConfig:setTimelineDates '{"startsAt":1794668400000,"endsAt":1794787200000}'
+
+# Verify what applicants will see
 npx convex run eventConfig:getPublicEventConfig '{}'
 ```
 
-Only pass the fields you intend to update; `setTimelineDates` validates the resulting schedule atomically. Use `--prod` only after separately confirming the production target. To reopen, run `npx convex run eventConfig:setRegistrationClosesAt '{"closesAt":null}'` on that deployment. Before opening or at/after closing, the backend rejects draft writes and submissions; saved drafts remain readable, submitted profiles remain accessible, and the registration/profile UI updates without a redeploy. Confirm all configured values and their Central-time display before relying on the window.
+Only pass the fields you intend to update. Before opening or at/after closing, the backend rejects draft writes and submissions; saved drafts remain readable and submitted profiles remain accessible.
 
 ## Monitoring & incidents
 

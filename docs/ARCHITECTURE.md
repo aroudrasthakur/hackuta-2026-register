@@ -149,7 +149,7 @@ Contact form lives in **hackuta-2026-registration**, not this repo.
 | SPA | Vercel | `VITE_*` env vars, vercel.json headers |
 | Backend | Convex Cloud | `npx convex env set`, separate dev/prod deployments |
 
-Dev deployment: `standing-manatee-425`. Production: `brilliant-ostrich-892`.
+Dev deployment: `standing-manatee-425`. Production Convex deployment is configured in Vercel and the Convex dashboard — not stored in this repo.
 
 ## Key design decisions
 

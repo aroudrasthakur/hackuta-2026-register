@@ -73,7 +73,22 @@ Reset codes: 6 digits, 10-minute expiry, hashed at rest, single-use. Password re
 
 ### `eventConfig:getPublicEventConfig`
 
-**Auth:** none · no args — returns the display name and resolved `registrationOpensAt`, `registrationClosesAt`, `decisionsReleasedAt`, `startsAt`, and `endsAt` timestamps. The date fields use UTC epoch milliseconds; `registrationClosesAt: null` means no close time, and `decisionsReleasedAt: null` means the decision date is unannounced. Applicant-facing times use `America/Chicago`.
+**Auth:** none · no args.
+
+Returns the display name and **resolved** schedule timestamps (UTC epoch milliseconds):
+
+```typescript
+{
+  name: string;
+  registrationOpensAt: number;
+  registrationClosesAt: number | null;
+  decisionsReleasedAt: number | null;
+  startsAt: number;
+  endsAt: number;
+}
+```
+
+Resolution merges the single `eventConfig` row (if present) with code defaults in `shared/hackathon/schedule.ts` via `resolveHackathonTimelineSource`. An empty table still returns the default name (`HackUTA 2026`) and default open/start/end dates; close and decisions default to `null` (“To be announced” on the profile timeline). Applicant-facing labels use `America/Chicago`.
 
 ### `applicant:getApplicantRoutingState`
 
@@ -282,11 +297,15 @@ All three emails are queued with the HackUTA email service (`POST /send-email`) 
 
 ### Event configuration
 
-| Function | Purpose |
-| --- | --- |
-| `eventConfig:setHackathonName` | Internal — update the displayed name without redeploying |
-| `eventConfig:setRegistrationClosesAt` | Internal — set UTC epoch milliseconds or `null` to reopen; no close time is configured by default |
-| `eventConfig:setTimelineDates` | Internal — atomically update optional opening, closing, decisions, start, and end dates with chronological validation |
+All operator mutations are **internal** — run via `npx convex run` (see [OPERATIONS.md — Event timeline](OPERATIONS.md#event-timeline-and-registration-window)). Dates are **UTC epoch milliseconds** (integers), not ISO strings.
+
+| Function | Args | Purpose |
+| --- | --- | --- |
+| `eventConfig:setHackathonName` | `{ name: string }` | Update the displayed name |
+| `eventConfig:setRegistrationClosesAt` | `{ closesAt: number \| null }` | Set or clear the application close time |
+| `eventConfig:setTimelineDates` | Optional patch: `registrationOpensAt`, `registrationClosesAt`, `decisionsReleasedAt`, `startsAt`, `endsAt` (each `number \| null`) | Atomically update one or more schedule fields |
+
+`setTimelineDates` validates the merged schedule: open before start before end; close (if set) after open and on/before start; decisions (if set) after open, after close (if set), and on/before start. `null` on close/decisions clears the date; `null` on open/start/end resets to `HACKATHON_SCHEDULE` defaults.
 
 ### Maintenance
 
@@ -352,7 +371,7 @@ Indexed by `applicationId` (`by_application`). Its validator is separate from th
 
 | Table | Purpose |
 | --- | --- |
-| `eventConfig` | Server-side name and operator-controlled schedule dates (single row) |
+| `eventConfig` | Single row (`key: "current"`): `name`, optional schedule overrides (`registrationOpensAt`, `registrationClosesAt`, `decisionsReleasedAt`, `startsAt`, `endsAt` as UTC ms or null), `updatedAt`. Missing fields fall back to `HACKATHON_SCHEDULE` at read time |
 | `rateLimits` | Throttle counters |
 | `resumeUploadSessions` | Upload capability tokens |
 | Auth tables | Managed by `@convex-dev/auth` |
