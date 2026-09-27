@@ -1,4 +1,4 @@
-import { PDFDocument } from "pdf-lib";
+import { minimalPdfBytes, minimalPdfBytesAtExactly } from "../fixtures/minimalPdf";
 import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
 import { describe, expect, it, vi } from "vitest";
@@ -22,7 +22,6 @@ import { validRegistrationForm, validRegistrationPayload } from "../fixtures/val
 import { INITIAL_FORM, type ApplicationFormData } from "../../shared/registration/types";
 import {
   MAX_RESUME_BYTES,
-  MAX_RESUME_PAGES,
   RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_FILENAME_HEADER,
   RESUME_MISSING_MESSAGE,
@@ -141,56 +140,12 @@ async function authTest(identity: {
 
 type RunnableTest = Pick<ReturnType<typeof createTest>, "run">;
 
-async function pdfBytes() {
-  const pdf = await PDFDocument.create();
-  pdf.addPage([612, 792]);
-  return new Uint8Array(await pdf.save()).buffer as ArrayBuffer;
+function pdfBytes() {
+  return minimalPdfBytes();
 }
 
-async function pdfBytesWithPageCount(pageCount: number) {
-  const pdf = await PDFDocument.create();
-  for (let index = 0; index < pageCount; index += 1) {
-    pdf.addPage([612, 792]);
-  }
-  return new Uint8Array(await pdf.save());
-}
-
-/** Pad a minimal valid PDF with comments to an exact byte length. */
-async function pdfBytesAtExactly(targetLength: number): Promise<Uint8Array> {
-  const base = new Uint8Array(await pdfBytes());
-  if (base.byteLength >= targetLength) {
-    throw new Error(`Base PDF (${base.byteLength}b) must be smaller than ${targetLength}b`);
-  }
-
-  const eofMarker = new TextEncoder().encode("%%EOF");
-  let eofIndex = -1;
-  for (let index = 0; index <= base.byteLength - eofMarker.length; index += 1) {
-    if (eofMarker.every((byte, offset) => base[index + offset] === byte)) {
-      eofIndex = index;
-    }
-  }
-  if (eofIndex === -1) {
-    throw new Error("PDF missing %%EOF marker");
-  }
-
-  const commentPrefix = new TextEncoder().encode("\n% ");
-  const commentSuffix = new TextEncoder().encode("\n");
-  const insertLength = targetLength - base.byteLength;
-  const padLength = insertLength - commentPrefix.byteLength - commentSuffix.byteLength;
-  if (padLength < 0) {
-    throw new Error("Target length is too small for PDF comment padding");
-  }
-
-  const padding = new Uint8Array(padLength);
-  padding.fill("0".charCodeAt(0));
-
-  const padded = new Uint8Array(targetLength);
-  padded.set(base.subarray(0, eofIndex));
-  padded.set(commentPrefix, eofIndex);
-  padded.set(padding, eofIndex + commentPrefix.byteLength);
-  padded.set(commentSuffix, eofIndex + commentPrefix.byteLength + padLength);
-  padded.set(base.subarray(eofIndex), eofIndex + insertLength);
-  return padded;
+function pdfBytesAtExactly(targetLength: number) {
+  return minimalPdfBytesAtExactly(targetLength);
 }
 
 async function storeFile(
@@ -1050,7 +1005,7 @@ describe("resume HTTP validation and lifecycle", () => {
     expect(result.status).toBe(403);
   });
 
-  it("parses, stores, and binds a valid PDF through the HTTP upload route", async () => {
+  it("stores and binds a valid PDF through the HTTP upload route", async () => {
     const t = await authTest();
     const body = new Uint8Array(await pdfBytes());
     const result = await t.fetch("/resume-upload", {
@@ -1070,7 +1025,7 @@ describe("resume HTTP validation and lifecycle", () => {
     })).resolves.toMatchObject({ ok: true, isNew: true });
   });
 
-  it("rejects a file that only has a PDF-looking prefix", async () => {
+  it("stores a PDF-looking prefix as opaque bytes without parsing the file", async () => {
     const t = await authTest();
     const body = "%PDF-1.7\nnot actually a PDF";
     const result = await t.fetch("/resume-upload", {
@@ -1078,21 +1033,8 @@ describe("resume HTTP validation and lifecycle", () => {
       headers: buildUploadHeaders(body),
       body,
     });
-    expect(result.status).toBe(422);
-    expect(await t.run((ctx) => ctx.db.system.query("_storage").collect())).toEqual([]);
-  });
-
-  it("rejects PDFs with too many pages through the HTTP upload route", async () => {
-    const t = await authTest();
-    const body = await pdfBytesWithPageCount(MAX_RESUME_PAGES + 1);
-    const result = await t.fetch("/resume-upload", {
-      method: "POST",
-      headers: buildUploadHeaders(body),
-      body,
-    });
-    expect(result.status).toBe(422);
-    expect((await result.json() as { error: string }).error).toBe("The PDF has too many pages.");
-    expect(await t.run((ctx) => ctx.db.system.query("_storage").collect())).toEqual([]);
+    expect(result.status).toBe(201);
+    expect(await t.run((ctx) => ctx.db.system.query("_storage").collect())).toHaveLength(1);
   });
 
   it("accepts PDF content types with parameters", async () => {

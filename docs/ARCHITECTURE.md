@@ -41,7 +41,6 @@ Related repo: marketing site ([hackuta-2026-repository](https://github.com/aroud
 | http.ts | Resume upload + Auth OIDC routes |
 | rateLimits.ts | Sign-up and password-reset OTP throttling |
 | resumeUploadSecurity.ts | Upload origin allowlist |
-| pdfValidation.ts | Server-side PDF parse |
 | emailDeliveries.ts | Queue-ID tracking for sent emails |
 | email/ | Email service client, email actions, templates |
 | lib/ | Auth, applications, draft patch helpers |

@@ -26,7 +26,6 @@
     "@paper-design/shaders-react": "^0.0.80",
     "convex": "^1.45.0",
     "libphonenumber-js": "^1.13.14",
-    "pdf-lib": "^1.17.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",

@@ -69,7 +69,6 @@ In CI, the **quality** job fails if any threshold is missed. It then writes a pe
 | Backend authorization + maintenance | backend-authorization.test.ts |
 | Input sanitization | sanitize-input.test.ts |
 | Resume upload | resume-upload.test.tsx, resume-upload-policy.test.ts, resume-upload-security.test.ts, convex.test.ts |
-| PDF validation | pdf-validation.test.ts |
 | Error mapping | submit-errors.test.ts |
 | CSP / headers sync | security.test.ts, csp.test.ts |
 | Profile dashboard | profile-page.test.tsx, applicant-timeline.test.tsx |

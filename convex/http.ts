@@ -12,7 +12,6 @@ import {
   RESUME_TEST_CONTENT_LENGTH_HEADER,
 } from "../shared/registration/resume";
 import { requireAuthUserId } from "./lib/auth";
-import { validateResumePdfBytes } from "./pdfValidation";
 import { getResumeUploadAllowedOrigins, isOriginAllowed } from "./resumeUploadSecurity";
 import { RESUME_UPLOAD_AUTH_REQUIRED_MESSAGE } from "../shared/registration/submitErrors";
 
@@ -26,14 +25,6 @@ const createVerifiedUploadSessionRef = makeFunctionReference<"mutation">(
   "resumeUploads:createVerifiedUploadSession",
 );
 const CONVEX_TEST_ORIGIN = "https://hackuta.test";
-
-/** Exact strings returned in 422 bodies; anything else is logged and mapped to the generic message. */
-const RESUME_VALIDATION_RESPONSE_MESSAGES = new Set([
-  "The file is not a valid PDF.",
-  "This PDF contains content that is not allowed.",
-  "A resume must have at least one page.",
-  "The PDF has too many pages.",
-]);
 
 function requestOrigin(request: Request) {
   const origin = request.headers.get("origin");
@@ -204,21 +195,6 @@ const uploadResume = httpAction(async (ctx, request) => {
 
   if (bytes.length !== contentLength.length || bytes.length > MAX_RESUME_BYTES) {
     return response(request, { error: RESUME_SIZE_ERROR_MESSAGE }, 413, origin);
-  }
-
-  try {
-    await validateResumePdfBytes(bytes);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message.trim() : "";
-    const message =
-      detail && RESUME_VALIDATION_RESPONSE_MESSAGES.has(detail)
-        ? detail
-        : "The file is not a valid PDF.";
-    console.error("Resume upload PDF validation failed", {
-      validationError: detail || "(empty)",
-      responseError: message,
-    });
-    return response(request, { error: message }, 422, origin);
   }
 
   let storageId;

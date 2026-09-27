@@ -178,12 +178,10 @@ Upload a PDF resume before form submission.
 **Validation pipeline:**
 
 1. Origin → Content-Type → Content-Length → filename allowlist
-2. Rate limit (IP + global)
-3. Read body; verify size matches header
-4. PDF magic bytes (`%PDF-`)
-5. `pdf-lib` structural parse; 1–25 pages
-6. Store in Convex `_storage` (not web server disk)
-7. Return capability token (30 min TTL, single-use at register)
+2. Rate limit (IP + authenticated user + global)
+3. Read body; verify size matches header (max 2 MB)
+4. Store raw bytes in Convex `_storage` (not web server disk; no PDF parsing)
+5. Return capability token (30 min TTL, single-use at register)
 
 **Success `201`:**
 
@@ -204,7 +202,6 @@ Upload a PDF resume before form submission.
 | `411` | Missing Content-Length |
 | `413` | Empty, oversize, or length mismatch |
 | `415` | Wrong Content-Type or filename |
-| `422` | Invalid PDF or too many pages |
 | `429` | Rate limit exceeded |
 | `500` | Storage failure |
 
@@ -251,7 +248,7 @@ Client-side Zod errors return per-field messages from `shared/registration/schem
 | Password reset copy | `shared/auth/passwordResetMessages.ts` | Neutral request confirmation, success, reuse, and rate-limit messages |
 | Auth error mapping | `shared/auth/errorMessages.ts` | mapAuthError, mapPasswordResetError |
 | Resume (client) | `shared/registration/resume.ts` | `.pdf` only, ≤ 2 MB |
-| Resume (server) | `convex/pdfValidation.ts` | Magic bytes, parse, ≤ 25 pages |
+| Resume (server) | `convex/http.ts`, `convex/resumeUploads.ts` | Auth, origin, rate limits, size, metadata; no PDF parse |
 
 Full field list: `shared/registration/schema.ts` and `shared/registration/constants.ts`.
 

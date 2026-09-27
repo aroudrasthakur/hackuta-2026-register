@@ -1,5 +1,4 @@
 export const MAX_RESUME_BYTES = 2 * 1024 * 1024;
-export const MAX_RESUME_PAGES = 25;
 export const ALLOWED_RESUME_EXTENSIONS = [".pdf"] as const;
 export const ALLOWED_RESUME_CONTENT_TYPE = "application/pdf";
 export const RESUME_FILENAME_HEADER = "x-resume-filename";
@@ -10,8 +9,6 @@ export const RESUME_SIZE_ERROR_MESSAGE =
 
 export const RESUME_EMPTY_ERROR_MESSAGE =
   "Your PDF is empty. Please select another file.";
-
-export const RESUME_TOO_MANY_PAGES_MESSAGE = "The PDF has too many pages.";
 
 export const RESUME_UPLOAD_EXPIRED_MESSAGE =
   "Your resume upload expired. Please upload your resume again.";
@@ -54,17 +51,6 @@ export function isAllowedResumeFilename(filename: string | null | undefined): bo
   );
 }
 
-export function hasPdfMagicBytes(bytes: Uint8Array): boolean {
-  if (bytes.byteLength < 5) return false;
-  return (
-    bytes[0] === 0x25 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x44 &&
-    bytes[3] === 0x46 &&
-    bytes[4] === 0x2d
-  );
-}
-
 export type ParsedResumeContentLength =
   | { ok: true; length: number }
   | { ok: false; reason: "missing" | "invalid" | "empty" | "too_large" };
@@ -85,7 +71,7 @@ export function parseResumeContentLength(raw: string | null): ParsedResumeConten
 
 /**
  * Lightweight client-side checks for immediate UX feedback only.
- * The upload endpoint validates PDF structure with pdf-lib; registration
+ * The upload endpoint stores bytes as-is in Convex file storage; registration
  * mutations verify storage metadata and a server-issued upload token.
  */
 export function validateResume(file: Pick<File, "name" | "type" | "size">): string | undefined {

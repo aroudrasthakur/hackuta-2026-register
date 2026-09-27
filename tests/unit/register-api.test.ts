@@ -107,19 +107,6 @@ describe("uploadResume", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("surfaces server-provided resume upload errors", async () => {
-    vi.stubEnv("VITE_CONVEX_URL", "https://example.convex.cloud");
-    vi.stubEnv("VITE_USE_MOCK_API", "false");
-    vi.resetModules();
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: "The file is not a valid PDF." }), { status: 422 }),
-    );
-    const { uploadResume } = await import("../../src/pages/Register/registerApi");
-    await expect(uploadResume(new File(["%PDF-1.7"], "resume.pdf"), "test-token")).rejects.toThrow(
-      "The file is not a valid PDF.",
-    );
-  });
-
   it("rejects upload without an auth token", async () => {
     vi.stubEnv("VITE_CONVEX_URL", "https://example.convex.cloud");
     vi.stubEnv("VITE_USE_MOCK_API", "false");

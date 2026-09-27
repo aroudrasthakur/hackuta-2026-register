@@ -49,18 +49,6 @@ describe("submit error mapping", () => {
   });
 
   it("maps resume upload HTTP statuses to applicant-friendly copy", () => {
-    expect(mapResumeUploadHttpError(422, {})).toBe(
-      "The file is not a valid PDF. Please choose another file.",
-    );
-    expect(
-      mapResumeUploadHttpError(422, { error: "This PDF contains content that is not allowed." }),
-    ).toBe("This PDF contains content that is not allowed.");
-    expect(mapResumeUploadHttpError(422, { error: "The file is not a valid PDF." })).toBe(
-      "The file is not a valid PDF.",
-    );
-    expect(mapResumeUploadHttpError(422, { error: "A resume must have at least one page." })).toBe(
-      "A resume must have at least one page.",
-    );
     expect(mapResumeUploadHttpError(429, { error: "Too many uploads. Please try again later." }))
       .toBe("Too many uploads. Please try again later.");
     expect(mapResumeUploadHttpError(429, {})).toBe("Too many uploads. Please try again later.");
@@ -81,9 +69,6 @@ describe("submit error mapping", () => {
     );
     expect(mapResumeUploadHttpError(411, { error: "Content-Length header is required." })).toBe(
       "We couldn't upload your resume. Please try again.",
-    );
-    expect(mapUploadError(new Error("The PDF has too many pages."))).toBe(
-      "The PDF has too many pages.",
     );
     expect(mapUploadError(new Error("Unexpected server failure"))).toBe(
       "We couldn't upload your resume. Please try again.",
@@ -137,7 +122,6 @@ describe("submit error mapping", () => {
     ["User already submitted", "You have already submitted an application."],
     ["Storage id already attached elsewhere", "This resume is already attached to another application."],
     ["Uploaded resume is too large for storage", RESUME_SIZE_ERROR_MESSAGE],
-    ["The PDF has too many pages.", "The PDF has too many pages."],
     [
       "Too many resume upload attempts. Please wait a few minutes and try again.",
       "Too many resume upload attempts. Please wait a few minutes and try again.",
