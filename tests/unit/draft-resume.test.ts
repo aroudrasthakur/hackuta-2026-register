@@ -1,5 +1,5 @@
-import { PDFDocument } from "pdf-lib";
 import { convexTest } from "convex-test";
+import { minimalPdfBytes } from "../fixtures/minimalPdf";
 import type { GenericId } from "convex/values";
 import { describe, expect, it } from "vitest";
 import schema from "../../convex/schema";
@@ -13,10 +13,8 @@ const modules = import.meta.glob("../../convex/**/*.ts", { eager: false });
 const createTest = () => convexTest(schema, modules);
 type TestInstance = ReturnType<typeof createTest>;
 
-async function pdfBytes() {
-  const pdf = await PDFDocument.create();
-  pdf.addPage([612, 792]);
-  return new Uint8Array(await pdf.save()).buffer as ArrayBuffer;
+function pdfBytes() {
+  return minimalPdfBytes();
 }
 
 async function storePdf(

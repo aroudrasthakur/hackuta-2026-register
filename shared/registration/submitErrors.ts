@@ -45,13 +45,8 @@ const RESUME_FIELD_MESSAGES = new Set([
   RESUME_EMPTY_ERROR_MESSAGE,
   RESUME_SIZE_ERROR_MESSAGE,
   "Please upload a PDF.",
-  "The file is not a valid PDF.",
-  "The file is not a valid PDF. Please choose another file.",
-  "This PDF contains content that is not allowed.",
-  "A resume must have at least one page.",
   "Content-Length header is required.",
   "Invalid upload request.",
-  "The PDF has too many pages.",
   "Too many uploads. Please try again later.",
   "Too many resume upload attempts. Please wait a few minutes and try again.",
   "Please upload a valid PDF resume of 2 MB or smaller.",
@@ -176,8 +171,6 @@ export function mapResumeUploadHttpError(
       return RESUME_SIZE_ERROR_MESSAGE;
     case 415:
       return "Please select a PDF file.";
-    case 422:
-      return "The file is not a valid PDF. Please choose another file.";
     case 429:
       return "Too many uploads. Please try again later.";
     case 403:

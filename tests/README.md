@@ -33,7 +33,6 @@ Config: [vitest.config.ts](../vitest.config.ts), [playwright.config.ts](../playw
 | otp-rate-limit.test.ts | OTP cooldown helpers |
 | submit-errors.test.ts | Error message mapping |
 | resume-upload-policy.test.ts | Client resume policy |
-| pdf-validation.test.ts | Server PDF parse |
 | hackathon-timeline.test.ts | Timeline builder |
 | dietary-migration.test.ts | Legacy eatsBeef/eatsPork → dietaryRestrictions migration mapping |
 | mlh-texas-schools.test.ts | Texas school ordering |

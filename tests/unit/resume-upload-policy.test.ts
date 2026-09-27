@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   ALLOWED_RESUME_EXTENSIONS,
-  hasPdfMagicBytes,
   isAllowedResumeFilename,
   MAX_RESUME_BYTES,
   MAX_RESUME_FILENAME_LENGTH,
@@ -46,17 +45,6 @@ describe("resume upload policy", () => {
       length: MAX_RESUME_BYTES - 1,
     });
     expect(parseResumeContentLength("1024")).toEqual({ ok: true, length: 1024 });
-  });
-
-  it("detects PDF magic bytes", () => {
-    expect(hasPdfMagicBytes(new TextEncoder().encode("%PDF-1.7"))).toBe(true);
-    expect(hasPdfMagicBytes(new TextEncoder().encode("<?php"))).toBe(false);
-  });
-
-  it("rejects buffers shorter than the PDF header and near-miss headers", () => {
-    expect(hasPdfMagicBytes(new TextEncoder().encode("%PDF"))).toBe(false);
-    expect(hasPdfMagicBytes(new Uint8Array())).toBe(false);
-    expect(hasPdfMagicBytes(new TextEncoder().encode("%PDF_1.7"))).toBe(false);
   });
 
   it("rejects blank, missing, and path-bearing filenames", () => {

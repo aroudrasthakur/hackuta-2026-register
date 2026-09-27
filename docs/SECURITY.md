@@ -24,7 +24,7 @@ Browser CSP ──► Client Zod (UX) ──► Convex handler ──► Shared 
 | Surface | Module | Server behavior |
 | --- | --- | --- |
 | Registration | shared/registration/schema.ts | Zod `.strict()`; rejects HTML/script patterns via shared/lib/sanitizeInput.ts |
-| Resume upload | convex/http.ts, convex/pdfValidation.ts | See [Upload security](#resume-upload-security) |
+| Resume upload | convex/http.ts, convex/resumeUploads.ts | See [Upload security](#resume-upload-security) |
 | OTP email lookup | rateLimits:getOtpSendCooldown, getPasswordResetSendCooldown | Neutral response when rate-limited |
 
 Free-text fields allow plain text only — no HTML tags, `javascript:` URLs, or event handlers.
@@ -64,13 +64,11 @@ Uploads never touch the Vercel filesystem. Files go to **Convex `_storage`** (ob
 2. Origin allowlist
 3. `Content-Type: application/pdf` (hint only; not trusted for validation)
 4. **`Content-Length` required** — reject oversize **before** reading body (DoS / bill protection)
-5. **`X-Resume-Filename`** — must end in `.pdf`; no path segments (UX hint; magic bytes + parser are authoritative)
+5. **`X-Resume-Filename`** — must end in `.pdf`; no path segments
 6. Rate limit (IP + authenticated user + global)
 7. Read body; verify length matches header; max **2 MB**
-8. PDF magic bytes (`%PDF-`)
-9. Structural parse via `pdf-lib`; max **25 pages**
-10. Store in private Convex `_storage` with server-generated storage ID (not the user's filename)
-11. Issue single-use capability token bound to the authenticated user (30 min TTL)
+8. Store raw bytes in private Convex `_storage` with server-generated storage ID (not the user's filename; **no PDF parsing**)
+9. Issue single-use capability token bound to the authenticated user (30 min TTL)
 
 Registration mutation verifies token ownership, storage metadata, and PDF content type before attaching. `discardUploadSession` requires the same authenticated user who created the session.
 

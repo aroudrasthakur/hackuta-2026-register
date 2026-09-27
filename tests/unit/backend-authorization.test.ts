@@ -1,4 +1,4 @@
-import { PDFDocument } from "pdf-lib";
+import { minimalPdfBytes } from "../fixtures/minimalPdf";
 import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
 import type { GenericId } from "convex/values";
@@ -97,9 +97,7 @@ function asUser(t: TestInstance, userId: GenericId<"users">, email?: string) {
 }
 
 async function storePdf(t: Pick<TestInstance, "run">) {
-  const pdf = await PDFDocument.create();
-  pdf.addPage([612, 792]);
-  const bytes = await pdf.save();
+  const bytes = new Uint8Array(minimalPdfBytes());
   const storageId = await t.run((ctx) => ctx.storage.store(new Blob([bytes as BlobPart], { type: "application/pdf" })));
   await t.run((ctx) =>
     (ctx.db.patch as unknown as (id: string, value: { contentType: string }) => Promise<void>)(storageId, {
@@ -498,9 +496,7 @@ describe("resume upload HTTP failure handling", () => {
   it("deletes the stored file and returns 500 when the upload session cannot be created", async () => {
     const t = createTest();
     const userId = await seedUser(t);
-    const pdf = await PDFDocument.create();
-    pdf.addPage([612, 792]);
-    const bytes = new Uint8Array(await pdf.save());
+    const bytes = new Uint8Array(minimalPdfBytes());
 
     const collidingToken = "00".repeat(32);
     await t.run((ctx) =>
