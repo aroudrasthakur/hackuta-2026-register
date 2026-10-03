@@ -22,7 +22,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@convex-dev/auth": "^0.0.95",
+    "@convex-dev/auth": "^0.0.96",
     "@paper-design/shaders-react": "^0.0.80",
     "convex": "^1.45.0",
     "libphonenumber-js": "^1.13.14",
