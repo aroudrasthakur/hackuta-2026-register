@@ -16,6 +16,19 @@ export default defineSchema({
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
   }).index("email", ["email"]),
+  admins: defineTable({
+    email: v.string(),
+    name: v.string(),
+    role: v.union(
+      v.literal("reviewer"),
+      v.literal("admin"),
+    ),
+    active: v.boolean(),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  })
+    .index("by_email", ["email"])
+    .index("by_role", ["role"]),
 
   eventConfig: defineTable({
     key: v.literal("current"),
