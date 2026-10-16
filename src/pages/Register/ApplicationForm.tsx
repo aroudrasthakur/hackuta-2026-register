@@ -56,6 +56,8 @@ import {
   MIN_GRADUATION_YEAR,
   MIN_HACKATHONS_ATTENDED,
   MLH_CODE_OF_CONDUCT_URL,
+  MLH_CONTEST_TERMS_URL,
+  DEV_URL,
   MLH_PRIVACY_POLICY_URL,
   MLH_SCHOOLS,
   MLH_TEXAS_SCHOOLS,
@@ -1188,9 +1190,28 @@ function ApplicationFormContent({
               id="mlhDataSharingConsent"
               label={
                 <>
-                  I authorize HackUTA to share my registration information with
+                  I authorize you to share my application/registration information with
                   Major League Hacking for event administration, ranking, and
-                  MLH administration in-line with the{" "}
+                  administration (including the creation of linked accounts on MLH and DEV (
+                  <a
+                    href={DEV_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-4 text-(--ocean) hover:text-(--ink) transition-colors font-semibold"
+                  >
+                    dev.to
+                  </a>
+                  )) in line with the{" "}
+                  MLH Privacy Policy. I further agree to the terms of both the{" "}
+                  <a
+                    href={MLH_CONTEST_TERMS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-4 text-(--ocean) hover:text-(--ink) transition-colors font-semibold"
+                  >
+                    MLH Contest Terms and Conditions
+                  </a>{" "}
+                  and the{" "}
                   <a
                     href={MLH_PRIVACY_POLICY_URL}
                     target="_blank"
@@ -1221,7 +1242,7 @@ function ApplicationFormContent({
           </div>
           <CustomCheckbox
             id="mlhCommunicationsConsent"
-            label="I authorize MLH to send me occasional emails about relevant events, career opportunities, and community announcements (optional)."
+            label="I authorize MLH + DEV to send me occasional emails about relevant events, career opportunities, and community announcements."
             checked={form.mlhCommunicationsConsent}
             onChange={(e) =>
               updateField("mlhCommunicationsConsent", e.target.checked)

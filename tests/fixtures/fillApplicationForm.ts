@@ -69,7 +69,7 @@ export function fillValidApplicationForm() {
   setInputValue(/Emergency contact relationship/, "Parent");
   setInputValue(/Emergency contact phone/, "2025550124");
   fireEvent.click(screen.getByLabelText(/MLH Code of Conduct/));
-  fireEvent.click(screen.getByLabelText(/authorize HackUTA to share my registration information/));
+  fireEvent.click(screen.getByLabelText(/authorize you to share my application\/registration information/));
   fireEvent.click(
     screen.getByLabelText(/cannot guarantee that food served at this event/),
   );

@@ -550,7 +550,7 @@ describe("ApplicationForm conditional answers", () => {
     });
 
     fireEvent.change(document.getElementById("github")!, { target: { value: "https://github.com/sam" } });
-    fireEvent.click(screen.getByLabelText(/authorize MLH to send me occasional emails/));
+    fireEvent.click(screen.getByLabelText(/authorize MLH \+ DEV to send me occasional emails/));
 
     await submit();
     await waitFor(() => expect(onSubmitted).toHaveBeenCalledOnce());
