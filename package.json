@@ -42,7 +42,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
-    "@vitest/coverage-istanbul": "^5.0.1",
+    "@vitest/coverage-istanbul": "^5.0.4",
     "convex-test": "^0.0.58",
     "eslint": "^10.10.0",
     "eslint-plugin-react-hooks": "^7.1.1",
