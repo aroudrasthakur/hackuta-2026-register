@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.95",
-    "@paper-design/shaders-react": "^0.0.80",
+    "@paper-design/shaders-react": "^0.0.82",
     "convex": "^1.45.0",
     "libphonenumber-js": "^1.13.14",
     "react": "^19.2.8",
