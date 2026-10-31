@@ -28,7 +28,7 @@
     "libphonenumber-js": "^1.13.14",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4",
+    "react-router-dom": "^7.18.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {
