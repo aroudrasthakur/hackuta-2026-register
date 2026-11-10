@@ -125,7 +125,7 @@ Same response shape as `getOtpSendCooldown`. Tracks accepted requests for all ad
 }
 ```
 
-Validates payload (Zod + sanitization), rejects submissions at or after the configured closing time, binds resume via token, sets status `submitted`, sends confirmation email. **Email in `data` is ignored** — server uses verified auth email.
+Validates payload (Zod + sanitization), rejects submissions at or after the configured closing time, binds resume via token, sets status `submitted`, and sends a confirmation email unless `mailConfig.confirmationEmail` is false. **Email in `data` is ignored** — server uses verified auth email.
 
 First submit creates the applicant record; sign-in alone does not write application data.
 
@@ -280,7 +280,7 @@ Not callable from the public client.
 | --- | --- |
 | `email/sendOtpEmail:sendOtpEmail` | Sign-up verification mail |
 | `email/sendPasswordResetEmail:sendPasswordResetEmail` | Password reset mail |
-| `email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail` | Post-submit confirmation |
+| `email/sendApplicationConfirmationEmail:sendApplicationConfirmationEmail` | Post-submit confirmation (skipped when `mailConfig.confirmationEmail` is false) |
 | `email/checkEmailStatus:checkEmailStatus` | Operator tool — `GET /email-status` for a tracked `serviceId` |
 
 All three emails are queued with the HackUTA email service (`POST /send-email`) using the plain-text template, since the service delivers `body` as plain text. HTML templates (with user content escaped via `escapeHtml()`) are kept for future HTML support.
