@@ -10,7 +10,7 @@ HackUTA email service client and templates for registration auth and confirmatio
 | [templates.ts](templates.ts) | HTML/text bodies for OTP, password reset, and confirmation mail; escapeHtml on user content |
 | [sendOtpEmail.ts](sendOtpEmail.ts) | sendOtpEmail action — sign-up verification code (called from [auth.ts](../auth.ts)) |
 | [sendPasswordResetEmail.ts](sendPasswordResetEmail.ts) | sendPasswordResetEmail action — password reset code (called from [auth.ts](../auth.ts)) |
-| [sendApplicationConfirmationEmail.ts](sendApplicationConfirmationEmail.ts) | sendApplicationConfirmationEmail action — post-submit mail (scheduled from [registrations.ts](../registrations.ts)) |
+| [sendApplicationConfirmationEmail.ts](sendApplicationConfirmationEmail.ts) | sendApplicationConfirmationEmail action — post-submit mail (scheduled from [registrations.ts](../registrations.ts) when `mailConfig.confirmationEmail` is on) |
 | [checkEmailStatus.ts](checkEmailStatus.ts) | Internal operator action — asks the service whether a tracked email was sent |
 
 Sign-up and password-reset emails use separate templates and subjects. Both OTP types expire in 10 minutes.
