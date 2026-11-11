@@ -232,15 +232,15 @@ export default function ProfilePage() {
         </div>
 
         <div className={profileActionsWrap}>
-          <SignOutButton
-            className={profileSignOutWrap}
-            buttonClassName={profileSignOutButton}
-          />
           {isAcceptedApplicant(registration) ? (
             <OdysseyButton href={HACKER_PORTAL_URL} className={profileHackerPortalButton}>
               Hacker Portal
             </OdysseyButton>
           ) : null}
+          <SignOutButton
+            className={profileSignOutWrap}
+            buttonClassName={profileSignOutButton}
+          />
         </div>
       </div>
     </ProfilePageShell>

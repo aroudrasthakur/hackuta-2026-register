@@ -51,7 +51,7 @@ export const profileCompactButton = "!min-h-11 !min-w-0 !px-8 !py-2";
 /** Fills the compact PageShell card so sign-out can sit at the panel bottom. */
 export const profilePageBody = "flex min-h-0 flex-1 flex-col gap-6";
 
-/** Sign-out and optional hacker-portal CTA, pinned near the panel bottom. */
+/** Hacker portal (when shown) then sign-out, pinned near the panel bottom. */
 export const profileActionsWrap = "mt-auto flex flex-col items-start gap-3 pt-4";
 
 export const profileSignOutWrap = "self-start";

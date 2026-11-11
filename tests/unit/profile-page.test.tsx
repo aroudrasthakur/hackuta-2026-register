@@ -420,7 +420,7 @@ describe("ProfilePage (Convex mode)", () => {
     expect(portal).toHaveAttribute("href", HACKER_PORTAL_URL);
     expect(portal.className).toContain("profile-hacker-portal-btn");
     const signOut = screen.getByRole("button", { name: "Sign out" });
-    expect(signOut.compareDocumentPosition(portal)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(signOut.compareDocumentPosition(portal)).toBe(Node.DOCUMENT_POSITION_PRECEDING);
   });
 
   it("shows an error when the dashboard cannot be loaded", () => {
