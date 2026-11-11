@@ -21,3 +21,8 @@ export function getApplicantStatusLabel(registration: ApplicantRegistration) {
 
   return "Under review";
 }
+
+/** Hacker portal CTA is only for organizers' accepted decision, not waitlist/reject/review. */
+export function isAcceptedApplicant(registration: ApplicantRegistration) {
+  return Boolean(registration?.submittedAt) && registration?.status === "accepted";
+}

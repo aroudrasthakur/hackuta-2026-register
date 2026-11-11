@@ -925,6 +925,29 @@
     outline: 2px solid var(--ocean);
     outline-offset: 3px;
   }
+
+  .odyssey-btn.profile-hacker-portal-btn {
+    color: var(--ink);
+    background: var(--light);
+    border: 1px solid color-mix(in srgb, var(--ocean) 22%, transparent);
+    box-shadow: 0 6px 18px rgb(26 58 82 / 0.12);
+  }
+
+  .odyssey-btn.profile-hacker-portal-btn::before,
+  .odyssey-btn.profile-hacker-portal-btn::after {
+    display: none;
+  }
+
+  .odyssey-btn.profile-hacker-portal-btn:hover {
+    color: var(--ink);
+    background: var(--clay);
+    box-shadow: 0 10px 24px rgb(26 58 82 / 0.18);
+  }
+
+  .odyssey-btn.profile-hacker-portal-btn:focus-visible {
+    outline: 2px solid var(--ocean);
+    outline-offset: 3px;
+  }
 }
 
 input[type="checkbox"]:focus-visible,

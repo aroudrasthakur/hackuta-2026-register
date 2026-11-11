@@ -30,6 +30,7 @@ Authenticated applicant dashboard: status, submitted answers, hackathon timeline
 | Draft state | “Continue application” / “Start application” OdysseyButton links to `/register` |
 | Submitted state | Larger title and field values; no register CTA |
 | Sign out | [SignOutButton](../../components/SignOutButton.tsx) below the overview grid, left-aligned, pinned toward the panel bottom via `mt-auto` |
+| Hacker portal | Cream OdysseyButton below sign-out, only when registration status is `accepted`; links to [HACKER_PORTAL_URL](../../constants/site.ts) |
 
 Timeline milestones come from [shared/hackathon/](../../../shared/hackathon/). Unscheduled dates show “To be announced”.
 

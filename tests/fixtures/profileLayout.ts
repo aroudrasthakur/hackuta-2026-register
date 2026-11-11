@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import {
+  profileActionsWrap,
   profileOverviewGrid,
   profilePageBody,
   profileSignOutButton,
-  profileSignOutWrap,
 } from "../../src/pages/Profile/profileStyles";
 
 export async function expectSignOutAfterOverviewGrid(page: Page) {
@@ -24,7 +24,7 @@ export async function expectSignOutAfterOverviewGrid(page: Page) {
     {
       bodyClass: profilePageBody,
       gridClass: profileOverviewGrid,
-      wrapClass: profileSignOutWrap,
+      wrapClass: profileActionsWrap,
     },
   );
 

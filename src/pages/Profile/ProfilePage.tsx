@@ -14,7 +14,8 @@ import {
   APPLICATION_NOT_OPEN_MESSAGE,
 } from "../../../shared/registration/submitErrors";
 import { buildHackathonTimeline } from "../../../shared/hackathon/timeline";
-import { getApplicantStatusLabel } from "./applicantStatus";
+import { HACKER_PORTAL_URL } from "../../constants/site";
+import { getApplicantStatusLabel, isAcceptedApplicant } from "./applicantStatus";
 import { ApplicantTimeline } from "./ApplicantTimeline";
 import { ProfileAsset } from "./ProfileAsset";
 import { ProfileField } from "./ProfileField";
@@ -30,6 +31,8 @@ import {
   profilePageSubtitleSubmitted,
   profilePageTitle,
   profilePageTitleSubmitted,
+  profileActionsWrap,
+  profileHackerPortalButton,
   profileSignOutButton,
   profileSignOutWrap,
 } from "./profileStyles";
@@ -228,10 +231,17 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <SignOutButton
-          className={profileSignOutWrap}
-          buttonClassName={profileSignOutButton}
-        />
+        <div className={profileActionsWrap}>
+          <SignOutButton
+            className={profileSignOutWrap}
+            buttonClassName={profileSignOutButton}
+          />
+          {isAcceptedApplicant(registration) ? (
+            <OdysseyButton href={HACKER_PORTAL_URL} className={profileHackerPortalButton}>
+              Hacker Portal
+            </OdysseyButton>
+          ) : null}
+        </div>
       </div>
     </ProfilePageShell>
   );

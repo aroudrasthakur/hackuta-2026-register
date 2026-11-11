@@ -9,7 +9,9 @@ import { type MockAuthScenario } from "../../src/constants/mockAuth";
 import { useMockAuth } from "../../src/hooks/useMockAuth";
 import { SessionAuthProvider } from "../../src/hooks/useSessionAuth";
 import ProfilePage from "../../src/pages/Profile/ProfilePage";
+import { HACKER_PORTAL_URL } from "../../src/constants/site";
 import {
+  profileActionsWrap,
   profileOverviewGrid,
   profilePageBody,
   profileSignOutWrap,
@@ -62,10 +64,11 @@ function profileLayoutNodes() {
   });
   const body = title.parentElement!.parentElement!;
   const grid = body.children[1] as HTMLElement;
-  const signOutWrap = body.children[2] as HTMLElement;
+  const actionsWrap = body.children[2] as HTMLElement;
+  const signOutWrap = screen.getByRole("button", { name: "Sign out" }).parentElement!;
   const signOutButton = screen.getByRole("button", { name: "Sign out" });
 
-  return { body, grid, signOutWrap, signOutButton };
+  return { body, grid, actionsWrap, signOutWrap, signOutButton };
 }
 
 function renderProfilePage(scenario: MockAuthScenario = "signedInReturning") {
@@ -180,14 +183,16 @@ describe("ProfilePage", () => {
     (scenario) => {
     renderProfilePage(scenario);
 
-    const { body, grid, signOutWrap, signOutButton } = profileLayoutNodes();
+    const { body, grid, actionsWrap, signOutWrap, signOutButton } = profileLayoutNodes();
 
     expect(body.className).toBe(profilePageBody);
     expect(grid.className).toBe(profileOverviewGrid);
+    expect(actionsWrap.className).toBe(profileActionsWrap);
     expect(signOutWrap.className).toBe(profileSignOutWrap);
     expect(signOutButton.className).toContain("profile-sign-out-btn");
     expect(signOutButton.className).toContain("!min-h-11");
-    expect(grid.compareDocumentPosition(signOutWrap)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(grid.compareDocumentPosition(actionsWrap)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.queryByRole("link", { name: "Hacker Portal" })).not.toBeInTheDocument();
     },
   );
 
@@ -381,6 +386,41 @@ describe("ProfilePage (Convex mode)", () => {
     expect(profileValue("Name")).toHaveTextContent("—");
     expect(profileValue("Year of study")).toHaveTextContent("—");
     expect(screen.getByRole("link", { name: "Start application" })).toHaveAttribute("href", "/register");
+  });
+
+  it.each(["waitlisted", "rejected", "submitted", "under_review"] as const)(
+    "hides the hacker portal for %s applicants",
+    (status) => {
+      dashboardQueryResult.current = {
+        profile: { displayName: "Pat Applicant", verifiedEmail: "pat@example.com" },
+        registration: {
+          status,
+          submittedAt: 1,
+          answers: { firstName: "Pat" },
+        },
+        hackathon: null,
+      };
+      renderConvexProfile();
+      expect(screen.queryByRole("link", { name: "Hacker Portal" })).not.toBeInTheDocument();
+    },
+  );
+
+  it("shows a cream hacker portal link for accepted applicants", () => {
+    dashboardQueryResult.current = {
+      profile: { displayName: "Ada Accepted", verifiedEmail: "ada@example.com" },
+      registration: {
+        status: "accepted",
+        submittedAt: 1,
+        answers: { firstName: "Ada" },
+      },
+      hackathon: null,
+    };
+    renderConvexProfile();
+    const portal = screen.getByRole("link", { name: "Hacker Portal" });
+    expect(portal).toHaveAttribute("href", HACKER_PORTAL_URL);
+    expect(portal.className).toContain("profile-hacker-portal-btn");
+    const signOut = screen.getByRole("button", { name: "Sign out" });
+    expect(signOut.compareDocumentPosition(portal)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("shows an error when the dashboard cannot be loaded", () => {
